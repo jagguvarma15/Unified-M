@@ -1,0 +1,310 @@
+name: MMM Training Pipeline
+
+on:
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  
+  workflow_dispatch:
+    inputs:
+      full_retrain:
+        description: 'Full model retrain (vs incremental)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ==========================================================================
+  # Data Ingestion & Validation
+  # ==========================================================================
+  ingest:
+    name: Ingest & Validate Data
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Run data ingestion
+        run: |
+          python -m unified_m.cli ingest \
+            --source data/raw \
+            --output data/validated
+      
+      - name: Validate data schemas
+        run: |
+          python -m unified_m.cli validate \
+            --input data/validated
+      
+      - name: Upload validated data
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-data
+          path: data/validated/
+          retention-days: 7
+
+  # ==========================================================================
+  # Feature Engineering & Transformation
+  # ==========================================================================
+  transform:
+    name: Transform & Feature Engineering
+    runs-on: ubuntu-latest
+    needs: ingest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Download validated data
+        uses: actions/download-artifact@v4
+        with:
+          name: validated-data
+          path: data/validated/
+      
+      - name: Run transformations
+        run: |
+          python -m unified_m.cli transform \
+            --input data/validated \
+            --output data/transformed
+      
+      - name: Upload transformed data
+        uses: actions/upload-artifact@v4
+        with:
+          name: transformed-data
+          path: data/transformed/
+          retention-days: 7
+
+  # ==========================================================================
+  # MMM Training
+  # ==========================================================================
+  train:
+    name: Train MMM Model
+    runs-on: ubuntu-latest
+    needs: transform
+    timeout-minutes: 180  # 3 hour limit for model training
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Download transformed data
+        uses: actions/download-artifact@v4
+        with:
+          name: transformed-data
+          path: data/transformed/
+      
+      - name: Train MMM model
+        run: |
+          python -m unified_m.cli train \
+            --input data/transformed \
+            --output models/ \
+            --samples 1000 \
+            --chains 4
+      
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmm-model
+          path: |
+            models/
+            data/outputs/mmm_results.json
+            data/outputs/contributions.parquet
+          retention-days: 30
+
+  # ==========================================================================
+  # Reconciliation
+  # ==========================================================================
+  reconcile:
+    name: Reconcile Measurements
+    runs-on: ubuntu-latest
+    needs: train
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Download model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mmm-model
+          path: ./
+      
+      - name: Run reconciliation
+        run: |
+          python -m unified_m.cli reconcile \
+            --mmm-results data/outputs/mmm_results.json \
+            --output data/outputs/reconciliation.json
+      
+      - name: Upload reconciliation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation
+          path: data/outputs/reconciliation.json
+          retention-days: 30
+
+  # ==========================================================================
+  # Budget Optimization
+  # ==========================================================================
+  optimize:
+    name: Optimize Budget
+    runs-on: ubuntu-latest
+    needs: reconcile
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mmm-model
+          path: ./
+      
+      - name: Download reconciliation
+        uses: actions/download-artifact@v4
+        with:
+          name: reconciliation
+          path: data/outputs/
+      
+      - name: Run optimization
+        run: |
+          python -m unified_m.cli optimize \
+            --mmm-results data/outputs/mmm_results.json \
+            --output data/outputs/optimization.json
+      
+      - name: Upload optimization results
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimization
+          path: |
+            data/outputs/optimization.json
+            data/outputs/response_curves.json
+            data/outputs/scenarios.json
+          retention-days: 30
+
+  # ==========================================================================
+  # Publish Results
+  # ==========================================================================
+  publish:
+    name: Publish Results
+    runs-on: ubuntu-latest
+    needs: optimize
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download all outputs
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Consolidate outputs
+        run: |
+          mkdir -p data/outputs
+          cp -r artifacts/mmm-model/* ./
+          cp -r artifacts/reconciliation/* data/outputs/
+          cp -r artifacts/optimization/* data/outputs/
+      
+      - name: Commit results to repository
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/outputs/
+          git diff --staged --quiet || git commit -m "Update MMM results [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create summary
+        run: |
+          echo "## Pipeline Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- MMM model trained successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- Reconciliation completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Budget optimization generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "Results are available in \`data/outputs/\`" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Notify (optional)
+  # ==========================================================================
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: publish
+    if: always()
+    
+    steps:
+      - name: Notify on success
+        if: ${{ needs.publish.result == 'success' }}
+        run: |
+          echo "Pipeline completed successfully"
+          # Add Slack/email notification here if needed
+      
+      - name: Notify on failure
+        if: ${{ needs.publish.result != 'success' }}
+        run: |
+          echo "Pipeline failed - check logs"
+          # Add Slack/email notification here if needed
+

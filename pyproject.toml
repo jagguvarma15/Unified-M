@@ -1,0 +1,85 @@
+[project]
+name = "unified-m"
+version = "0.1.0"
+description = "Unified Marketing Measurement: MMM + Attribution + Incrementality fusion"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Unified-M Team" }]
+
+dependencies = [
+    # Core data processing
+    "polars>=1.0.0",
+    "pandas>=2.0.0",
+    "pyarrow>=15.0.0",
+    "duckdb>=1.0.0",
+    
+    # Validation
+    "pandera>=0.20.0",
+    
+    # MMM & Statistics
+    "pymc>=5.10.0",
+    "pymc-marketing>=0.9.0",
+    "arviz>=0.18.0",
+    "scikit-learn>=1.4.0",
+    "scipy>=1.12.0",
+    
+    # Optimization
+    "scipy>=1.12.0",
+    
+    # API
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.6.0",
+    
+    # UI
+    "streamlit>=1.32.0",
+    "plotly>=5.19.0",
+    "altair>=5.2.0",
+    
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "loguru>=0.7.0",
+    "typer>=0.9.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.29.0",
+]
+
+[project.scripts]
+unified-m = "unified_m.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unified_m"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=src/unified_m"
+
