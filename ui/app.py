@@ -491,12 +491,12 @@ def render_dashboard():
         
         Run the training pipeline to generate results:
         ```bash
-        python -m unified_m.cli run-pipeline
+        python -m cli run-pipeline
         ```
         
         Or use the demo data:
         ```bash
-        python -m unified_m.cli generate-demo
+        python -m cli generate-demo
         ```
         """)
         return

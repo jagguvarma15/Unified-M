@@ -5,13 +5,13 @@ Fuses MMM estimates with incrementality tests and attribution signals
 to produce unified channel-level lift estimates with calibrated uncertainty.
 """
 
-from unified_m.reconciliation.fusion import (
+from reconciliation.fusion import (
     ReconciliationEngine,
     ReconciliationResult,
     weighted_average_fusion,
     bayesian_fusion,
 )
-from unified_m.reconciliation.calibration import (
+from reconciliation.calibration import (
     calibrate_mmm_with_tests,
     compute_calibration_factors,
 )

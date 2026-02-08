@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from unified_m.optimization.allocator import BudgetOptimizer, OptimizationResult
+from optimization.allocator import BudgetOptimizer, OptimizationResult
 
 
 @dataclass

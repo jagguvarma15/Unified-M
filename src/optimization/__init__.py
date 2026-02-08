@@ -5,12 +5,12 @@ Provides optimal budget allocation based on response curves
 and constraints using scipy.optimize.
 """
 
-from unified_m.optimization.allocator import (
+from optimization.allocator import (
     BudgetOptimizer,
     OptimizationResult,
     optimize_budget,
 )
-from unified_m.optimization.scenarios import (
+from optimization.scenarios import (
     create_budget_scenarios,
     compare_scenarios,
 )

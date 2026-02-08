@@ -5,17 +5,17 @@ Wraps PyMC-Marketing with additional utilities for training,
 evaluation, and contribution decomposition.
 """
 
-from unified_m.mmm.model import (
+from mmm.model import (
     UnifiedMMM,
     MMMResults,
 )
-from unified_m.mmm.evaluation import (
+from mmm.evaluation import (
     evaluate_model,
     cross_validate,
     compute_mape,
     compute_rmse,
 )
-from unified_m.mmm.decomposition import (
+from mmm.decomposition import (
     decompose_contributions,
     compute_channel_roi,
     compute_marginal_roi,

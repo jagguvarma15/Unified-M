@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 import pandas as pd
 from loguru import logger
 
-from unified_m.config import get_config
+from config import get_config
 
 
 # =============================================================================
@@ -487,7 +487,7 @@ def run_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = False):
     
     logger.info(f"Starting Unified-M API on {host}:{port}")
     uvicorn.run(
-        "unified_m.api.app:app",
+        "api.app:app",
         host=host,
         port=port,
         reload=reload,

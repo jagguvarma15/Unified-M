@@ -13,7 +13,7 @@ from loguru import logger
 import pandas as pd
 import numpy as np
 
-from unified_m.config import load_config, get_config
+from config import load_config, get_config
 
 app = typer.Typer(
     name="unified-m",
@@ -75,7 +75,7 @@ def ingest(
     ),
 ):
     """Ingest raw data from source."""
-    from unified_m.ingestion import DataIngestion
+    from ingestion import DataIngestion
     
     logger.info(f"Ingesting data from {source}")
     
@@ -106,7 +106,7 @@ def validate(
     ),
 ):
     """Validate data against schemas."""
-    from unified_m.schemas import (
+    from schemas import (
         validate_media_spend,
         validate_outcomes,
         validate_controls,
@@ -145,7 +145,7 @@ def transform(
     ),
 ):
     """Transform data for MMM training."""
-    from unified_m.transforms import create_mmm_features
+    from transforms import create_mmm_features
     
     logger.info(f"Transforming data from {input_dir}")
     
@@ -187,7 +187,7 @@ def train(
     chains: int = typer.Option(4, "--chains", help="MCMC chains"),
 ):
     """Train MMM model."""
-    from unified_m.mmm import UnifiedMMM
+    from mmm import UnifiedMMM
     
     logger.info(f"Training MMM with {samples} samples, {chains} chains")
     
@@ -231,7 +231,7 @@ def reconcile(
     ),
 ):
     """Run reconciliation to unify measurement signals."""
-    from unified_m.reconciliation import ReconciliationEngine
+    from reconciliation import ReconciliationEngine
     
     logger.info("Running reconciliation...")
     
@@ -280,7 +280,7 @@ def optimize(
     ),
 ):
     """Run budget optimization."""
-    from unified_m.optimization import BudgetOptimizer
+    from optimization import BudgetOptimizer
     
     logger.info(f"Optimizing budget allocation for ${budget:,.0f}")
     
@@ -336,7 +336,7 @@ def serve(
     reload: bool = typer.Option(False, "--reload", help="Enable auto-reload"),
 ):
     """Start the API server."""
-    from unified_m.api.app import run_server
+    from api.app import run_server
     
     run_server(host=host, port=port, reload=reload)
 

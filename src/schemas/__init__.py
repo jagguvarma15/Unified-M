@@ -4,7 +4,7 @@ Data schemas for Unified-M.
 Generalized Pandera schemas that can validate various marketing data sources.
 """
 
-from unified_m.schemas.base import (
+from schemas.base import (
     MediaSpendSchema,
     OutcomeSchema,
     ControlVariableSchema,

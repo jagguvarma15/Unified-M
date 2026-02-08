@@ -53,32 +53,32 @@ pip install -e ".[dev]"
 ### Generate Demo Data
 
 ```bash
-python -m unified_m.cli generate-demo --days 365
+python -m cli generate-demo --days 365
 ```
 
 ### Run the Pipeline
 
 ```bash
 # Run full pipeline
-python -m unified_m.cli run-pipeline
+python -m cli run-pipeline
 
 # Or run individual steps
-python -m unified_m.cli ingest
-python -m unified_m.cli validate
-python -m unified_m.cli transform
-python -m unified_m.cli train
-python -m unified_m.cli reconcile
-python -m unified_m.cli optimize
+python -m cli ingest
+python -m cli validate
+python -m cli transform
+python -m cli train
+python -m cli reconcile
+python -m cli optimize
 ```
 
 ### Start the UI
 
 ```bash
 # Start API server
-python -m unified_m.cli serve --port 8000
+python -m cli serve --port 8000
 
 # Start Streamlit UI (in another terminal)
-python -m unified_m.cli ui --port 8501
+python -m cli ui --port 8501
 ```
 
 ## Project Structure
@@ -91,7 +91,7 @@ unified-m/
 │   ├── transformed/      # Model-ready features
 │   └── outputs/          # Results (JSON, Parquet)
 ├── models/               # Trained model artifacts
-├── src/unified_m/
+├── src/
 │   ├── schemas/          # Pandera data schemas
 │   ├── ingestion/        # Data loaders
 │   ├── transforms/       # Adstock, saturation, features
@@ -184,7 +184,7 @@ pytest
 ruff check src/
 
 # Type checking
-mypy src/unified_m/
+mypy src/
 ```
 
 ## Configuration

@@ -5,19 +5,20 @@ Provides adstock, saturation, and feature engineering transformations
 for preparing data for MMM modeling.
 """
 
-from unified_m.transforms.adstock import (
+from transforms.adstock import (
     geometric_adstock,
     weibull_adstock,
     delayed_adstock,
     apply_adstock,
 )
-from unified_m.transforms.saturation import (
+from transforms.saturation import (
     hill_saturation,
     logistic_saturation,
     michaelis_menten_saturation,
     apply_saturation,
+    estimate_marginal_response,
 )
-from unified_m.transforms.features import (
+from transforms.features import (
     create_mmm_features,
     pivot_media_spend,
     add_time_features,
@@ -36,6 +37,7 @@ __all__ = [
     "logistic_saturation",
     "michaelis_menten_saturation",
     "apply_saturation",
+    "estimate_marginal_response",
     # Features
     "create_mmm_features",
     "pivot_media_spend",

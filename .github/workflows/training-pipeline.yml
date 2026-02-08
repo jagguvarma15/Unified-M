@@ -17,9 +17,7 @@ env:
   PYTHON_VERSION: '3.11'
 
 jobs:
-  # ==========================================================================
   # Data Ingestion & Validation
-  # ==========================================================================
   ingest:
     name: Ingest & Validate Data
     runs-on: ubuntu-latest
@@ -41,13 +39,13 @@ jobs:
       
       - name: Run data ingestion
         run: |
-          python -m unified_m.cli ingest \
+          python -m cli ingest \
             --source data/raw \
             --output data/validated
       
       - name: Validate data schemas
         run: |
-          python -m unified_m.cli validate \
+          python -m cli validate \
             --input data/validated
       
       - name: Upload validated data
@@ -57,9 +55,7 @@ jobs:
           path: data/validated/
           retention-days: 7
 
-  # ==========================================================================
   # Feature Engineering & Transformation
-  # ==========================================================================
   transform:
     name: Transform & Feature Engineering
     runs-on: ubuntu-latest
@@ -88,7 +84,7 @@ jobs:
       
       - name: Run transformations
         run: |
-          python -m unified_m.cli transform \
+          python -m cli transform \
             --input data/validated \
             --output data/transformed
       
@@ -99,9 +95,7 @@ jobs:
           path: data/transformed/
           retention-days: 7
 
-  # ==========================================================================
   # MMM Training
-  # ==========================================================================
   train:
     name: Train MMM Model
     runs-on: ubuntu-latest
@@ -131,7 +125,7 @@ jobs:
       
       - name: Train MMM model
         run: |
-          python -m unified_m.cli train \
+          python -m cli train \
             --input data/transformed \
             --output models/ \
             --samples 1000 \
@@ -147,9 +141,9 @@ jobs:
             data/outputs/contributions.parquet
           retention-days: 30
 
-  # ==========================================================================
+
   # Reconciliation
-  # ==========================================================================
+  
   reconcile:
     name: Reconcile Measurements
     runs-on: ubuntu-latest
@@ -178,7 +172,7 @@ jobs:
       
       - name: Run reconciliation
         run: |
-          python -m unified_m.cli reconcile \
+          python -m cli reconcile \
             --mmm-results data/outputs/mmm_results.json \
             --output data/outputs/reconciliation.json
       
@@ -189,9 +183,7 @@ jobs:
           path: data/outputs/reconciliation.json
           retention-days: 30
 
-  # ==========================================================================
   # Budget Optimization
-  # ==========================================================================
   optimize:
     name: Optimize Budget
     runs-on: ubuntu-latest
@@ -226,7 +218,7 @@ jobs:
       
       - name: Run optimization
         run: |
-          python -m unified_m.cli optimize \
+          python -m cli optimize \
             --mmm-results data/outputs/mmm_results.json \
             --output data/outputs/optimization.json
       
@@ -240,9 +232,7 @@ jobs:
             data/outputs/scenarios.json
           retention-days: 30
 
-  # ==========================================================================
   # Publish Results
-  # ==========================================================================
   publish:
     name: Publish Results
     runs-on: ubuntu-latest
@@ -286,9 +276,7 @@ jobs:
           echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "Results are available in \`data/outputs/\`" >> $GITHUB_STEP_SUMMARY
 
-  # ==========================================================================
   # Notify (optional)
-  # ==========================================================================
   notify:
     name: Send Notification
     runs-on: ubuntu-latest

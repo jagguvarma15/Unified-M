@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from unified_m.optimization import BudgetOptimizer, optimize_budget
+from optimization import BudgetOptimizer, optimize_budget
 
 
 class TestBudgetOptimizer:
