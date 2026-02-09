@@ -1,0 +1,20 @@
+[package]
+name = "unified-m-core"
+version = "0.2.0"
+edition = "2021"
+
+[lib]
+name = "unified_m_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+numpy = "0.21"
+ndarray = "0.16"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

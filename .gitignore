@@ -93,6 +93,13 @@ ui/.turbo/
 # Pipeline runs (generated artifacts)
 runs/
 
+# Rust build artifacts
+rust/target/
+rust/Cargo.lock
+rust/*.so
+rust/*.dylib
+rust/*.dll
+
 # Temporary
 tmp/
 temp/
