@@ -1,8 +1,14 @@
 # Unified-M
 
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://react.dev/)
+[![Bun](https://img.shields.io/badge/Bun-1.3-black.svg)](https://bun.sh/)
+
 **Unified Marketing Measurement Platform**
 
-An end-to-end Unified Marketing Measurement platform that fuses strategic MMM, tactical attribution, and incrementality experiments into a single decision layer, producing consistent channel-level and tactic-level lift with calibrated confidence intervals, stable budget recommendations, and scenario simulations.
+An end-to-end framework that fuses Marketing Mix Modeling (MMM), incrementality tests, and attribution data into a single source of truth for channel-level lift with calibrated uncertainty, producing stable budget recommendations and scenario simulations. Built for local-first deployment with a modern React dashboard, pluggable model backends, and full audit trails.
 
 ## Architecture
 
@@ -39,47 +45,49 @@ An end-to-end Unified Marketing Measurement platform that fuses strategic MMM, t
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Unified-M.git
+git clone https://github.com/jagguvarma15/Unified-M.git
 cd Unified-M
 
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+python -m venv .venv
+source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
 
-# Install dependencies
+# Install Python dependencies
+pip install -r requirements.txt
+# Or install in development mode:
 pip install -e ".[dev]"
+
+# Install UI dependencies (requires Bun: https://bun.sh)
+cd ui && bun install
 ```
 
-### Generate Demo Data
+### Generate Demo Data & Run Pipeline
 
 ```bash
-python -m cli generate-demo --days 365
-```
+# Generate synthetic data and run the full pipeline
+PYTHONPATH=src python -m cli demo
 
-### Run the Pipeline
-
-```bash
-# Run full pipeline
-python -m cli run-pipeline
-
-# Or run individual steps
-python -m cli ingest
-python -m cli validate
-python -m cli transform
-python -m cli train
-python -m cli reconcile
-python -m cli optimize
+# Or run the pipeline with your own data
+PYTHONPATH=src python -m cli run \
+  --media-spend data/processed/media_spend.parquet \
+  --outcomes data/processed/outcomes.parquet \
+  --model builtin \
+  --target revenue
 ```
 
 ### Start the UI
 
 ```bash
-# Start API server
-python -m cli serve --port 8000
+# Start API server (terminal 1)
+PYTHONPATH=src python -m cli serve --port 8000
 
-# Start Streamlit UI (in another terminal)
-python -m cli ui --port 8501
+# Start React UI (terminal 2)
+cd ui && bun install && bun dev
+# Or use the CLI:
+PYTHONPATH=src python -m cli ui
 ```
+
+The UI will be available at `http://localhost:5173` and automatically proxies API requests to the backend.
 
 ## Project Structure
 
@@ -87,40 +95,46 @@ python -m cli ui --port 8501
 unified-m/
 ├── data/
 │   ├── raw/              # Raw input data (Parquet)
-│   ├── validated/        # Validated data
-│   ├── transformed/      # Model-ready features
+│   ├── processed/        # Validated & transformed data
 │   └── outputs/          # Results (JSON, Parquet)
-├── models/               # Trained model artifacts
+├── runs/                 # Versioned pipeline artifacts
 ├── src/
-│   ├── schemas/          # Pandera data schemas
-│   ├── ingestion/        # Data loaders
+│   ├── core/             # Contracts, artifacts, base models, exceptions
+│   ├── connectors/       # Data loaders (Parquet, CSV, DuckDB)
+│   ├── models/           # MMM backends (builtin, pymc, registry)
+│   ├── pipeline/         # End-to-end runner
 │   ├── transforms/       # Adstock, saturation, features
-│   ├── mmm/              # PyMC-Marketing wrapper
-│   ├── reconciliation/   # Fusion logic
-│   ├── optimization/     # Budget allocator
-│   ├── api/              # FastAPI endpoints
-│   ├── config.py         # Configuration
+│   ├── reconciliation/   # Fusion engine (MMM + tests + attribution)
+│   ├── optimization/     # Budget allocator & scenarios
+│   ├── server/           # FastAPI application
+│   ├── config.py         # Configuration management
 │   └── cli.py            # CLI commands
-├── ui/                   # Streamlit dashboard
-├── notebooks/            # Exploration notebooks
+├── ui/                   # React + TypeScript dashboard
+│   ├── src/
+│   │   ├── pages/        # Dashboard, Contributions, Optimization, etc.
+│   │   ├── components/   # Reusable UI components
+│   │   └── lib/          # API client, utilities
+│   └── package.json      # Bun dependencies
+├── notebooks/            # Educational notebooks
 ├── tests/                # Test suite
-├── .github/workflows/    # GitHub Actions pipeline
-└── pyproject.toml        # Dependencies
+└── pyproject.toml        # Python dependencies
 ```
 
 ## Technology Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Storage** | Parquet files (S3/GCS compatible) |
-| **Query Engine** | DuckDB |
-| **Transforms** | Polars + Python |
-| **Validation** | Pandera |
-| **MMM** | PyMC-Marketing |
-| **Orchestration** | GitHub Actions |
+| **Backend** | Python 3.10+ |
+| **Data Storage** | Parquet files (local or S3/GCS compatible) |
+| **Query Engine** | DuckDB (optional) |
+| **Validation** | Pydantic |
+| **MMM Backends** | Built-in (Ridge), PyMC-Marketing (optional) |
 | **Optimization** | scipy.optimize |
-| **API** | FastAPI |
-| **UI** | Streamlit |
+| **API** | FastAPI + Uvicorn |
+| **UI** | React 18 + TypeScript + Vite |
+| **UI Runtime** | Bun |
+| **Styling** | Tailwind CSS |
+| **Charts** | Recharts |
 
 ## Features
 
@@ -143,10 +157,11 @@ unified-m/
 - Efficiency frontier analysis
 
 ### API & UI
-- RESTful API for all outputs
-- Interactive Streamlit dashboard
-- Real-time scenario simulation
-- Export capabilities
+- RESTful API for all outputs (FastAPI)
+- Modern React dashboard with TypeScript
+- Real-time data visualization with Recharts
+- Responsive design with Tailwind CSS
+- Fast development with Bun + Vite
 
 ## Data Schemas
 
