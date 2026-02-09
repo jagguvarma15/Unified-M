@@ -1,32 +1,35 @@
-# Core data processing
-polars>=1.0.0
+# Unified-M core dependencies
+# Install with: pip install -r requirements.txt
+
+# Core
 pandas>=2.0.0
-pyarrow>=15.0.0
-duckdb>=1.0.0
-
-# Validation
-pandera>=0.20.0
-
-# MMM & Statistics
-pymc>=5.10.0
-pymc-marketing>=0.9.0
-arviz>=0.18.0
-scikit-learn>=1.4.0
+numpy>=1.24.0
 scipy>=1.12.0
+scikit-learn>=1.4.0
 
-# API
-fastapi>=0.110.0
-uvicorn[standard]>=0.27.0
+# Validation & config
 pydantic>=2.6.0
-
-# UI
-streamlit>=1.32.0
-plotly>=5.19.0
-altair>=5.2.0
-
-# Utilities
-python-dotenv>=1.0.0
-loguru>=0.7.0
-typer>=0.9.0
 pyyaml>=6.0.0
 
+# API server
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+
+# Dashboard UI
+streamlit>=1.32.0
+plotly>=5.19.0
+
+# CLI & logging
+typer>=0.9.0
+loguru>=0.7.0
+
+# Optional: Parquet support (recommended)
+pyarrow>=15.0.0
+
+# Optional: DuckDB connector
+# duckdb>=1.0.0
+
+# Optional: Bayesian MMM backend
+# pymc>=5.10.0
+# pymc-marketing>=0.9.0
+# arviz>=0.18.0

@@ -85,6 +85,14 @@ secrets/
 *.pem
 *.key
 
+# Node / Bun (React UI)
+node_modules/
+ui/dist/
+ui/.turbo/
+
+# Pipeline runs (generated artifacts)
+runs/
+
 # Temporary
 tmp/
 temp/

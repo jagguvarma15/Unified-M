@@ -4,10 +4,12 @@ Feature engineering utilities for MMM.
 Creates model-ready datasets from raw marketing data.
 """
 
+from __future__ import annotations
+
+from typing import Literal
+
 import numpy as np
 import pandas as pd
-import polars as pl
-from typing import Literal
 
 
 def pivot_media_spend(

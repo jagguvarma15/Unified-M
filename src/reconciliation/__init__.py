@@ -1,27 +1,27 @@
 """
-Reconciliation layer for Unified-M.
-
-Fuses MMM estimates with incrementality tests and attribution signals
-to produce unified channel-level lift estimates with calibrated uncertainty.
+Reconciliation module -- fuses measurement signals into unified estimates.
 """
 
-from reconciliation.fusion import (
+from .engine import (
     ReconciliationEngine,
     ReconciliationResult,
-    weighted_average_fusion,
-    bayesian_fusion,
+    ChannelEstimate,
 )
-from reconciliation.calibration import (
-    calibrate_mmm_with_tests,
+from .calibration import (
     compute_calibration_factors,
+    calibrate_mmm_with_tests,
+    compute_blended_estimates,
+    estimate_test_coverage,
+    create_calibration_report,
 )
 
 __all__ = [
     "ReconciliationEngine",
     "ReconciliationResult",
-    "weighted_average_fusion",
-    "bayesian_fusion",
-    "calibrate_mmm_with_tests",
+    "ChannelEstimate",
     "compute_calibration_factors",
+    "calibrate_mmm_with_tests",
+    "compute_blended_estimates",
+    "estimate_test_coverage",
+    "create_calibration_report",
 ]
-

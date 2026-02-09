@@ -1,25 +1,25 @@
 """
-Budget optimization layer for Unified-M.
-
-Provides optimal budget allocation based on response curves
-and constraints using scipy.optimize.
+Budget optimization module.
 """
 
-from optimization.allocator import (
-    BudgetOptimizer,
-    OptimizationResult,
-    optimize_budget,
-)
-from optimization.scenarios import (
+from .allocator import BudgetOptimizer, OptimizationResult, optimize_budget
+from .scenarios import (
+    BudgetScenario,
     create_budget_scenarios,
     compare_scenarios,
+    create_channel_shift_scenarios,
+    compute_efficiency_frontier,
+    find_diminishing_returns_point,
 )
 
 __all__ = [
     "BudgetOptimizer",
     "OptimizationResult",
     "optimize_budget",
+    "BudgetScenario",
     "create_budget_scenarios",
     "compare_scenarios",
+    "create_channel_shift_scenarios",
+    "compute_efficiency_frontier",
+    "find_diminishing_returns_point",
 ]
-

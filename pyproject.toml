@@ -1,50 +1,53 @@
 [project]
 name = "unified-m"
-version = "0.1.0"
-description = "Unified Marketing Measurement: MMM + Attribution + Incrementality fusion"
+version = "0.2.0"
+description = "Unified Marketing Measurement: one incrementality truth from MMM + attribution + lift tests"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Unified-M Team" }]
+authors = [{ name = "Unified-M Contributors" }]
 
 dependencies = [
-    # Core data processing
-    "polars>=1.0.0",
+    # Core (always required)
     "pandas>=2.0.0",
-    "pyarrow>=15.0.0",
-    "duckdb>=1.0.0",
-    
-    # Validation
-    "pandera>=0.20.0",
-    
-    # MMM & Statistics
-    "pymc>=5.10.0",
-    "pymc-marketing>=0.9.0",
-    "arviz>=0.18.0",
+    "numpy>=1.24.0",
+    "scipy>=1.12.0",
     "scikit-learn>=1.4.0",
-    "scipy>=1.12.0",
-    
-    # Optimization
-    "scipy>=1.12.0",
-    
-    # API
+
+    # Validation & config
+    "pydantic>=2.6.0",
+    "pyyaml>=6.0.0",
+
+    # API (also serves the built React UI in production)
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.27.0",
-    "pydantic>=2.6.0",
-    
-    # UI
-    "streamlit>=1.32.0",
-    "plotly>=5.19.0",
-    "altair>=5.2.0",
-    
-    # Utilities
-    "python-dotenv>=1.0.0",
-    "loguru>=0.7.0",
+
+    # CLI & logging
     "typer>=0.9.0",
-    "pyyaml>=6.0.0",
+    "loguru>=0.7.0",
 ]
 
 [project.optional-dependencies]
+# Heavy model backends (install only what you need)
+pymc = [
+    "pymc>=5.10.0",
+    "pymc-marketing>=0.9.0",
+    "arviz>=0.18.0",
+]
+# Data connectors
+connectors = [
+    "polars>=1.0.0",
+    "pyarrow>=15.0.0",
+    "duckdb>=1.0.0",
+]
+# Full install
+all = [
+    "unified-m[pymc,connectors]",
+    "pandera>=0.20.0",
+    "altair>=5.2.0",
+    "python-dotenv>=1.0.0",
+]
+# Development
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
@@ -77,9 +80,7 @@ ignore = ["E501"]
 python_version = "3.10"
 strict = false
 warn_return_any = true
-warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --cov=src"
-

@@ -1,64 +1,47 @@
 # Unified-M Configuration
-# ======================
-# Copy this file to config.yaml and customize for your environment
+# =======================
+# Copy and customise for your environment.
 
 project_name: "Unified-M"
 environment: "development"
 
-# Storage Configuration
+# Storage paths (all relative to project root)
 storage:
   raw_path: "data/raw"
-  validated_path: "data/validated"
-  transformed_path: "data/transformed"
+  processed_path: "data/processed"
   outputs_path: "data/outputs"
   models_path: "models"
+  runs_path: "runs"
 
-# MMM Model Configuration
-mmm:
-  # Adstock parameters
+# Model defaults
+model:
+  backend: "builtin"        # builtin | pymc | meridian
   adstock_max_lag: 8
-  
-  # Saturation
-  saturation_type: "logistic"
-  
-  # Sampling (adjust based on compute)
-  n_samples: 1000
+  saturation_type: "hill"
+  n_samples: 1000           # Only used by Bayesian backends
   n_chains: 4
   target_accept: 0.9
-  
-  # Default priors (can be overridden per channel)
-  default_adstock_alpha_prior: [0.0, 1.0]  # Beta distribution
-  default_saturation_lambda_prior: [0.5, 1.0]  # Gamma distribution
 
-# Reconciliation Configuration
+# Reconciliation (signal fusion weights)
 reconciliation:
-  # Weighting scheme for fusion
   mmm_weight: 0.5
   incrementality_weight: 0.3
   attribution_weight: 0.2
-  
-  # Settings
-  use_hierarchical_calibration: false
+  fusion_method: "weighted_average"   # weighted_average | bayesian
   confidence_threshold: 0.8
 
-# Optimization Configuration
+# Budget optimisation
 optimization:
   method: "SLSQP"
   max_iterations: 1000
   tolerance: 1.0e-8
-  
-  # Constraints
   min_channel_budget_pct: 0.0
   max_channel_budget_pct: 1.0
 
-# API Configuration
-api:
-  host: "0.0.0.0"
-  port: 8000
-  reload: false
-
-# UI Configuration
-ui:
-  port: 8501
-  theme: "dark"
-
+# Server (API + UI)
+server:
+  api_host: "127.0.0.1"
+  api_port: 8000
+  ui_port: 8501
+  cors_origins:
+    - "*"
