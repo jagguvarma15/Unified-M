@@ -6,12 +6,14 @@ import {
   TrendingUp,
   History,
   Activity,
+  Database,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type HealthData } from "../lib/api";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/data", label: "Data", icon: Database },
   { to: "/contributions", label: "Contributions", icon: BarChart3 },
   { to: "/optimization", label: "Optimization", icon: Target },
   { to: "/curves", label: "Response Curves", icon: TrendingUp },

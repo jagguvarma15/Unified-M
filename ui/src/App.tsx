@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
+import Data from "./pages/Data";
 import Contributions from "./pages/Contributions";
 import Optimization from "./pages/Optimization";
 import ResponseCurves from "./pages/ResponseCurves";
@@ -12,6 +13,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="/data" element={<Data />} />
           <Route path="/contributions" element={<Contributions />} />
           <Route path="/optimization" element={<Optimization />} />
           <Route path="/curves" element={<ResponseCurves />} />
