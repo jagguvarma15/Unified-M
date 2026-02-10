@@ -4,6 +4,10 @@ import Layout from "./components/Layout";
 
 // Eagerly load the dashboard (landing page)
 import Dashboard from "./pages/Dashboard";
+// Eagerly load monitoring pages so they never show blank (no lazy chunk errors)
+import Calibration from "./pages/Calibration";
+import Stability from "./pages/Stability";
+import DataQuality from "./pages/DataQuality";
 
 // Lazy-load secondary pages for smaller initial bundle
 const Data = lazy(() => import("./pages/Data"));
@@ -16,9 +20,6 @@ const ROASAnalysis = lazy(() => import("./pages/ROASAnalysis"));
 const ScenarioPlanner = lazy(() => import("./pages/ScenarioPlanner"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Datapoint = lazy(() => import("./pages/Datapoint"));
-const Calibration = lazy(() => import("./pages/Calibration"));
-const Stability = lazy(() => import("./pages/Stability"));
-const DataQuality = lazy(() => import("./pages/DataQuality"));
 
 function PageLoader() {
   return (

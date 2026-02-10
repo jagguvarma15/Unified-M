@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import PageErrorBoundary from "./PageErrorBoundary";
 import {
   LayoutDashboard,
   BarChart3,
@@ -172,8 +173,10 @@ export default function Layout() {
 
       {/* ---- Main ---- */}
       <main className="flex-1 overflow-auto bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <Outlet />
+        <div className="max-w-7xl mx-auto px-6 py-8 min-h-[400px]">
+          <PageErrorBoundary>
+            <Outlet />
+          </PageErrorBoundary>
         </div>
       </main>
     </div>

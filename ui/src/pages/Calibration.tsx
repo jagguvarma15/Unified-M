@@ -41,7 +41,7 @@ export default function Calibration() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
       </div>
     );
@@ -49,11 +49,13 @@ export default function Calibration() {
 
   if (error) {
     return (
-      <EmptyState
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <EmptyState
         icon={<AlertTriangle className="w-10 h-10 text-amber-400" />}
         title="Calibration data unavailable"
         description={error}
       />
+      </div>
     );
   }
 
@@ -61,11 +63,13 @@ export default function Calibration() {
   const nTests = data?.n_tests ?? 0;
   if (!data || nTests === 0) {
     return (
-      <EmptyState
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <EmptyState
         icon={<Target className="w-10 h-10 text-gray-400" />}
         title="No calibration data yet"
         description="Run an experiment calibration to see predictions vs. measured lift."
       />
+      </div>
     );
   }
 
@@ -91,7 +95,7 @@ export default function Calibration() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-[60vh] space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">
         Calibration: MMM vs. Experiments
       </h1>
@@ -99,17 +103,17 @@ export default function Calibration() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          icon={<Target className="w-5 h-5" />}
+          icon={Target}
           label="Tests Compared"
           value={data.n_tests}
         />
         <MetricCard
-          icon={<CheckCircle className="w-5 h-5 text-green-600" />}
+          icon={CheckCircle}
           label="Coverage (within CI)"
           value={`${(data.coverage * 100).toFixed(0)}%`}
         />
         <MetricCard
-          icon={<AlertTriangle className="w-5 h-5" />}
+          icon={AlertTriangle}
           label="Median Lift Error"
           value={`${data.median_lift_error.toFixed(1)}%`}
         />

@@ -65,7 +65,7 @@ export default function DataQuality() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
       </div>
     );
@@ -73,26 +73,30 @@ export default function DataQuality() {
 
   if (error) {
     return (
-      <EmptyState
-        icon={<AlertTriangle className="w-10 h-10 text-amber-400" />}
-        title="Data quality report unavailable"
-        description={error}
-      />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <EmptyState
+          icon={<AlertTriangle className="w-10 h-10 text-amber-400" />}
+          title="Data quality report unavailable"
+          description={error}
+        />
+      </div>
     );
   }
 
   if (!data) {
     return (
-      <EmptyState
-        icon={<Database className="w-10 h-10 text-gray-400" />}
-        title="No data quality report"
-        description="Run the pipeline to generate a data quality report."
-      />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <EmptyState
+          icon={<Database className="w-10 h-10 text-gray-400" />}
+          title="No data quality report"
+          description="Run the pipeline to generate a data quality report."
+        />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-[60vh] space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Data Quality</h1>
 
       {/* Summary banner */}
@@ -127,17 +131,17 @@ export default function DataQuality() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MetricCard
-          icon={<CheckCircle className="w-5 h-5 text-green-600" />}
+          icon={CheckCircle}
           label="Passed"
           value={data.n_passed ?? 0}
         />
         <MetricCard
-          icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
+          icon={AlertTriangle}
           label="Warnings"
           value={data.n_warnings ?? 0}
         />
         <MetricCard
-          icon={<XCircle className="w-5 h-5 text-red-600" />}
+          icon={XCircle}
           label="Failed"
           value={data.n_failed ?? 0}
         />

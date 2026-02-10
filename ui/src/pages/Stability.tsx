@@ -38,7 +38,7 @@ export default function Stability() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
       </div>
     );
@@ -46,11 +46,13 @@ export default function Stability() {
 
   if (error) {
     return (
-      <EmptyState
-        icon={<AlertTriangle className="w-10 h-10 text-amber-400" />}
-        title="Stability data unavailable"
-        description={error}
-      />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <EmptyState
+          icon={<AlertTriangle className="w-10 h-10 text-amber-400" />}
+          title="Stability data unavailable"
+          description={error}
+        />
+      </div>
     );
   }
 
@@ -62,11 +64,13 @@ export default function Stability() {
 
   if (!data || !hasStabilityData) {
     return (
-      <EmptyState
-        icon={<Shield className="w-10 h-10 text-gray-400" />}
-        title="No stability data yet"
-        description="Run at least two pipeline runs to see recommendation stability."
-      />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <EmptyState
+          icon={<Shield className="w-10 h-10 text-gray-400" />}
+          title="No stability data yet"
+          description="Run at least two pipeline runs to see recommendation stability."
+        />
+      </div>
     );
   }
 
@@ -92,7 +96,7 @@ export default function Stability() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-[60vh] space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">
         Recommendation Stability
       </h1>
@@ -102,23 +106,17 @@ export default function Stability() {
         {recStability && (
           <>
             <MetricCard
-              icon={
-                recStability.is_stable ? (
-                  <Shield className="w-5 h-5 text-green-600" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                )
-              }
+              icon={recStability.is_stable ? Shield : AlertTriangle}
               label="Recommendation Status"
               value={recStability.is_stable ? "Stable" : "Unstable"}
             />
             <MetricCard
-              icon={<TrendingUp className="w-5 h-5" />}
+              icon={TrendingUp}
               label="Max Channel Change"
               value={`${recStability.max_change_pct.toFixed(1)}%`}
             />
             <MetricCard
-              icon={<Activity className="w-5 h-5" />}
+              icon={Activity}
               label="Alert Threshold"
               value={`${recStability.alert_threshold_pct}%`}
             />
@@ -126,7 +124,7 @@ export default function Stability() {
         )}
         {drift && (
           <MetricCard
-            icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+            icon={AlertTriangle}
             label="Parameter Drift Alerts"
             value={drift.n_drift_alerts}
           />
