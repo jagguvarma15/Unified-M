@@ -85,6 +85,30 @@ class CSVConnector(BaseConnector):
 
 
 # ---------------------------------------------------------------------------
+# Excel
+# ---------------------------------------------------------------------------
+
+class ExcelConnector(BaseConnector):
+    """Read / write Excel files (.xlsx, .xls)."""
+
+    def load(self, source: str | Path, **kwargs: Any) -> pd.DataFrame:
+        path = self._ensure_path(source)
+        logger.info(f"Loading Excel from {path}")
+        
+        # Default to first sheet if sheet_name not specified
+        if 'sheet_name' not in kwargs:
+            kwargs['sheet_name'] = 0
+        
+        return pd.read_excel(path, **kwargs)
+
+    def save(self, df: pd.DataFrame, dest: str | Path, **kwargs: Any) -> Path:
+        path = self._ensure_parent(dest)
+        df.to_excel(path, index=False, **kwargs)
+        logger.info(f"Saved {len(df)} rows to {path}")
+        return path
+
+
+# ---------------------------------------------------------------------------
 # Parquet
 # ---------------------------------------------------------------------------
 
@@ -174,6 +198,8 @@ _EXTENSION_MAP: dict[str, type[BaseConnector]] = {
     ".tsv": CSVConnector,
     ".parquet": ParquetConnector,
     ".pq": ParquetConnector,
+    ".xlsx": ExcelConnector,
+    ".xls": ExcelConnector,
     ".duckdb": DuckDBConnector,
     ".db": DuckDBConnector,
 }
@@ -193,6 +219,8 @@ def auto_connect(source: str | Path) -> BaseConnector:
             return ParquetConnector()
         if any(path.glob("*.csv")):
             return CSVConnector()
+        if any(path.glob("*.xlsx")) or any(path.glob("*.xls")):
+            return ExcelConnector()
         raise ConnectorError(f"Cannot auto-detect format for directory: {path}", source=str(path))
 
     ext = path.suffix.lower()

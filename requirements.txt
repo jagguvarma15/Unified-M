@@ -27,8 +27,20 @@ python-multipart
 # Optional: Parquet support (recommended)
 pyarrow>=15.0.0
 
+# Optional: Excel support
+openpyxl>=3.1.0
+
 # Optional: DuckDB connector
 # duckdb>=1.0.0
+
+# Optional: Database connectors
+# psycopg2-binary>=2.9.0  # PostgreSQL
+# pymysql>=1.1.0  # MySQL
+# pyodbc>=5.0.0  # SQL Server
+
+# Optional: Cloud storage connectors
+# boto3>=1.34.0  # AWS S3
+# azure-storage-blob>=12.19.0  # Azure Blob Storage
 
 # Optional: Bayesian MMM backend
 # pymc>=5.10.0

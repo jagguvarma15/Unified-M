@@ -505,6 +505,178 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         reader.invalidate()
         return {"status": "cache_invalidated"}
 
+    # ------------------------------------------------------------------
+    # Datapoint Connectors
+    # ------------------------------------------------------------------
+
+    @application.post("/api/v1/datapoint/test")
+    async def test_datapoint_connection(
+        connection_type: str = Form(...),
+        connection_config: str = Form(...),
+    ):
+        """
+        Test connection to a datapoint (database or cloud storage).
+        
+        connection_type: 'database' or 'cloud'
+        connection_config: JSON string with connection parameters
+        """
+        import json
+        
+        try:
+            config = json.loads(connection_config)
+            
+            if connection_type == "database":
+                from connectors.database import create_database_connector
+                db_type = config.pop("db_type")
+                connector = create_database_connector(db_type, **config)
+                success = connector.test_connection()
+                connector.close()
+                
+                return {
+                    "status": "success" if success else "failed",
+                    "connected": success,
+                    "message": "Connection successful" if success else "Connection failed",
+                }
+            
+            elif connection_type == "cloud":
+                from connectors.cloud import create_cloud_connector
+                cloud_type = config.pop("cloud_type")
+                connector = create_cloud_connector(cloud_type, **config)
+                success = connector.test_connection()
+                
+                return {
+                    "status": "success" if success else "failed",
+                    "connected": success,
+                    "message": "Connection successful" if success else "Connection failed",
+                }
+            
+            else:
+                raise HTTPException(400, f"Invalid connection_type: {connection_type}")
+        
+        except Exception as e:
+            logger.exception("Datapoint connection test failed")
+            return {
+                "status": "error",
+                "connected": False,
+                "message": str(e),
+            }
+
+    @application.post("/api/v1/datapoint/fetch")
+    async def fetch_datapoint_data(
+        connection_type: str = Form(...),
+        connection_config: str = Form(...),
+        query_or_path: str = Form(...),
+        data_type: str = Form(...),
+    ):
+        """
+        Fetch data from a datapoint connection.
+        
+        For databases: query_or_path is SQL query
+        For cloud: query_or_path is file path
+        data_type: 'media_spend', 'outcomes', 'controls', etc.
+        """
+        import json
+        import tempfile
+        from pathlib import Path
+        
+        try:
+            config = json.loads(connection_config)
+            config_obj = get_config()
+            processed = config_obj.storage.processed_path
+            
+            if connection_type == "database":
+                from connectors.database import create_database_connector
+                db_type = config.pop("db_type")
+                connector = create_database_connector(db_type, **config)
+                df = connector.load(query_or_path)
+                connector.close()
+            
+            elif connection_type == "cloud":
+                from connectors.cloud import create_cloud_connector
+                cloud_type = config.pop("cloud_type")
+                connector = create_cloud_connector(cloud_type, **config)
+                df = connector.load(query_or_path)
+            
+            else:
+                raise HTTPException(400, f"Invalid connection_type: {connection_type}")
+            
+            # Save to processed directory
+            output_path = processed / f"{data_type}.parquet"
+            df.to_parquet(output_path, index=False)
+            
+            # Invalidate cache to refresh data status
+            reader.invalidate()
+            
+            return {
+                "status": "success",
+                "rows": len(df),
+                "columns": list(df.columns),
+                "path": str(output_path),
+                "data_type": data_type,
+            }
+        
+        except Exception as e:
+            logger.exception("Datapoint data fetch failed")
+            raise HTTPException(500, f"Failed to fetch data: {str(e)}")
+
+    @application.post("/api/v1/datapoint/upload")
+    async def upload_datapoint_file(
+        file: UploadFile = File(...),
+        data_type: str = Form(...),
+    ):
+        """
+        Upload a file (CSV, Parquet, Excel) as a datapoint.
+        
+        data_type: 'media_spend', 'outcomes', 'controls', etc.
+        """
+        from connectors.local import auto_connect
+        import tempfile
+        import io
+        
+        # Validate file extension
+        ext = Path(file.filename).suffix.lower()
+        if ext not in [".csv", ".parquet", ".xlsx", ".xls"]:
+            raise HTTPException(400, f"Unsupported file type: {ext}. Allowed: .csv, .parquet, .xlsx, .xls")
+        
+        config = get_config()
+        processed = config.storage.processed_path
+        processed.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            # Read uploaded file
+            contents = await file.read()
+            
+            # Save to temp file for connector
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                tmp.write(contents)
+                tmp_path = tmp.name
+            
+            # Load using connector
+            connector = auto_connect(tmp_path)
+            df = connector.load(tmp_path)
+            
+            # Save to processed directory as parquet
+            output_path = processed / f"{data_type}.parquet"
+            df.to_parquet(output_path, index=False)
+            
+            # Cleanup temp file
+            Path(tmp_path).unlink()
+            
+            # Invalidate cache
+            reader.invalidate()
+            
+            return {
+                "status": "success",
+                "data_type": data_type,
+                "path": str(output_path),
+                "rows": len(df),
+                "columns": list(df.columns),
+            }
+        
+        except Exception as e:
+            logger.exception(f"Failed to upload datapoint file: {data_type}")
+            raise HTTPException(500, f"Upload failed: {str(e)}")
+
     return application
 
 

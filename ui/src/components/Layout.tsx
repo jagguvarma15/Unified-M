@@ -12,6 +12,7 @@ import {
   Calculator,
   Settings,
   ChevronDown,
+  Plug,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -32,8 +33,9 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "Overview",
     items: [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/data", label: "Data", icon: Database },
+      { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/data", label: "Data", icon: Database },
+      { to: "/datapoint", label: "Connect to Datapoint", icon: Plug },
       { to: "/runs", label: "Runs", icon: History },
     ],
   },

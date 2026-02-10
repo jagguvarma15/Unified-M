@@ -15,6 +15,7 @@ const Diagnostics = lazy(() => import("./pages/Diagnostics"));
 const ROASAnalysis = lazy(() => import("./pages/ROASAnalysis"));
 const ScenarioPlanner = lazy(() => import("./pages/ScenarioPlanner"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Datapoint = lazy(() => import("./pages/Datapoint"));
 
 function PageLoader() {
   return (
@@ -37,9 +38,10 @@ export default function App() {
           <Route path="/curves" element={<ResponseCurves />} />
           <Route path="/runs" element={<Runs />} />
             <Route path="/diagnostics" element={<Diagnostics />} />
-            <Route path="/roas" element={<ROASAnalysis />} />
+          <Route path="/roas" element={<ROASAnalysis />} />
             <Route path="/scenarios" element={<ScenarioPlanner />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/datapoint" element={<Datapoint />} />
         </Route>
       </Routes>
       </Suspense>
