@@ -13,6 +13,9 @@ import {
   Settings,
   ChevronDown,
   Plug,
+  Crosshair,
+  Shield,
+  ClipboardCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -53,6 +56,14 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/optimization", label: "Budget Optimizer", icon: Target },
       { to: "/scenarios", label: "Scenario Planner", icon: Calculator },
+    ],
+  },
+  {
+    title: "Monitoring",
+    items: [
+      { to: "/calibration", label: "Calibration", icon: Crosshair },
+      { to: "/stability", label: "Stability", icon: Shield },
+      { to: "/data-quality", label: "Data Quality", icon: ClipboardCheck },
     ],
   },
   {

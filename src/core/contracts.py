@@ -55,6 +55,14 @@ class FusionMethod(str, Enum):
     HIERARCHICAL = "hierarchical"
 
 
+class RunMode(str, Enum):
+    LOCAL_DEV = "local-dev"
+    WEEKLY_PROD = "weekly-prod"
+    BACKFILL = "backfill"
+    WHAT_IF = "what-if"
+    EXPERIMENT_CALIBRATION = "experiment-calibration"
+
+
 # ---------------------------------------------------------------------------
 # Input contracts  (what users feed into the framework)
 # ---------------------------------------------------------------------------
@@ -63,6 +71,7 @@ class MediaSpendInput(BaseModel):
     """One row of media spend data (long format: one row per date x channel)."""
 
     date: datetime
+    geo: str = Field(default="national", min_length=1, max_length=120)
     channel: str = Field(min_length=1, max_length=120)
     spend: float = Field(ge=0)
     impressions: float | None = Field(default=None, ge=0)
@@ -76,8 +85,10 @@ class OutcomeInput(BaseModel):
     """One row of outcome / KPI data."""
 
     date: datetime
+    geo: str = Field(default="national", min_length=1, max_length=120)
     revenue: float | None = Field(default=None, ge=0)
     conversions: float | None = Field(default=None, ge=0)
+    new_customers: float | None = Field(default=None, ge=0)
 
     class Config:
         extra = "allow"
@@ -87,6 +98,7 @@ class ControlInput(BaseModel):
     """One row of control-variable data (non-media factors)."""
 
     date: datetime
+    geo: str = Field(default="national", min_length=1, max_length=120)
 
     class Config:
         extra = "allow"
@@ -105,19 +117,88 @@ class IncrementalityTestInput(BaseModel):
     lift_ci_upper: float
     confidence_level: float | None = Field(default=0.95, ge=0, le=1)
     spend_during_test: float | None = Field(default=None, ge=0)
+    incremental_kpi: float | None = Field(default=None)
+    control_geos: str | None = Field(default=None, description="Comma-separated control geo codes")
+    treatment_geos: str | None = Field(default=None, description="Comma-separated treatment geo codes")
+    p_value: float | None = Field(default=None, ge=0, le=1)
+    statistical_power: float | None = Field(default=None, ge=0, le=1)
 
     class Config:
         extra = "allow"
 
 
 class AttributionInput(BaseModel):
-    """One row of platform / MTA attribution data."""
+    """One row of platform / MTA attribution data (daily channel-level aggregates)."""
 
     date: datetime
     channel: str
     model_type: AttributionModel
     attributed_conversions: float | None = Field(default=None, ge=0)
     attributed_revenue: float | None = Field(default=None, ge=0)
+
+    class Config:
+        extra = "allow"
+
+
+# ---------------------------------------------------------------------------
+# Measurement Mart contracts  (gold-zone canonical schema)
+# ---------------------------------------------------------------------------
+
+class MeasurementMartRow(BaseModel):
+    """
+    One row of the canonical measurement mart (weekly x geo).
+
+    This is the gold-zone table that all modeling engines consume.
+    Media columns are dynamic ({channel}_spend) so they are captured
+    via ``extra = "allow"``.  Fixed columns are validated here.
+    """
+
+    week_start: datetime = Field(description="ISO Monday of the week")
+    geo: str = Field(default="national", description="DMA / region / country code")
+
+    # KPI columns
+    kpi_revenue: float | None = Field(default=None, ge=0)
+    kpi_conversions: float | None = Field(default=None, ge=0)
+    kpi_new_customers: float | None = Field(default=None, ge=0)
+
+    # Control columns (prefixed ctrl_)
+    ctrl_is_holiday: int = Field(default=0, ge=0, le=1)
+    ctrl_promo_active: int = Field(default=0, ge=0, le=1)
+    ctrl_promo_discount_pct: float = Field(default=0.0, ge=0)
+    ctrl_price_index: float = Field(default=1.0, ge=0)
+    ctrl_temperature_f: float | None = Field(default=None)
+    ctrl_consumer_confidence: float | None = Field(default=None)
+    ctrl_competitor_promo: int = Field(default=0, ge=0, le=1)
+    ctrl_inventory_oos_pct: float = Field(default=0.0, ge=0, le=1)
+
+    class Config:
+        extra = "allow"  # allows dynamic {channel}_spend columns
+
+
+class ExperimentRecord(BaseModel):
+    """
+    One row in dim_experiments -- a completed lift test result.
+
+    Extends IncrementalityTestInput with additional analysis fields.
+    """
+
+    test_id: str
+    channel: str
+    start_date: datetime
+    end_date: datetime
+    test_type: TestType
+
+    lift_pct: float = Field(description="Point estimate of lift as proportion (e.g. 0.08 = 8%)")
+    lift_ci_lower: float
+    lift_ci_upper: float
+    confidence_level: float = Field(default=0.95, ge=0, le=1)
+
+    spend_during_test: float | None = Field(default=None, ge=0)
+    incremental_kpi: float | None = Field(default=None)
+    control_geos: str | None = Field(default=None)
+    treatment_geos: str | None = Field(default=None)
+    p_value: float | None = Field(default=None, ge=0, le=1)
+    statistical_power: float | None = Field(default=None, ge=0, le=1)
 
     class Config:
         extra = "allow"
@@ -168,6 +249,7 @@ class ModelMetrics(BaseModel):
     """Standard model-fit metrics."""
 
     mape: float = Field(description="Mean Absolute Percentage Error (%)")
+    wmape: float | None = Field(default=None, description="Weighted MAPE (sum|err|/sum|actual|)")
     rmse: float = Field(description="Root Mean Squared Error")
     mae: float = Field(description="Mean Absolute Error")
     r_squared: float = Field(description="R-squared (coefficient of determination)")
@@ -241,11 +323,13 @@ class RunManifest(BaseModel):
     timestamp: str
     duration_seconds: float = 0.0
     status: str = "pending"  # pending | running | completed | failed
+    run_mode: str = "local-dev"
 
     # What was run
     model_backend: str = ""
     pipeline_steps: list[str] = Field(default_factory=list)
     config_snapshot: dict[str, Any] = Field(default_factory=dict)
+    git_sha: str | None = Field(default=None, description="Git commit hash for traceability")
 
     # Data fingerprint
     data_hash: str = ""

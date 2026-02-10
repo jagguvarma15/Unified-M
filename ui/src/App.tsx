@@ -16,6 +16,9 @@ const ROASAnalysis = lazy(() => import("./pages/ROASAnalysis"));
 const ScenarioPlanner = lazy(() => import("./pages/ScenarioPlanner"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Datapoint = lazy(() => import("./pages/Datapoint"));
+const Calibration = lazy(() => import("./pages/Calibration"));
+const Stability = lazy(() => import("./pages/Stability"));
+const DataQuality = lazy(() => import("./pages/DataQuality"));
 
 function PageLoader() {
   return (
@@ -42,6 +45,9 @@ export default function App() {
             <Route path="/scenarios" element={<ScenarioPlanner />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/datapoint" element={<Datapoint />} />
+            <Route path="/calibration" element={<Calibration />} />
+            <Route path="/stability" element={<Stability />} />
+            <Route path="/data-quality" element={<DataQuality />} />
         </Route>
       </Routes>
       </Suspense>

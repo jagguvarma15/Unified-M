@@ -21,10 +21,13 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 class StorageConfig(BaseModel):
-    """Filesystem paths for data and artifacts."""
+    """Filesystem paths for data and artifacts (lakehouse zones)."""
 
     raw_path: Path = Field(default=Path("data/raw"))
-    processed_path: Path = Field(default=Path("data/processed"))
+    bronze_path: Path = Field(default=Path("data/bronze"))
+    silver_path: Path = Field(default=Path("data/silver"))
+    gold_path: Path = Field(default=Path("data/gold"))
+    processed_path: Path = Field(default=Path("data/gold"))  # alias for gold
     outputs_path: Path = Field(default=Path("data/outputs"))
     models_path: Path = Field(default=Path("models"))
     runs_path: Path = Field(default=Path("runs"))
@@ -103,10 +106,12 @@ class UnifiedMConfig(BaseModel):
         return self.model_dump()
 
     def ensure_directories(self) -> None:
-        """Create all required directories."""
+        """Create all required directories (lakehouse zones + artifacts)."""
         for p in [
             self.storage.raw_path,
-            self.storage.processed_path,
+            self.storage.bronze_path,
+            self.storage.silver_path,
+            self.storage.gold_path,
             self.storage.outputs_path,
             self.storage.models_path,
             self.storage.runs_path,

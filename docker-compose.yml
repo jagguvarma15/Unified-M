@@ -1,0 +1,77 @@
+# Unified-M Local Stack
+# =====================
+# Usage:
+#   docker compose up api ui redis -d        # Start serving stack
+#   docker compose run --rm pipeline         # Run batch pipeline
+#   docker compose --profile orchestrator up # Include Dagster
+
+services:
+  # ---- Batch Pipeline (run on-demand) ----
+  pipeline:
+    build:
+      context: .
+      target: base
+    command: python -m cli run --model builtin
+    volumes:
+      - ./data:/app/data
+      - ./runs:/app/runs
+      - ./config.yaml:/app/config.yaml
+      - ./.env:/app/.env:ro
+    env_file: .env
+    profiles: [batch]
+
+  # ---- FastAPI Server ----
+  api:
+    build:
+      context: .
+      target: base
+    command: python -m cli serve --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./runs:/app/runs
+      - ./data:/app/data
+      - ./config.yaml:/app/config.yaml
+      - ./.env:/app/.env:ro
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  # ---- React UI (production build served via Nginx) ----
+  ui:
+    build:
+      context: .
+      target: ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  # ---- Redis Cache ----
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  # ---- Optional: Dagster Orchestrator ----
+  dagster:
+    build:
+      context: .
+      target: base
+    command: dagster dev -h 0.0.0.0 -p 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./runs:/app/runs
+      - ./config.yaml:/app/config.yaml
+      - ./.env:/app/.env:ro
+    env_file: .env
+    profiles: [orchestrator]
+
+volumes:
+  redis-data:

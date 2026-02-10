@@ -6,7 +6,7 @@ Provides metrics, cross-validation, and diagnostic functions.
 
 import numpy as np
 import pandas as pd
-from typing import Callable
+from typing import Any, Callable
 from loguru import logger
 
 
@@ -259,3 +259,134 @@ def compute_contribution_stability(
         stability[col] = float(cv)
 
     return stability
+
+
+# ---------------------------------------------------------------------------
+# Stability / whipsaw metrics across runs
+# ---------------------------------------------------------------------------
+
+def compute_recommendation_stability(
+    current_allocation: dict[str, float],
+    previous_allocation: dict[str, float],
+    alert_threshold_pct: float = 20.0,
+) -> dict[str, Any]:
+    """
+    Compare optimal allocation between two consecutive runs.
+
+    Detects "whipsaw" -- large swings in recommendations that undermine
+    stakeholder trust.
+
+    Args:
+        current_allocation:   Channel -> spend from current run.
+        previous_allocation:  Channel -> spend from previous run.
+        alert_threshold_pct:  Flag channels with > this % change.
+
+    Returns:
+        Dict with per-channel changes and stability flag.
+    """
+    channels = set(current_allocation.keys()) | set(previous_allocation.keys())
+    changes: dict[str, dict[str, float]] = {}
+    max_change = 0.0
+
+    for ch in channels:
+        curr = current_allocation.get(ch, 0)
+        prev = previous_allocation.get(ch, 0)
+        if prev > 0:
+            pct_change = (curr - prev) / prev * 100
+        elif curr > 0:
+            pct_change = 100.0
+        else:
+            pct_change = 0.0
+
+        changes[ch] = {
+            "current": curr,
+            "previous": prev,
+            "change_pct": round(pct_change, 2),
+        }
+        max_change = max(max_change, abs(pct_change))
+
+    is_stable = max_change <= alert_threshold_pct
+
+    return {
+        "is_stable": is_stable,
+        "max_change_pct": round(max_change, 2),
+        "alert_threshold_pct": alert_threshold_pct,
+        "channel_changes": changes,
+    }
+
+
+def compute_parameter_drift(
+    current_params: dict[str, Any],
+    previous_params: dict[str, Any],
+    drift_threshold_sigma: float = 2.0,
+) -> dict[str, Any]:
+    """
+    Compare model parameters between runs to detect drift.
+
+    Args:
+        current_params:         Current run's parameters.
+        previous_params:        Previous run's parameters.
+        drift_threshold_sigma:  Alert if change > N times posterior SD.
+
+    Returns:
+        Dict with per-parameter drift metrics.
+    """
+    curr_coef = current_params.get("coefficients", {})
+    prev_coef = previous_params.get("coefficients", {})
+
+    drift_alerts: list[dict[str, Any]] = []
+    channels = set(curr_coef.keys()) | set(prev_coef.keys())
+
+    for ch in channels:
+        c = curr_coef.get(ch, 0.0)
+        p = prev_coef.get(ch, 0.0)
+
+        # Approximate posterior SD as 30% of coefficient
+        approx_sd = abs(p) * 0.3 + 0.01
+
+        delta = abs(c - p)
+        delta_sigma = delta / approx_sd
+
+        if delta_sigma > drift_threshold_sigma:
+            drift_alerts.append({
+                "channel": ch,
+                "current": round(c, 4),
+                "previous": round(p, 4),
+                "delta_sigma": round(delta_sigma, 2),
+            })
+
+    return {
+        "n_drift_alerts": len(drift_alerts),
+        "drift_threshold_sigma": drift_threshold_sigma,
+        "alerts": drift_alerts,
+    }
+
+
+def compute_stability_report(
+    current_allocation: dict[str, float] | None = None,
+    previous_allocation: dict[str, float] | None = None,
+    current_params: dict[str, Any] | None = None,
+    previous_params: dict[str, Any] | None = None,
+    contributions: pd.DataFrame | None = None,
+) -> dict[str, Any]:
+    """
+    Comprehensive stability report combining all stability checks.
+
+    Returns a dict suitable for saving as stability_metrics.json.
+    """
+    report: dict[str, Any] = {}
+
+    if current_allocation and previous_allocation:
+        report["recommendation_stability"] = compute_recommendation_stability(
+            current_allocation, previous_allocation
+        )
+
+    if current_params and previous_params:
+        report["parameter_drift"] = compute_parameter_drift(
+            current_params, previous_params
+        )
+
+    if contributions is not None:
+        report["contribution_stability"] = compute_contribution_stability(contributions)
+
+    return report

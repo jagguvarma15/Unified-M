@@ -169,6 +169,40 @@ class Pipeline:
         results: dict[str, Any] = {"run_id": self._run_id}
 
         try:
+            # -- Quality gates (pre-flight) --------------------------------
+            logger.info("Pipeline step: quality gates")
+            try:
+                from quality.gates import run_quality_gates
+                from quality.pii_scanner import scan_for_pii
+
+                # PII scan
+                for df_name, df in [
+                    ("media_spend", self._media_spend),
+                    ("outcomes", self._outcomes),
+                    ("controls", self._controls),
+                ]:
+                    if df is not None:
+                        pii = scan_for_pii(df, source_name=df_name)
+                        if pii.has_pii:
+                            logger.warning(pii.message)
+
+                # Data quality gates
+                dq_report = run_quality_gates(
+                    media_spend=self._media_spend,
+                    outcomes=self._outcomes,
+                    target_col=target_col,
+                )
+                self._store.save_json(self._run_id, "data_quality_report", dq_report.to_dict())
+                results["data_quality"] = dq_report.to_dict()
+
+                if not dq_report.overall_pass:
+                    logger.warning(
+                        f"Quality gates: {dq_report.n_failed} failure(s), "
+                        f"{dq_report.n_warnings} warning(s). Continuing..."
+                    )
+            except Exception as dq_exc:
+                logger.warning(f"Quality gates failed (non-fatal): {dq_exc}")
+
             # -- Transform ------------------------------------------------
             logger.info("Pipeline step: transform")
             self._transform(target_col)
@@ -225,6 +259,47 @@ class Pipeline:
             self._store.save_json(self._run_id, "optimization", opt_result)
             results["optimization"] = opt_result
 
+            # -- Calibration eval -----------------------------------------
+            if self._incrementality_tests is not None:
+                try:
+                    logger.info("Pipeline step: calibration eval")
+                    from models.calibration_eval import evaluate_calibration
+                    cal_report = evaluate_calibration(self._incrementality_tests, params)
+                    self._store.save_json(self._run_id, "calibration_eval", cal_report.to_dict())
+                    results["calibration_eval"] = cal_report.to_dict()
+                except Exception as cal_exc:
+                    logger.warning(f"Calibration eval failed (non-fatal): {cal_exc}")
+
+            # -- Stability metrics ----------------------------------------
+            try:
+                logger.info("Pipeline step: stability metrics")
+                from models.evaluation import compute_stability_report
+
+                # Compare with previous run
+                all_runs = self._store.list_runs(limit=2)
+                prev_alloc = None
+                prev_params = None
+                if len(all_runs) >= 2:
+                    prev_id = all_runs[1].run_id
+                    prev_opt = self._store.load_json(prev_id, "optimization")
+                    prev_params = self._store.load_json(prev_id, "parameters")
+                    if prev_opt:
+                        prev_alloc = prev_opt.get("optimal_allocation")
+
+                curr_alloc = opt_result.get("optimal_allocation") if opt_result else None
+
+                stability = compute_stability_report(
+                    current_allocation=curr_alloc,
+                    previous_allocation=prev_alloc,
+                    current_params=params,
+                    previous_params=prev_params,
+                    contributions=contrib_df,
+                )
+                self._store.save_json(self._run_id, "stability_metrics", stability)
+                results["stability_metrics"] = stability
+            except Exception as stab_exc:
+                logger.warning(f"Stability metrics failed (non-fatal): {stab_exc}")
+
             # -- Finalise -------------------------------------------------
             duration = time.time() - t0
             data_hash = ArtifactStore.compute_data_hash(self._mmm_input)
@@ -235,7 +310,7 @@ class Pipeline:
                 duration_seconds=round(duration, 2),
                 status="completed",
                 model_backend=model,
-                pipeline_steps=["connect", "transform", "train", "reconcile", "optimise"],
+                pipeline_steps=["connect", "quality_gates", "transform", "train", "reconcile", "optimise", "calibration_eval", "stability"],
                 config_snapshot=self._config,
                 data_hash=data_hash,
                 n_rows=len(self._mmm_input),

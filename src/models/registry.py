@@ -96,4 +96,18 @@ def _auto_discover() -> None:
     except Exception as exc:
         logger.warning(f"Could not load PyMC adapter: {exc}")
 
-    # Future: Meridian, Robyn, etc.
+    # Google Meridian adapter (optional)
+    try:
+        import models.meridian_adapter  # noqa: F401
+    except ImportError:
+        logger.debug("Meridian adapter not available (google-meridian not installed)")
+    except Exception as exc:
+        logger.warning(f"Could not load Meridian adapter: {exc}")
+
+    # NumPyro adapter (optional)
+    try:
+        import models.numpyro_adapter  # noqa: F401
+    except ImportError:
+        logger.debug("NumPyro adapter not available (numpyro not installed)")
+    except Exception as exc:
+        logger.warning(f"Could not load NumPyro adapter: {exc}")

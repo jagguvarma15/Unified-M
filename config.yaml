@@ -5,10 +5,13 @@
 project_name: "Unified-M"
 environment: "development"
 
-# Storage paths (all relative to project root)
+# Storage paths -- lakehouse zones (all relative to project root)
 storage:
   raw_path: "data/raw"
-  processed_path: "data/processed"
+  bronze_path: "data/bronze"
+  silver_path: "data/silver"
+  gold_path: "data/gold"
+  processed_path: "data/gold"      # alias: gold zone is the measurement mart
   outputs_path: "data/outputs"
   models_path: "models"
   runs_path: "runs"

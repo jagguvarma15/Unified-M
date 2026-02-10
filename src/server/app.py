@@ -95,6 +95,10 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     store = ArtifactStore(_runs_dir)
     reader = ArtifactReader(store)
 
+    # Import cache layer (Redis with in-memory fallback)
+    from server.cache import get_cache, cache_key as make_cache_key
+    cache = get_cache()
+
     application = FastAPI(
         title="Unified-M API",
         description=(
@@ -114,6 +118,10 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Optional bearer-token auth (reads API_AUTH_TOKEN from env)
+    from server.auth import BearerAuthMiddleware
+    application.add_middleware(BearerAuthMiddleware)
+
     # ------------------------------------------------------------------
     # Health
     # ------------------------------------------------------------------
@@ -126,7 +134,18 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             "timestamp": datetime.now().isoformat(),
             "latest_run": run_id,
             "version": "0.2.0",
+            "cache": cache.stats(),
         }
+
+    @application.get("/api/cache/stats")
+    def cache_stats():
+        return cache.stats()
+
+    @application.post("/api/cache/clear")
+    def cache_clear():
+        cache.clear()
+        reader.invalidate()
+        return {"message": "Cache cleared"}
 
     @application.get("/")
     def root():
@@ -496,6 +515,115 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(500, f"Pipeline failed: {str(e)}")
 
     # ------------------------------------------------------------------
+    # Calibration, Stability, Data Quality
+    # ------------------------------------------------------------------
+
+    @application.get("/api/v1/calibration")
+    def calibration():
+        """Calibration: MMM predicted vs. experiment-measured lift."""
+        # Check cache
+        ck = make_cache_key("calibration", str(store.get_latest_run_id()))
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
+
+        data = reader.get("calibration_eval")
+        if data is None:
+            # Generate on-the-fly from parameters + tests
+            params = reader.get("parameters")
+            run_id = store.get_latest_run_id()
+            if params and run_id:
+                tests_path = _runs_dir / run_id / "incrementality_tests.parquet"
+                alt_tests = config.storage.processed_path / "incrementality_tests.parquet"
+                if tests_path.exists():
+                    tests_df = pd.read_parquet(tests_path)
+                elif alt_tests.exists():
+                    tests_df = pd.read_parquet(alt_tests)
+                else:
+                    raise HTTPException(404, "No calibration data (no experiments)")
+
+                from models.calibration_eval import evaluate_calibration
+                report = evaluate_calibration(tests_df, params)
+                data = report.to_dict()
+            else:
+                raise HTTPException(404, "No calibration data available")
+
+        cache.set(ck, data, ttl=600)
+        return data
+
+    @application.get("/api/v1/stability")
+    def stability():
+        """Recommendation stability metrics across runs."""
+        ck = make_cache_key("stability", str(store.get_latest_run_id()))
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
+
+        data = reader.get("stability_metrics")
+        if data is None:
+            # Compute on-the-fly from last two runs
+            all_runs = store.list_runs(limit=2)
+            if len(all_runs) < 2:
+                raise HTTPException(404, "Need at least 2 runs for stability analysis")
+
+            curr_id = all_runs[0].run_id
+            prev_id = all_runs[1].run_id
+
+            curr_opt = store.load_json(curr_id, "optimization")
+            prev_opt = store.load_json(prev_id, "optimization")
+            curr_params = store.load_json(curr_id, "parameters")
+            prev_params = store.load_json(prev_id, "parameters")
+
+            from models.evaluation import compute_stability_report
+
+            curr_alloc = curr_opt.get("optimal_allocation", {}) if curr_opt else None
+            prev_alloc = prev_opt.get("optimal_allocation", {}) if prev_opt else None
+
+            contributions_data = reader.get_dataframe_as_dict("contributions")
+            contrib_df = None
+            if contributions_data:
+                contrib_df = pd.DataFrame(contributions_data["data"])
+
+            data = compute_stability_report(
+                current_allocation=curr_alloc,
+                previous_allocation=prev_alloc,
+                current_params=curr_params,
+                previous_params=prev_params,
+                contributions=contrib_df,
+            )
+
+        cache.set(ck, data, ttl=600)
+        return data
+
+    @application.get("/api/v1/data-quality")
+    def data_quality():
+        """Data quality gate results from the latest run."""
+        ck = make_cache_key("data_quality", str(store.get_latest_run_id()))
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
+
+        data = reader.get("data_quality_report")
+        if data is None:
+            # Run quality gates on current data
+            processed = config.storage.processed_path
+            ms_path = processed / "media_spend.parquet"
+            oc_path = processed / "outcomes.parquet"
+
+            ms_df = pd.read_parquet(ms_path) if ms_path.exists() else None
+            oc_df = pd.read_parquet(oc_path) if oc_path.exists() else None
+
+            if ms_df is None and oc_df is None:
+                raise HTTPException(404, "No data files to check quality")
+
+            from quality.gates import run_quality_gates
+            report = run_quality_gates(media_spend=ms_df, outcomes=oc_df)
+            data = report.to_dict()
+
+        cache.set(ck, data, ttl=300)
+        return data
+
+    # ------------------------------------------------------------------
     # Cache control
     # ------------------------------------------------------------------
 
@@ -503,6 +631,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     def refresh_cache():
         """Force the server to re-read artifacts from disk."""
         reader.invalidate()
+        cache.clear()
         return {"status": "cache_invalidated"}
 
     # ------------------------------------------------------------------
