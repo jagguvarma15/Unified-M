@@ -19,13 +19,30 @@ import { COLORS } from "../lib/colors";
 export default function Stability() {
   const [data, setData] = useState<StabilityData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     api
       .stability()
-      .then(setData)
-      .catch((e) => setError(e.message));
+      .then((d) => {
+        setData(d);
+        setError(null);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : String(e));
+        setData(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -37,7 +54,13 @@ export default function Stability() {
     );
   }
 
-  if (!data) {
+  const hasStabilityData =
+    data &&
+    (data.recommendation_stability ||
+      data.parameter_drift ||
+      data.contribution_stability);
+
+  if (!data || !hasStabilityData) {
     return (
       <EmptyState
         icon={<Shield className="w-10 h-10 text-gray-400" />}

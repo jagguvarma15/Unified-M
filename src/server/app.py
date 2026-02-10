@@ -520,105 +520,103 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
     @application.get("/api/v1/calibration")
     def calibration():
-        """Calibration: MMM predicted vs. experiment-measured lift."""
-        # Check cache
-        ck = make_cache_key("calibration", str(store.get_latest_run_id()))
+        """Calibration: MMM predicted vs. experiment-measured lift. Returns empty payload when no data."""
+        run_id = store.get_latest_run_id()
+        ck = make_cache_key("calibration", str(run_id))
         cached = cache.get(ck)
         if cached is not None:
             return cached
 
         data = reader.get("calibration_eval")
         if data is None:
-            # Generate on-the-fly from parameters + tests
             params = reader.get("parameters")
-            run_id = store.get_latest_run_id()
             if params and run_id:
                 tests_path = _runs_dir / run_id / "incrementality_tests.parquet"
                 alt_tests = config.storage.processed_path / "incrementality_tests.parquet"
+                tests_df = None
                 if tests_path.exists():
                     tests_df = pd.read_parquet(tests_path)
                 elif alt_tests.exists():
                     tests_df = pd.read_parquet(alt_tests)
+                if tests_df is not None and len(tests_df) > 0:
+                    from models.calibration_eval import evaluate_calibration
+                    report = evaluate_calibration(tests_df, params)
+                    data = report.to_dict()
                 else:
-                    raise HTTPException(404, "No calibration data (no experiments)")
-
-                from models.calibration_eval import evaluate_calibration
-                report = evaluate_calibration(tests_df, params)
-                data = report.to_dict()
+                    data = {"n_tests": 0, "points": [], "coverage": 0, "median_lift_error": 0, "mean_lift_error": 0, "calibration_quality": "no_tests"}
             else:
-                raise HTTPException(404, "No calibration data available")
+                data = {"n_tests": 0, "points": [], "coverage": 0, "median_lift_error": 0, "mean_lift_error": 0, "calibration_quality": "no_tests"}
 
         cache.set(ck, data, ttl=600)
         return data
 
     @application.get("/api/v1/stability")
     def stability():
-        """Recommendation stability metrics across runs."""
-        ck = make_cache_key("stability", str(store.get_latest_run_id()))
+        """Recommendation stability metrics across runs. Returns empty payload when fewer than 2 runs."""
+        run_id = store.get_latest_run_id()
+        ck = make_cache_key("stability", str(run_id))
         cached = cache.get(ck)
         if cached is not None:
             return cached
 
         data = reader.get("stability_metrics")
         if data is None:
-            # Compute on-the-fly from last two runs
             all_runs = store.list_runs(limit=2)
             if len(all_runs) < 2:
-                raise HTTPException(404, "Need at least 2 runs for stability analysis")
-
-            curr_id = all_runs[0].run_id
-            prev_id = all_runs[1].run_id
-
-            curr_opt = store.load_json(curr_id, "optimization")
-            prev_opt = store.load_json(prev_id, "optimization")
-            curr_params = store.load_json(curr_id, "parameters")
-            prev_params = store.load_json(prev_id, "parameters")
-
-            from models.evaluation import compute_stability_report
-
-            curr_alloc = curr_opt.get("optimal_allocation", {}) if curr_opt else None
-            prev_alloc = prev_opt.get("optimal_allocation", {}) if prev_opt else None
-
-            contributions_data = reader.get_dataframe_as_dict("contributions")
-            contrib_df = None
-            if contributions_data:
-                contrib_df = pd.DataFrame(contributions_data["data"])
-
-            data = compute_stability_report(
-                current_allocation=curr_alloc,
-                previous_allocation=prev_alloc,
-                current_params=curr_params,
-                previous_params=prev_params,
-                contributions=contrib_df,
-            )
+                data = {}
+            else:
+                curr_id = all_runs[0].run_id
+                prev_id = all_runs[1].run_id
+                curr_opt = store.load_json(curr_id, "optimization")
+                prev_opt = store.load_json(prev_id, "optimization")
+                curr_params = store.load_json(curr_id, "parameters")
+                prev_params = store.load_json(prev_id, "parameters")
+                from models.evaluation import compute_stability_report
+                curr_alloc = curr_opt.get("optimal_allocation", {}) if curr_opt else None
+                prev_alloc = prev_opt.get("optimal_allocation", {}) if prev_opt else None
+                contributions_data = reader.get_dataframe_as_dict("contributions")
+                contrib_df = pd.DataFrame(contributions_data["data"]) if contributions_data else None
+                data = compute_stability_report(
+                    current_allocation=curr_alloc,
+                    previous_allocation=prev_alloc,
+                    current_params=curr_params,
+                    previous_params=prev_params,
+                    contributions=contrib_df,
+                )
 
         cache.set(ck, data, ttl=600)
         return data
 
     @application.get("/api/v1/data-quality")
     def data_quality():
-        """Data quality gate results from the latest run."""
-        ck = make_cache_key("data_quality", str(store.get_latest_run_id()))
+        """Data quality gate results from the latest run. Returns empty payload when no data."""
+        run_id = store.get_latest_run_id()
+        ck = make_cache_key("data_quality", str(run_id))
         cached = cache.get(ck)
         if cached is not None:
             return cached
 
         data = reader.get("data_quality_report")
         if data is None:
-            # Run quality gates on current data
             processed = config.storage.processed_path
             ms_path = processed / "media_spend.parquet"
             oc_path = processed / "outcomes.parquet"
-
             ms_df = pd.read_parquet(ms_path) if ms_path.exists() else None
             oc_df = pd.read_parquet(oc_path) if oc_path.exists() else None
 
             if ms_df is None and oc_df is None:
-                raise HTTPException(404, "No data files to check quality")
-
-            from quality.gates import run_quality_gates
-            report = run_quality_gates(media_spend=ms_df, outcomes=oc_df)
-            data = report.to_dict()
+                data = {
+                    "timestamp": datetime.now().isoformat(),
+                    "overall_pass": True,
+                    "n_passed": 0,
+                    "n_failed": 0,
+                    "n_warnings": 0,
+                    "gates": [],
+                }
+            else:
+                from quality.gates import run_quality_gates
+                report = run_quality_gates(media_spend=ms_df, outcomes=oc_df)
+                data = report.to_dict()
 
         cache.set(ck, data, ttl=300)
         return data

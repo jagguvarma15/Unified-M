@@ -1,21 +1,29 @@
 import { Database } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface Props {
   title?: string;
   message?: string;
+  /** Alias for message (used by Calibration, Stability, DataQuality pages) */
+  description?: string;
+  /** Optional custom icon (otherwise Database) */
+  icon?: ReactNode;
 }
 
 export default function EmptyState({
   title = "No data available",
-  message = "Run the pipeline first to generate results.",
+  message,
+  description,
+  icon,
 }: Props) {
+  const displayMessage = message ?? description ?? "Run the pipeline first to generate results.";
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="p-4 bg-slate-100 rounded-full mb-4">
-        <Database size={32} className="text-slate-400" />
+        {icon ?? <Database size={32} className="text-slate-400" />}
       </div>
       <h3 className="text-lg font-semibold text-slate-700">{title}</h3>
-      <p className="text-sm text-slate-500 mt-1 max-w-md">{message}</p>
+      <p className="text-sm text-slate-500 mt-1 max-w-md">{displayMessage}</p>
       <div className="mt-6 bg-slate-900 rounded-lg p-5 text-left shadow-lg">
         <p className="text-xs font-mono text-slate-300 leading-relaxed">
           <span className="text-slate-500"># generate demo data + train</span>

@@ -45,14 +45,31 @@ function GateBadge({ severity, passed }: { severity: string; passed: boolean }) 
 export default function DataQuality() {
   const [data, setData] = useState<DataQualityData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     api
       .dataQuality()
-      .then(setData)
-      .catch((e) => setError(e.message));
+      .then((d) => {
+        setData(d);
+        setError(null);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : String(e));
+        setData(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -98,9 +115,11 @@ export default function DataQuality() {
               : `${data.n_failed} gate(s) failed`}
           </p>
           <p className="text-sm text-gray-600">
-            Checked at {new Date(data.timestamp).toLocaleString()} &middot;{" "}
-            {data.n_passed} passed, {data.n_warnings} warnings,{" "}
-            {data.n_failed} failed
+            {data.timestamp
+              ? `Checked at ${new Date(data.timestamp).toLocaleString()} · `
+              : ""}
+            {data.n_passed ?? 0} passed, {data.n_warnings ?? 0} warnings,{" "}
+            {data.n_failed ?? 0} failed
           </p>
         </div>
       </div>
@@ -110,23 +129,23 @@ export default function DataQuality() {
         <MetricCard
           icon={<CheckCircle className="w-5 h-5 text-green-600" />}
           label="Passed"
-          value={data.n_passed}
+          value={data.n_passed ?? 0}
         />
         <MetricCard
           icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
           label="Warnings"
-          value={data.n_warnings}
+          value={data.n_warnings ?? 0}
         />
         <MetricCard
           icon={<XCircle className="w-5 h-5 text-red-600" />}
           label="Failed"
-          value={data.n_failed}
+          value={data.n_failed ?? 0}
         />
       </div>
 
       {/* Gate details */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-200">
-        {data.gates.map((gate) => (
+        {(data.gates ?? []).map((gate) => (
           <div key={gate.gate_name}>
             <button
               className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"

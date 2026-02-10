@@ -22,13 +22,30 @@ import { COLORS } from "../lib/colors";
 export default function Calibration() {
   const [data, setData] = useState<CalibrationData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     api
       .calibration()
-      .then(setData)
-      .catch((e) => setError(e.message));
+      .then((d) => {
+        setData(d);
+        setError(null);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : String(e));
+        setData(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -40,7 +57,9 @@ export default function Calibration() {
     );
   }
 
-  if (!data || data.n_tests === 0) {
+  const points = data?.points ?? [];
+  const nTests = data?.n_tests ?? 0;
+  if (!data || nTests === 0) {
     return (
       <EmptyState
         icon={<Target className="w-10 h-10 text-gray-400" />}
@@ -58,14 +77,14 @@ export default function Calibration() {
         : "text-red-600";
 
   // Scatter data for predicted vs measured
-  const scatterData = data.points.map((p) => ({
+  const scatterData = points.map((p) => ({
     ...p,
     x: p.measured_lift,
     y: p.predicted_lift,
   }));
 
   // Error bar chart by channel
-  const barData = data.points.map((p) => ({
+  const barData = points.map((p) => ({
     channel: p.channel,
     error_pct: Math.round(p.error_pct),
     within_ci: p.within_ci,
@@ -229,7 +248,7 @@ export default function Calibration() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {data.points.map((p, i) => (
+            {points.map((p, i) => (
               <tr key={i} className="hover:bg-gray-50">
                 <td className="px-4 py-3 text-sm font-mono">{p.test_id}</td>
                 <td className="px-4 py-3 text-sm">{p.channel}</td>
