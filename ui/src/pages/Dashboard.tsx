@@ -76,11 +76,11 @@ export default function Dashboard() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Unified Marketing Measurement overview
-          </p>
+    <div>
+      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+      <p className="text-sm text-slate-500 mt-1">
+        Unified Marketing Measurement overview
+      </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Activity size={14} className="text-emerald-400" />

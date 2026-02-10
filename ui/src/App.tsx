@@ -28,20 +28,20 @@ export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="/data" element={<Data />} />
-            <Route path="/contributions" element={<Contributions />} />
-            <Route path="/optimization" element={<Optimization />} />
-            <Route path="/curves" element={<ResponseCurves />} />
-            <Route path="/runs" element={<Runs />} />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="/data" element={<Data />} />
+          <Route path="/contributions" element={<Contributions />} />
+          <Route path="/optimization" element={<Optimization />} />
+          <Route path="/curves" element={<ResponseCurves />} />
+          <Route path="/runs" element={<Runs />} />
             <Route path="/diagnostics" element={<Diagnostics />} />
             <Route path="/roas" element={<ROASAnalysis />} />
             <Route path="/scenarios" element={<ScenarioPlanner />} />
             <Route path="/settings" element={<Settings />} />
-          </Route>
-        </Routes>
+        </Route>
+      </Routes>
       </Suspense>
     </BrowserRouter>
   );

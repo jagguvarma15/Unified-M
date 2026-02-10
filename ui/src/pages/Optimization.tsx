@@ -72,13 +72,13 @@ export default function Optimization() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Budget Optimization
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Optimal budget allocation to maximize expected response
-          </p>
+    <div>
+      <h1 className="text-2xl font-bold text-slate-900">
+        Budget Optimization
+      </h1>
+      <p className="text-sm text-slate-500 mt-1">
+        Optimal budget allocation to maximize expected response
+      </p>
         </div>
         <a
           href="/scenarios"
@@ -144,29 +144,29 @@ export default function Optimization() {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-4">
         {view === "grouped" && (
           <>
-            <h2 className="text-sm font-semibold text-slate-700 mb-4">
-              Current vs Optimal Allocation
-            </h2>
-            <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="channel" tick={{ fontSize: 13 }} />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v) =>
-                    `$${(v / 1000).toFixed(0)}k`
-                  }
-                />
-                <Tooltip
-                  formatter={(v: number) =>
-                    `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                  }
-                />
-                <Legend />
-                <Bar dataKey="Current" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Optimal" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <h2 className="text-sm font-semibold text-slate-700 mb-4">
+          Current vs Optimal Allocation
+        </h2>
+        <ResponsiveContainer width="100%" height={360}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="channel" tick={{ fontSize: 13 }} />
+            <YAxis
+              tick={{ fontSize: 12 }}
+              tickFormatter={(v) =>
+                `$${(v / 1000).toFixed(0)}k`
+              }
+            />
+            <Tooltip
+              formatter={(v: number) =>
+                `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+              }
+            />
+            <Legend />
+            <Bar dataKey="Current" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Optimal" fill="#6366f1" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
           </>
         )}
 
@@ -278,47 +278,47 @@ export default function Optimization() {
             </thead>
             <tbody>
               {channelDetails.map((ch, i) => (
-                <tr
+                  <tr
                   key={ch.channel}
-                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                >
+                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
                   <td className="py-3 px-4 flex items-center gap-2 font-medium">
                     <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
                     {ch.channel}
                   </td>
-                  <td className="text-right py-3 px-4 tabular-nums">
+                    <td className="text-right py-3 px-4 tabular-nums">
                     ${ch.cur.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </td>
                   <td className="text-right py-3 px-4 tabular-nums text-slate-500">
                     {ch.curShare.toFixed(1)}%
-                  </td>
-                  <td className="text-right py-3 px-4 tabular-nums">
+                    </td>
+                    <td className="text-right py-3 px-4 tabular-nums">
                     ${ch.opt.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </td>
                   <td className="text-right py-3 px-4 tabular-nums text-slate-500">
                     {ch.optShare.toFixed(1)}%
-                  </td>
-                  <td
-                    className={`text-right py-3 px-4 tabular-nums font-medium ${
+                    </td>
+                    <td
+                      className={`text-right py-3 px-4 tabular-nums font-medium ${
                       ch.diff > 0
-                        ? "text-emerald-600"
+                          ? "text-emerald-600"
                         : ch.diff < 0
-                          ? "text-red-500"
-                          : "text-slate-500"
-                    }`}
-                  >
+                            ? "text-red-500"
+                            : "text-slate-500"
+                      }`}
+                    >
                     {ch.diff >= 0 ? "+" : ""}
                     ${ch.diff.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </td>
-                  <td
-                    className={`text-right py-3 px-4 tabular-nums font-medium ${
+                    </td>
+                    <td
+                      className={`text-right py-3 px-4 tabular-nums font-medium ${
                       ch.pct > 0
-                        ? "text-emerald-600"
+                          ? "text-emerald-600"
                         : ch.pct < 0
-                          ? "text-red-500"
-                          : "text-slate-500"
-                    }`}
-                  >
+                            ? "text-red-500"
+                            : "text-slate-500"
+                      }`}
+                    >
                     {ch.pct >= 0 ? "+" : ""}
                     {ch.pct.toFixed(1)}%
                   </td>
@@ -332,8 +332,8 @@ export default function Optimization() {
                     }`}>
                       {ch.pct > 5 ? "Increase" : ch.pct < -5 ? "Decrease" : "Maintain"}
                     </span>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
               ))}
             </tbody>
           </table>

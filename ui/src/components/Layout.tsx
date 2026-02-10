@@ -32,16 +32,16 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "Overview",
     items: [
-      { to: "/", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/data", label: "Data", icon: Database },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/data", label: "Data", icon: Database },
       { to: "/runs", label: "Runs", icon: History },
     ],
   },
   {
     title: "Analysis",
     items: [
-      { to: "/contributions", label: "Contributions", icon: BarChart3 },
-      { to: "/curves", label: "Response Curves", icon: TrendingUp },
+  { to: "/contributions", label: "Contributions", icon: BarChart3 },
+  { to: "/curves", label: "Response Curves", icon: TrendingUp },
       { to: "/roas", label: "ROAS Analysis", icon: DollarSign },
       { to: "/diagnostics", label: "Diagnostics", icon: Stethoscope },
     ],
@@ -114,21 +114,21 @@ export default function Layout() {
               {!collapsed[section.title] && (
                 <div className="mt-1 space-y-0.5">
                   {section.items.map(({ to, label, icon: Icon }) => (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={to === "/"}
-                      className={({ isActive }) =>
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive
-                            ? "bg-indigo-600 text-white"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`
-                      }
-                    >
+                  isActive
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`
+              }
+            >
                       <Icon size={17} />
-                      {label}
-                    </NavLink>
+              {label}
+            </NavLink>
                   ))}
                 </div>
               )}
