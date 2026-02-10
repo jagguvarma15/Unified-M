@@ -7,21 +7,63 @@ import {
   History,
   Activity,
   Database,
+  Stethoscope,
+  DollarSign,
+  Calculator,
+  Settings,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import { api, type HealthData } from "../lib/api";
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/data", label: "Data", icon: Database },
-  { to: "/contributions", label: "Contributions", icon: BarChart3 },
-  { to: "/optimization", label: "Optimization", icon: Target },
-  { to: "/curves", label: "Response Curves", icon: TrendingUp },
-  { to: "/runs", label: "Runs", icon: History },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/data", label: "Data", icon: Database },
+      { to: "/runs", label: "Runs", icon: History },
+    ],
+  },
+  {
+    title: "Analysis",
+    items: [
+      { to: "/contributions", label: "Contributions", icon: BarChart3 },
+      { to: "/curves", label: "Response Curves", icon: TrendingUp },
+      { to: "/roas", label: "ROAS Analysis", icon: DollarSign },
+      { to: "/diagnostics", label: "Diagnostics", icon: Stethoscope },
+    ],
+  },
+  {
+    title: "Optimization",
+    items: [
+      { to: "/optimization", label: "Budget Optimizer", icon: Target },
+      { to: "/scenarios", label: "Scenario Planner", icon: Calculator },
+    ],
+  },
+  {
+    title: "Configuration",
+    items: [
+      { to: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export default function Layout() {
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     api
@@ -39,6 +81,10 @@ export default function Layout() {
     return () => clearInterval(id);
   }, []);
 
+  const toggleSection = (title: string) => {
+    setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* ---- Sidebar ---- */}
@@ -48,27 +94,45 @@ export default function Layout() {
             Unified-M
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Marketing Measurement
+            Marketing Measurement Platform
           </p>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1">
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                }`
-              }
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
+        <nav className="flex-1 px-3 space-y-4 overflow-y-auto pb-4">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <button
+                onClick={() => toggleSection(section.title)}
+                className="flex items-center justify-between w-full px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider hover:text-slate-300 transition-colors"
+              >
+                {section.title}
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform ${collapsed[section.title] ? "-rotate-90" : ""}`}
+                />
+              </button>
+              {!collapsed[section.title] && (
+                <div className="mt-1 space-y-0.5">
+                  {section.items.map(({ to, label, icon: Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === "/"}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive
+                            ? "bg-indigo-600 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                        }`
+                      }
+                    >
+                      <Icon size={17} />
+                      {label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 

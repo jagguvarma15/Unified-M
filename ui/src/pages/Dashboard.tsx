@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart2, Percent, Layers, TrendingUp } from "lucide-react";
+import { BarChart2, Percent, Layers, TrendingUp, DollarSign, Activity } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -14,6 +14,9 @@ import {
   Area,
   CartesianGrid,
   ResponsiveContainer,
+  LineChart,
+  Line,
+  ReferenceLine,
 } from "recharts";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
@@ -23,6 +26,9 @@ import {
   type ReconciliationData,
   type OptimizationData,
   type RunsData,
+  type WaterfallData,
+  type DiagnosticsData,
+  type ROASData,
 } from "../lib/api";
 import { COLORS } from "../lib/colors";
 
@@ -33,6 +39,9 @@ export default function Dashboard() {
   const [reconciliation, setReconciliation] = useState<ReconciliationData | null>(null);
   const [optimization, setOptimization] = useState<OptimizationData | null>(null);
   const [runs, setRuns] = useState<RunsData | null>(null);
+  const [waterfall, setWaterfall] = useState<WaterfallData | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsData | null>(null);
+  const [roas, setRoas] = useState<ROASData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +50,9 @@ export default function Dashboard() {
       api.reconciliation().then(setReconciliation),
       api.optimization().then(setOptimization),
       api.runs(1).then(setRuns),
+      api.waterfall().then(setWaterfall),
+      api.diagnostics().then(setDiagnostics),
+      api.roas().then(setRoas),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -59,16 +71,25 @@ export default function Dashboard() {
   const contribShares = getContribShares(contributions);
   const timeline = getTimeline(contributions);
   const reconBars = getReconBars(reconciliation);
+  const waterfallBars = buildWaterfall(waterfall);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p className="text-sm text-slate-500 mt-1">
-        Unified Marketing Measurement overview
-      </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Unified Marketing Measurement overview
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <Activity size={14} className="text-emerald-400" />
+          Run: {latestRun.run_id.slice(0, 12)}...
+        </div>
+      </div>
 
       {/* ---- Metric cards ---- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
         <MetricCard
           label="R-squared"
           value={metrics?.r_squared?.toFixed(3) ?? "\u2014"}
@@ -97,7 +118,53 @@ export default function Dashboard() {
           icon={TrendingUp}
           color="indigo"
         />
+        <MetricCard
+          label="Total Spend"
+          value={
+            roas
+              ? `$${(roas.summary.total_spend / 1000).toFixed(0)}k`
+              : "\u2014"
+          }
+          icon={DollarSign}
+          color="emerald"
+        />
+        <MetricCard
+          label="Blended ROAS"
+          value={
+            roas
+              ? `${roas.summary.blended_roas.toFixed(2)}x`
+              : "\u2014"
+          }
+          icon={TrendingUp}
+          color="amber"
+        />
       </div>
+
+      {/* ---- Actual vs Predicted mini ---- */}
+      {diagnostics && diagnostics.chart.length > 0 && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-slate-700">
+              Model Fit: Actual vs Predicted
+            </h2>
+            <a href="/diagnostics" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+              View diagnostics &rarr;
+            </a>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={diagnostics.chart}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} />
+              <Tooltip
+                formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              />
+              <Line type="monotone" dataKey="actual" stroke="#334155" strokeWidth={1.5} dot={false} name="Actual" />
+              <Line type="monotone" dataKey="predicted" stroke="#6366f1" strokeWidth={1.5} dot={false} strokeDasharray="5 3" name="Predicted" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* ---- Charts row ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
@@ -141,6 +208,38 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Waterfall chart */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+          <h2 className="text-sm font-semibold text-slate-700 mb-4">
+            Response Waterfall Decomposition
+          </h2>
+          {waterfallBars.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={waterfallBars} margin={{ left: 10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} />
+                <Tooltip
+                  formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                />
+                <Bar dataKey="invisible" stackId="stack" fill="transparent" />
+                <Bar dataKey="value" stackId="stack" radius={[4, 4, 0, 0]}>
+                  {waterfallBars.map((d, i) => (
+                    <Cell key={i} fill={d.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-slate-400 py-20 text-center">
+              No waterfall data
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ---- Reconciled lift + ROAS row ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Reconciled lift bars */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
           <h2 className="text-sm font-semibold text-slate-700 mb-4">
@@ -195,6 +294,37 @@ export default function Dashboard() {
             </p>
           )}
         </div>
+
+        {/* ROAS by channel */}
+        {roas && roas.channels.length > 0 && (
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-slate-700">
+                ROAS by Channel
+              </h2>
+              <a href="/roas" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                Full analysis &rarr;
+              </a>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={roas.channels} layout="vertical" margin={{ left: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `${v.toFixed(1)}x`} />
+                <YAxis type="category" dataKey="channel" tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => `${v.toFixed(2)}x`} />
+                <ReferenceLine x={roas.summary.blended_roas} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: "Avg", fontSize: 10 }} />
+                <Bar dataKey="roas" radius={[0, 4, 4, 0]} name="ROAS">
+                  {roas.channels.map((c, i) => (
+                    <Cell
+                      key={i}
+                      fill={c.roas >= roas.summary.blended_roas ? "#10b981" : "#f59e0b"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* ---- Timeline ---- */}
@@ -275,4 +405,28 @@ function getReconBars(data: ReconciliationData | null) {
     ciHi: est.ci_upper,
     confidence: est.confidence_score,
   }));
+}
+
+function buildWaterfall(data: WaterfallData | null) {
+  if (!data) return [];
+  const bars: { name: string; value: number; invisible: number; color: string }[] = [];
+
+  // Baseline bar
+  bars.push({ name: "Baseline", value: data.baseline, invisible: 0, color: "#94a3b8" });
+
+  // Channel bars (stacked waterfall)
+  let running = data.baseline;
+  for (const ch of data.channels) {
+    if (ch.value >= 0) {
+      bars.push({ name: ch.name, value: ch.value, invisible: running, color: "#6366f1" });
+    } else {
+      bars.push({ name: ch.name, value: Math.abs(ch.value), invisible: running + ch.value, color: "#ef4444" });
+    }
+    running += ch.value;
+  }
+
+  // Total bar
+  bars.push({ name: "Total", value: data.total, invisible: 0, color: "#10b981" });
+
+  return bars;
 }

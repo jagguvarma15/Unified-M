@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 import io
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import Any
@@ -210,6 +211,139 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         if data is None:
             raise HTTPException(404, "No parameters. Run the pipeline first.")
         return data
+
+    @application.get("/api/v1/diagnostics")
+    def get_diagnostics():
+        """Model diagnostics: actual vs predicted, residuals, fit stats."""
+        contrib_data = reader.get_dataframe_as_dict("contributions")
+        if contrib_data is None or not contrib_data.get("data"):
+            raise HTTPException(404, "No contribution data for diagnostics.")
+
+        rows = contrib_data["data"]
+        actuals = [r.get("actual", 0) or 0 for r in rows]
+        predicted = [r.get("predicted", 0) or 0 for r in rows]
+        dates = [r.get("date", "") for r in rows]
+
+        y_true = np.array(actuals, dtype=float)
+        y_pred = np.array(predicted, dtype=float)
+        residuals = y_true - y_pred
+
+        mask = y_true != 0
+        mape = float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100) if mask.any() else 0
+        rmse = float(np.sqrt(np.mean(residuals ** 2)))
+        ss_res = float(np.sum(residuals ** 2))
+        ss_tot = float(np.sum((y_true - y_true.mean()) ** 2))
+        r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+        mae = float(np.mean(np.abs(residuals)))
+
+        # Durbin-Watson
+        diff = np.diff(residuals)
+        dw = float(np.sum(diff ** 2) / (np.sum(residuals ** 2) + 1e-12))
+
+        # Downsample for chart
+        step = max(1, len(dates) // 200)
+        chart_rows = [
+            {
+                "date": dates[i],
+                "actual": actuals[i],
+                "predicted": predicted[i],
+                "residual": float(residuals[i]),
+            }
+            for i in range(0, len(dates), step)
+        ]
+
+        return {
+            "metrics": {
+                "r_squared": round(r2, 4),
+                "mape": round(mape, 2),
+                "rmse": round(rmse, 2),
+                "mae": round(mae, 2),
+                "durbin_watson": round(dw, 4),
+                "n_observations": len(dates),
+            },
+            "chart": chart_rows,
+            "residual_stats": {
+                "mean": round(float(np.mean(residuals)), 4),
+                "std": round(float(np.std(residuals)), 4),
+                "min": round(float(np.min(residuals)), 4),
+                "max": round(float(np.max(residuals)), 4),
+            },
+        }
+
+    @application.get("/api/v1/roas")
+    def get_roas():
+        """Channel-level ROAS / ROI analysis."""
+        contrib_data = reader.get_dataframe_as_dict("contributions")
+        optim_data = reader.get("optimization")
+        params = reader.get("parameters")
+
+        if contrib_data is None or not contrib_data.get("data"):
+            raise HTTPException(404, "No data for ROAS analysis.")
+
+        rows = contrib_data["data"]
+        reserved = {"date", "actual", "predicted", "baseline"}
+        channels = [k for k in rows[0].keys() if k not in reserved]
+
+        channel_roas = []
+        for ch in channels:
+            total_contribution = sum(float(r.get(ch, 0) or 0) for r in rows)
+            spend = 0.0
+            if optim_data:
+                spend = optim_data.get("current_allocation", {}).get(ch, 0)
+            roas = total_contribution / spend if spend > 0 else 0
+            mroi = 0.0
+            if params and "coefficients" in params:
+                mroi = params["coefficients"].get(ch, 0)
+
+            channel_roas.append({
+                "channel": ch,
+                "total_contribution": round(total_contribution, 2),
+                "total_spend": round(spend, 2),
+                "roas": round(roas, 4),
+                "marginal_roi": round(mroi, 4),
+                "cpa": round(spend / total_contribution, 2) if total_contribution > 0 else 0,
+            })
+
+        channel_roas.sort(key=lambda x: x["roas"], reverse=True)
+
+        return {
+            "channels": channel_roas,
+            "summary": {
+                "total_spend": round(sum(c["total_spend"] for c in channel_roas), 2),
+                "total_contribution": round(sum(c["total_contribution"] for c in channel_roas), 2),
+                "blended_roas": round(
+                    sum(c["total_contribution"] for c in channel_roas)
+                    / (sum(c["total_spend"] for c in channel_roas) + 1e-8),
+                    4,
+                ),
+            },
+        }
+
+    @application.get("/api/v1/waterfall")
+    def get_waterfall():
+        """Waterfall decomposition of total response."""
+        contrib_data = reader.get_dataframe_as_dict("contributions")
+        if contrib_data is None or not contrib_data.get("data"):
+            raise HTTPException(404, "No contribution data for waterfall.")
+
+        rows = contrib_data["data"]
+        reserved = {"date", "actual", "predicted", "baseline"}
+        channels = [k for k in rows[0].keys() if k not in reserved]
+
+        baseline = sum(float(r.get("baseline", 0) or 0) for r in rows)
+        channel_totals = []
+        for ch in channels:
+            total = sum(float(r.get(ch, 0) or 0) for r in rows)
+            channel_totals.append({"name": ch, "value": round(total, 2)})
+
+        channel_totals.sort(key=lambda x: abs(x["value"]), reverse=True)
+        total_response = sum(float(r.get("actual", 0) or 0) for r in rows)
+
+        return {
+            "baseline": round(baseline, 2),
+            "channels": channel_totals,
+            "total": round(total_response, 2),
+        }
 
     # ------------------------------------------------------------------
     # Data Management
