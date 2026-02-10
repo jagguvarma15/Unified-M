@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/Unified-M/Unified-M/blob/main/README.md
+    about: Project docs and architecture
+  - name: Discussions
+    url: https://github.com/Unified-M/Unified-M/discussions
+    about: Ask questions or discuss ideas

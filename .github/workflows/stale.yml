@@ -1,0 +1,44 @@
+# Stale: mark and close inactive issues and PRs
+# https://github.com/actions/stale
+
+name: Stale
+
+on:
+  schedule:
+    # Run weekly on Sunday 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark and close stale issues and PRs
+        uses: actions/stale@v10
+        with:
+          days-before-issue-stale: 60
+          days-before-issue-close: 7
+          days-before-pr-stale: 45
+          days-before-pr-close: 7
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 7 days if no further activity occurs.
+            Thank you for your contributions.
+          close-issue-message: >
+            This issue was closed because it had no recent activity.
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 7 days if no further activity occurs.
+          close-pr-message: >
+            This pull request was closed because it had no recent activity.
+          exempt-issue-labels: pinned,security,in progress
+          exempt-pr-labels: pinned,security,in progress
+          stale-issue-label: stale
+          stale-pr-label: stale
+          remove-stale-when-updated: true
+          operations-per-run: 100

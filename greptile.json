@@ -1,0 +1,26 @@
+{
+  "$schema": "https://greptile.com/schemas/greptile.json",
+  "triggers": {
+    "onPullRequest": true,
+    "onComment": "@greptileai",
+    "draftPullRequests": false
+  },
+  "rules": [
+    "Check for security issues and dependency risks",
+    "Flag breaking API or contract changes in src/core/contracts.py",
+    "Suggest tests for new or modified Python/TypeScript code",
+    "Suggest dependency update strategy for security patches and compatibility",
+    "Remind to update docs (README, ARCHITECTURE, config) when behavior or config changes"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/__pycache__/**",
+    "**/.git/**",
+    "**/runs/**",
+    "**/data/**",
+    "**/models/**",
+    "**/.pytest_cache/**"
+  ],
+  "context": "Unified-M is a local-first marketing measurement framework (MMM, attribution, experiments). Keep changes backward-compatible and document config/API changes."
+}
