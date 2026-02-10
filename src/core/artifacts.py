@@ -229,10 +229,16 @@ class ArtifactStore:
     @staticmethod
     def compute_data_hash(df: pd.DataFrame) -> str:
         """Deterministic SHA-256 of a DataFrame for reproducibility checks."""
+        import numpy as np
         h = hashlib.sha256()
         for col in sorted(df.columns):
             h.update(col.encode())
-            h.update(df[col].values.tobytes())
+            # Convert to numpy array to handle both regular arrays and nullable IntegerArray
+            values = df[col].to_numpy(dtype=None, na_value=0)
+            # Ensure we have a contiguous array for tobytes()
+            if not values.flags['C_CONTIGUOUS']:
+                values = np.ascontiguousarray(values)
+            h.update(values.tobytes())
         return h.hexdigest()[:16]
 
     # ------------------------------------------------------------------
