@@ -1,5 +1,7 @@
 # Dependabot: automated dependency updates for better maintenance
+# Groups similar updates (minor/patch) into single PRs to minimize PR count.
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuring-dependabot-version-updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/optimizing-pr-creation-version-updates
 
 version: 2
 registries: {}
@@ -10,31 +12,46 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "python"
     commit-message:
       prefix: "deps(pip)"
 
-  # Docker: Dockerfile and docker-compose base images
+  # Docker: Dockerfile and docker-compose base images (group all in one PR)
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      docker-bases:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "docker"
     commit-message:
       prefix: "deps(docker)"
 
-  # GitHub Actions: workflow versions
+  # GitHub Actions: workflow versions (group all in one PR)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      actions:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "github-actions"
@@ -47,7 +64,14 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      ui-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "ui"
@@ -60,6 +84,13 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      rust-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "rust"
