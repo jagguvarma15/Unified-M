@@ -13,16 +13,19 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 mod adstock;
+mod cache;
 mod saturation;
 mod optimization;
 
 use adstock::*;
+use cache::PyLruCache;
 use saturation::*;
 use optimization::*;
 
 /// Python module definition
 #[pymodule]
 fn unified_m_core(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyLruCache>()?;
     m.add_function(wrap_pyfunction!(geometric_adstock_rust, m)?)?;
     m.add_function(wrap_pyfunction!(weibull_adstock_rust, m)?)?;
     m.add_function(wrap_pyfunction!(hill_saturation_rust, m)?)?;
