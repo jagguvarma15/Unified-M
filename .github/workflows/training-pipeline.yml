@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -49,7 +49,7 @@ jobs:
             --input data/validated
       
       - name: Upload validated data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: validated-data
           path: data/validated/
@@ -66,7 +66,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -77,7 +77,7 @@ jobs:
           pip install -e ".[dev]"
       
       - name: Download validated data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: validated-data
           path: data/validated/
@@ -89,7 +89,7 @@ jobs:
             --output data/transformed
       
       - name: Upload transformed data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: transformed-data
           path: data/transformed/
@@ -107,7 +107,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -118,7 +118,7 @@ jobs:
           pip install -e ".[dev]"
       
       - name: Download transformed data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: transformed-data
           path: data/transformed/
@@ -132,7 +132,7 @@ jobs:
             --chains 4
       
       - name: Upload model artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mmm-model
           path: |
@@ -154,7 +154,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -165,7 +165,7 @@ jobs:
           pip install -e ".[dev]"
       
       - name: Download model artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: mmm-model
           path: ./
@@ -177,7 +177,7 @@ jobs:
             --output data/outputs/reconciliation.json
       
       - name: Upload reconciliation results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reconciliation
           path: data/outputs/reconciliation.json
@@ -194,7 +194,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -205,13 +205,13 @@ jobs:
           pip install -e ".[dev]"
       
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: mmm-model
           path: ./
       
       - name: Download reconciliation
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: reconciliation
           path: data/outputs/
@@ -223,7 +223,7 @@ jobs:
             --output data/outputs/optimization.json
       
       - name: Upload optimization results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: optimization
           path: |
@@ -243,7 +243,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Download all outputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts/
       
