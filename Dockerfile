@@ -2,7 +2,7 @@
 # ================================
 # Multi-stage build: slim runtime with only what's needed.
 
-FROM python:3.11-slim AS base
+FROM python:3.14-slim AS base
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ ENV PYTHONUNBUFFERED=1
 CMD ["python", "-m", "cli", "serve", "--host", "0.0.0.0", "--port", "8000"]
 
 # ---- UI build stage ----
-FROM node:20-slim AS ui-build
+FROM node:25-slim AS ui-build
 
 RUN npm install -g bun
 
