@@ -1,12 +1,13 @@
 """
 Cache layer for Unified-M serving API.
 
-Provides a unified cache interface with two backends:
+Provides a unified cache interface with three backends:
   1. Redis (production: shared across workers, persistent)
-  2. In-memory LRU (development: no external deps needed)
+  2. Rust LRU (in-memory, when unified-m-core is built: fast, bounded)
+  3. Python in-memory LRU (fallback when Rust extension not available)
 
-The API server automatically uses Redis if REDIS_URL is set,
-otherwise falls back to in-memory.
+The API server uses Redis if REDIS_URL is set; otherwise uses Rust LRU
+when the extension is available, else Python in-memory.
 """
 
 from __future__ import annotations
@@ -20,6 +21,14 @@ from collections import OrderedDict
 from typing import Any
 
 from loguru import logger
+
+# Optional Rust extension for fast in-memory cache
+try:
+    import unified_m_core
+    _RUST_CACHE_AVAILABLE = True
+except ImportError:
+    _RUST_CACHE_AVAILABLE = False
+    unified_m_core = None
 
 
 class CacheBackend(ABC):
@@ -44,6 +53,51 @@ class CacheBackend(ABC):
     @abstractmethod
     def stats(self) -> dict[str, Any]:
         ...
+
+
+class RustLruCache(CacheBackend):
+    """
+    Rust-backed in-memory LRU cache (when unified-m-core is built).
+
+    Lower overhead and predictable memory use than the Python LRU.
+    Values are stored as JSON bytes at the boundary.
+    """
+
+    def __init__(self, max_size: int = 256):
+        if not _RUST_CACHE_AVAILABLE:
+            raise ImportError("unified_m_core not installed; build the Rust extension")
+        self._rust = unified_m_core.PyLruCache(max_size=max_size)
+
+    def get(self, key: str) -> Any | None:
+        raw = self._rust.get(key)
+        if raw is None:
+            return None
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except Exception:
+            return None
+
+    def set(self, key: str, value: Any, ttl: int = 300) -> None:
+        payload = json.dumps(value, default=str).encode("utf-8")
+        self._rust.set(key, payload, ttl_secs=ttl)
+
+    def delete(self, key: str) -> None:
+        self._rust.delete(key)
+
+    def clear(self) -> None:
+        self._rust.clear()
+
+    def stats(self) -> dict[str, Any]:
+        entries, max_size, hits, misses = self._rust.stats()
+        total = hits + misses
+        return {
+            "backend": "rust_lru",
+            "entries": entries,
+            "max_size": max_size,
+            "hits": hits,
+            "misses": misses,
+            "hit_rate": round(hits / total, 4) if total > 0 else 0,
+        }
 
 
 class InMemoryCache(CacheBackend):
@@ -182,7 +236,8 @@ def get_cache() -> CacheBackend:
     """
     Get or create the global cache instance.
 
-    Uses Redis if REDIS_URL is set and reachable, otherwise in-memory.
+    Uses Redis if REDIS_URL is set and reachable; otherwise uses Rust LRU
+    when unified-m-core is built, else Python in-memory LRU.
     """
     global _cache_instance
     if _cache_instance is not None:
@@ -196,8 +251,16 @@ def get_cache() -> CacheBackend:
         except Exception as e:
             logger.warning(f"Redis unavailable ({e}), falling back to in-memory cache")
 
+    if _RUST_CACHE_AVAILABLE:
+        try:
+            _cache_instance = RustLruCache(max_size=256)
+            logger.info("Using Rust LRU cache (set REDIS_URL for Redis)")
+            return _cache_instance
+        except Exception as e:
+            logger.warning(f"Rust cache failed ({e}), falling back to Python in-memory")
+
     _cache_instance = InMemoryCache(max_size=256)
-    logger.info("Using in-memory cache (set REDIS_URL for Redis)")
+    logger.info("Using in-memory cache (set REDIS_URL for Redis; build Rust for Rust LRU)")
     return _cache_instance
 
 
