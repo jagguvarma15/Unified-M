@@ -45,7 +45,7 @@ export default function Diagnostics() {
   const m = data.metrics;
 
   // Residual histogram
-  const residuals = data.chart.map((r) => r.residual);
+  const residuals = data.chart.map((r) => r.residual ?? 0);
   const histBins = buildHistogram(residuals, 30);
 
   // Scatter data for actual vs predicted
@@ -191,7 +191,7 @@ export default function Diagnostics() {
               <ReferenceLine y={0} stroke="#64748b" strokeWidth={1.5} />
               <Bar dataKey="residual" name="Residual">
                 {data.chart.map((row, i) => (
-                  <Cell key={i} fill={row.residual >= 0 ? "#10b981" : "#ef4444"} fillOpacity={0.7} />
+                  <Cell key={i} fill={(row.residual ?? 0) >= 0 ? "#10b981" : "#ef4444"} fillOpacity={0.7} />
                 ))}
               </Bar>
             </BarChart>
@@ -225,19 +225,19 @@ export default function Diagnostics() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Mean</span>
-                <span className="font-mono font-medium">{data.residual_stats.mean.toFixed(2)}</span>
+                <span className="font-mono font-medium">{(data.residual_stats?.mean ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Std Dev</span>
-                <span className="font-mono font-medium">{data.residual_stats.std.toFixed(2)}</span>
+                <span className="font-mono font-medium">{(data.residual_stats?.std ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Min</span>
-                <span className="font-mono font-medium">{data.residual_stats.min.toFixed(2)}</span>
+                <span className="font-mono font-medium">{(data.residual_stats?.min ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Max</span>
-                <span className="font-mono font-medium">{data.residual_stats.max.toFixed(2)}</span>
+                <span className="font-mono font-medium">{(data.residual_stats?.max ?? 0).toFixed(2)}</span>
               </div>
             </div>
             <div className="pt-3 border-t border-slate-200">

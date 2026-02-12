@@ -20,6 +20,8 @@ import {
 } from "recharts";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
+import { MetricCardSkeleton } from "../components/Skeleton";
 import {
   api,
   type ContributionsData,
@@ -58,8 +60,16 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+      <div>
+        <PageHeader title="Dashboard" description="Unified Marketing Measurement overview" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <MetricCardSkeleton key={i} />
+          ))}
+        </div>
+        <div className="mt-6 flex items-center justify-center h-48 rounded-xl border border-slate-200/60 bg-white/50">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-indigo-500" />
+        </div>
       </div>
     );
   }
@@ -75,48 +85,51 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-    <div>
-      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p className="text-sm text-slate-500 mt-1">
-        Unified Marketing Measurement overview
-      </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <Activity size={14} className="text-emerald-400" />
-          Run: {latestRun.run_id.slice(0, 12)}...
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Unified Marketing Measurement overview"
+        detail={
+          <span className="inline-flex items-center gap-1.5">
+            <Activity size={12} className="text-emerald-500" aria-hidden />
+            Run: <code className="font-mono text-slate-500">{latestRun.run_id.slice(0, 12)}…</code>
+          </span>
+        }
+        hint="Metrics from latest pipeline run"
+      />
 
       {/* ---- Metric cards ---- */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <MetricCard
           label="R-squared"
           value={metrics?.r_squared?.toFixed(3) ?? "\u2014"}
           icon={BarChart2}
           color="indigo"
+          tooltip="Variance in the target explained by the model. Higher is better (0–1)."
         />
         <MetricCard
           label="MAPE"
           value={metrics?.mape ? `${metrics.mape.toFixed(1)}%` : "\u2014"}
           icon={Percent}
           color="emerald"
+          tooltip="Mean Absolute Percentage Error. Lower is better."
         />
         <MetricCard
           label="Channels"
           value={latestRun.n_channels}
           icon={Layers}
           color="amber"
+          tooltip="Number of media channels in the model."
         />
         <MetricCard
           label="Optim. Uplift"
           value={
-            optimization
+            optimization != null && optimization.improvement_pct != null
               ? `${optimization.improvement_pct >= 0 ? "+" : ""}${optimization.improvement_pct.toFixed(1)}%`
               : "\u2014"
           }
           icon={TrendingUp}
           color="indigo"
+          tooltip="Expected response gain from reallocating to the optimal budget mix."
         />
         <MetricCard
           label="Total Spend"
@@ -127,6 +140,7 @@ export default function Dashboard() {
           }
           icon={DollarSign}
           color="emerald"
+          tooltip="Sum of spend across all channels in the latest run."
         />
         <MetricCard
           label="Blended ROAS"
@@ -137,17 +151,19 @@ export default function Dashboard() {
           }
           icon={TrendingUp}
           color="amber"
+          tooltip="Return on ad spend: total contribution ÷ total spend."
         />
       </div>
 
       {/* ---- Actual vs Predicted mini ---- */}
       {diagnostics && diagnostics.chart.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
+        <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-700">
-              Model Fit: Actual vs Predicted
-            </h2>
-            <a href="/diagnostics" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+            <div>
+              <h2 className="text-sm font-semibold tracking-tight text-slate-700">Model Fit: Actual vs Predicted</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Daily actual outcome vs model prediction</p>
+            </div>
+            <a href="/diagnostics" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
               View diagnostics &rarr;
             </a>
           </div>
@@ -169,10 +185,9 @@ export default function Dashboard() {
       {/* ---- Charts row ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Contribution donut */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">
-            Contribution Share
-          </h2>
+        <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Contribution Share</h2>
+          <p className="mb-4 mt-0.5 text-xs text-slate-500">How much each channel contributes to the outcome</p>
           {contribShares.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
@@ -185,19 +200,24 @@ export default function Dashboard() {
                   innerRadius="50%"
                   outerRadius="78%"
                   paddingAngle={2}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  labelLine={false}
+                  label={({ name, percent }) => {
+                    if (percent < CONTRIB_LABEL_MIN_PERCENT) return null;
+                    const pctStr = `${(percent * 100).toFixed(0)}%`;
+                    const shortName = name.startsWith("Others (") ? "Others" : name;
+                    return `${shortName} ${pctStr}`;
+                  }}
+                  labelLine={true}
                 >
                   {contribShares.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number) =>
-                    v.toLocaleString(undefined, { maximumFractionDigits: 0 })
-                  }
+                  formatter={(v: number, name: string) => {
+                    const total = contribShares.reduce((s, d) => s + d.value, 0);
+                    const pct = total > 0 ? (Number(v) / total) * 100 : 0;
+                    return [v.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ` (${pct.toFixed(1)}%)`, name];
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -209,10 +229,9 @@ export default function Dashboard() {
         </div>
 
         {/* Waterfall chart */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">
-            Response Waterfall Decomposition
-          </h2>
+        <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Response Waterfall Decomposition</h2>
+          <p className="mb-4 mt-0.5 text-xs text-slate-500">Baseline + channel lift building to total response</p>
           {waterfallBars.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={waterfallBars} margin={{ left: 10, right: 10 }}>
@@ -241,10 +260,9 @@ export default function Dashboard() {
       {/* ---- Reconciled lift + ROAS row ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Reconciled lift bars */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">
-            Reconciled Lift by Channel
-          </h2>
+        <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Reconciled Lift by Channel</h2>
+          <p className="mb-4 mt-0.5 text-xs text-slate-500">Experiment-calibrated lift with 95% CI</p>
           {reconBars.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart
@@ -297,11 +315,12 @@ export default function Dashboard() {
 
         {/* ROAS by channel */}
         {roas && roas.channels.length > 0 && (
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+          <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-700">
-                ROAS by Channel
-              </h2>
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight text-slate-700">ROAS by Channel</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Return on ad spend per channel vs blended average</p>
+              </div>
               <a href="/roas" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
                 Full analysis &rarr;
               </a>
@@ -329,10 +348,9 @@ export default function Dashboard() {
 
       {/* ---- Timeline ---- */}
       {timeline.channels.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">
-            Contributions Over Time
-          </h2>
+        <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Contributions Over Time</h2>
+          <p className="mb-4 mt-0.5 text-xs text-slate-500">Stacked daily contribution by channel</p>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={timeline.rows}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -369,10 +387,15 @@ function channelKeys(row: Record<string, unknown>): string[] {
   return Object.keys(row).filter((k) => !RESERVED.has(k));
 }
 
+/** Threshold below which a slice is grouped into "Others"; 8% keeps only meaningful segments and avoids tiny slices with missing/cramped labels */
+const CONTRIB_OTHERS_THRESHOLD = 0.08;
+/** Min slice size to show inline label; match Others threshold so every visible slice gets a label */
+const CONTRIB_LABEL_MIN_PERCENT = 0.08;
+
 function getContribShares(data: ContributionsData | null) {
   if (!data?.data?.length) return [];
   const channels = channelKeys(data.data[0]);
-  return channels
+  const raw = channels
     .map((ch) => ({
       name: ch,
       value: Math.abs(
@@ -381,6 +404,33 @@ function getContribShares(data: ContributionsData | null) {
     }))
     .filter((t) => t.value > 0)
     .sort((a, b) => b.value - a.value);
+
+  const total = raw.reduce((s, t) => s + t.value, 0);
+  if (total <= 0) return [];
+
+  const main: { name: string; value: number }[] = [];
+  let othersValue = 0;
+  const othersNames: string[] = [];
+
+  for (const t of raw) {
+    const pct = t.value / total;
+    if (pct < CONTRIB_OTHERS_THRESHOLD) {
+      othersValue += t.value;
+      othersNames.push(t.name);
+    } else {
+      main.push(t);
+    }
+  }
+
+  if (othersValue > 0) {
+    const othersLabel =
+      othersNames.length > 1
+        ? `Others (${othersNames.length})`
+        : othersNames[0];
+    main.push({ name: othersLabel, value: othersValue });
+  }
+
+  return main;
 }
 
 function getTimeline(data: ContributionsData | null) {

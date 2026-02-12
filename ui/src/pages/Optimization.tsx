@@ -107,9 +107,9 @@ export default function Optimization() {
         />
         <MetricCard
           label="Improvement"
-          value={`${data.improvement_pct >= 0 ? "+" : ""}${data.improvement_pct.toFixed(1)}%`}
+          value={`${(data.improvement_pct ?? 0) >= 0 ? "+" : ""}${(data.improvement_pct ?? 0).toFixed(1)}%`}
           icon={ArrowUpDown}
-          color={data.improvement_pct >= 0 ? "emerald" : "red"}
+          color={(data.improvement_pct ?? 0) >= 0 ? "emerald" : "red"}
         />
         <MetricCard
           label="ROI"

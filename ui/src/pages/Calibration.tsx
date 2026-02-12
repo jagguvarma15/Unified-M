@@ -83,15 +83,15 @@ export default function Calibration() {
   // Scatter data for predicted vs measured
   const scatterData = points.map((p) => ({
     ...p,
-    x: p.measured_lift,
-    y: p.predicted_lift,
+    x: p.measured_lift ?? 0,
+    y: p.predicted_lift ?? 0,
   }));
 
   // Error bar chart by channel
   const barData = points.map((p) => ({
-    channel: p.channel,
-    error_pct: Math.round(p.error_pct),
-    within_ci: p.within_ci,
+    channel: p.channel ?? "",
+    error_pct: Math.round(p.error_pct ?? 0),
+    within_ci: p.within_ci ?? false,
   }));
 
   return (
@@ -110,12 +110,12 @@ export default function Calibration() {
         <MetricCard
           icon={CheckCircle}
           label="Coverage (within CI)"
-          value={`${(data.coverage * 100).toFixed(0)}%`}
+          value={`${((data.coverage ?? 0) * 100).toFixed(0)}%`}
         />
         <MetricCard
           icon={AlertTriangle}
           label="Median Lift Error"
-          value={`${data.median_lift_error.toFixed(1)}%`}
+          value={`${(data.median_lift_error ?? 0).toFixed(1)}%`}
         />
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-5 py-4">
           <p className="text-xs text-gray-500 mb-1">Quality</p>
@@ -254,16 +254,16 @@ export default function Calibration() {
           <tbody className="bg-white divide-y divide-gray-200">
             {points.map((p, i) => (
               <tr key={i} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-mono">{p.test_id}</td>
-                <td className="px-4 py-3 text-sm">{p.channel}</td>
+                <td className="px-4 py-3 text-sm font-mono">{p.test_id ?? ""}</td>
+                <td className="px-4 py-3 text-sm">{p.channel ?? ""}</td>
                 <td className="px-4 py-3 text-sm text-right">
-                  {p.measured_lift.toFixed(4)}
+                  {(p.measured_lift ?? 0).toFixed(4)}
                 </td>
                 <td className="px-4 py-3 text-sm text-right">
-                  {p.predicted_lift.toFixed(4)}
+                  {(p.predicted_lift ?? 0).toFixed(4)}
                 </td>
                 <td className="px-4 py-3 text-sm text-right">
-                  {p.error_pct.toFixed(1)}%
+                  {(p.error_pct ?? 0).toFixed(1)}%
                 </td>
                 <td className="px-4 py-3 text-center">
                   {p.within_ci ? (

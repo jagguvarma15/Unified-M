@@ -49,7 +49,7 @@ export default function ROASAnalysis() {
       case "roas": return b.roas - a.roas;
       case "contribution": return b.total_contribution - a.total_contribution;
       case "spend": return b.total_spend - a.total_spend;
-      case "cpa": return a.cpa - b.cpa;
+      case "cpa": return (a.cpa ?? 0) - (b.cpa ?? 0);
       default: return 0;
     }
   });
@@ -58,14 +58,14 @@ export default function ROASAnalysis() {
   const maxRoas = Math.max(...data.channels.map((c) => c.roas));
   const maxContrib = Math.max(...data.channels.map((c) => c.total_contribution));
   const maxSpend = Math.max(...data.channels.map((c) => c.total_spend));
-  const maxMROI = Math.max(...data.channels.map((c) => Math.abs(c.marginal_roi)));
+  const maxMROI = Math.max(...data.channels.map((c) => Math.abs(c.marginal_roi ?? 0)));
 
   const radarData = data.channels.map((ch) => ({
     channel: ch.channel,
     ROAS: maxRoas > 0 ? (ch.roas / maxRoas) * 100 : 0,
     Contribution: maxContrib > 0 ? (ch.total_contribution / maxContrib) * 100 : 0,
     Spend: maxSpend > 0 ? (ch.total_spend / maxSpend) * 100 : 0,
-    "Marginal ROI": maxMROI > 0 ? (Math.abs(ch.marginal_roi) / maxMROI) * 100 : 0,
+    "Marginal ROI": maxMROI > 0 ? (Math.abs(ch.marginal_roi ?? 0) / maxMROI) * 100 : 0,
   }));
 
   // Efficiency quadrant data
@@ -233,10 +233,10 @@ export default function ROASAnalysis() {
                     {ch.roas.toFixed(2)}x
                   </td>
                   <td className="text-right py-3 px-4 tabular-nums">
-                    {ch.marginal_roi.toFixed(4)}
+                    {(ch.marginal_roi ?? 0).toFixed(4)}
                   </td>
                   <td className="text-right py-3 px-4 tabular-nums">
-                    ${ch.cpa.toFixed(2)}
+                    ${(ch.cpa ?? 0).toFixed(2)}
                   </td>
                   <td className="py-3 px-4">
                     <EfficiencyBar value={ch.roas} max={maxRoas} />

@@ -149,13 +149,15 @@ export default function DataQuality() {
 
       {/* Gate details */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-200">
-        {(data.gates ?? []).map((gate) => (
-          <div key={gate.gate_name}>
+        {(data.gates ?? []).map((gate) => {
+          const gateKey = gate.gate_name ?? gate.name ?? "";
+          return (
+          <div key={gateKey}>
             <button
               className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
               onClick={() =>
                 setExpanded(
-                  expanded === gate.gate_name ? null : gate.gate_name
+                  expanded === gateKey ? null : gateKey
                 )
               }
             >
@@ -163,14 +165,14 @@ export default function DataQuality() {
                 <GateIcon gate={gate} />
                 <div className="text-left">
                   <p className="text-sm font-semibold text-gray-900">
-                    {gate.gate_name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {(gate.gate_name ?? gate.name).replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                   </p>
                   <p className="text-xs text-gray-500">{gate.message}</p>
                 </div>
               </div>
               <GateBadge severity={gate.severity} passed={gate.passed} />
             </button>
-            {expanded === gate.gate_name && (
+            {expanded === gateKey && (
               <div className="px-5 pb-4 bg-gray-50">
                 <pre className="text-xs text-gray-700 bg-white rounded border border-gray-200 p-3 overflow-x-auto whitespace-pre-wrap">
                   {JSON.stringify(gate.details, null, 2)}
@@ -178,7 +180,8 @@ export default function DataQuality() {
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

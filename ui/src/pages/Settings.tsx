@@ -231,15 +231,20 @@ function AdstockTab({ params }: { params: ParametersData | null }) {
     return <EmptyState title="No adstock parameters" message="Run a model with adstock transforms to see decay parameters." />;
   }
 
-  const adstock = Object.entries(params.adstock).map(([channel, p]) => ({
-    channel,
-    decay: p.decay,
-    max_lag: p.max_lag,
-    halfLife: p.decay > 0 ? Math.log(0.5) / Math.log(p.decay) : 0,
-  }));
+  const adstock = Object.entries(params.adstock).map(([channel, p]) => {
+    const q = p as { decay?: number; max_lag?: number };
+    const decay = q.decay ?? 0;
+    const max_lag = q.max_lag ?? 0;
+    return {
+      channel,
+      decay,
+      max_lag,
+      halfLife: decay > 0 ? Math.log(0.5) / Math.log(decay) : 0,
+    };
+  });
 
   // Build decay curves for visualization
-  const maxLag = Math.max(...adstock.map((a) => a.max_lag));
+  const maxLag = Math.max(0, ...adstock.map((a) => a.max_lag));
   const decayCurves = Array.from({ length: maxLag + 1 }, (_, t) => {
     const row: Record<string, number | string> = { lag: t };
     for (const a of adstock) {
@@ -327,11 +332,10 @@ function SaturationTab({ params }: { params: ParametersData | null }) {
     return <EmptyState title="No saturation parameters" message="Run a model with saturation transforms to see Hill curve parameters." />;
   }
 
-  const saturation = Object.entries(params.saturation).map(([channel, p]) => ({
-    channel,
-    K: p.K,
-    S: p.S,
-  }));
+  const saturation = Object.entries(params.saturation).map(([channel, p]) => {
+    const q = p as { K?: number; S?: number };
+    return { channel, K: q.K ?? 0, S: q.S ?? 0 };
+  });
 
   return (
     <div className="space-y-6">

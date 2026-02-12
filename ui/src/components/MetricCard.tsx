@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import Tooltip from "./Tooltip";
 
 interface Props {
   label: string;
@@ -6,6 +7,8 @@ interface Props {
   icon: LucideIcon;
   delta?: string;
   color?: "indigo" | "emerald" | "amber" | "red";
+  /** Short explanation for the metric (shown in tooltip on label hover) */
+  tooltip?: string;
 }
 
 const iconBg: Record<string, string> = {
@@ -21,17 +24,26 @@ export default function MetricCard({
   icon: Icon,
   delta,
   color = "indigo",
+  tooltip,
 }: Props) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200/60">
+    <div className="rounded-xl border border-slate-200/60 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        <div className={`p-2 rounded-lg ${iconBg[color]}`}>
-          <Icon size={18} />
+        {tooltip ? (
+          <Tooltip content={tooltip} side="top">
+            <span className="cursor-help text-sm font-medium text-slate-500 border-b border-dotted border-slate-400/50">
+              {label}
+            </span>
+          </Tooltip>
+        ) : (
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+        )}
+        <div className={`rounded-lg p-2 ${iconBg[color]}`}>
+          <Icon size={18} aria-hidden />
         </div>
       </div>
-      <p className="text-2xl font-bold text-slate-900 mt-2">{value}</p>
-      {delta && <p className="text-xs text-slate-500 mt-1">{delta}</p>}
+      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+      {delta && <p className="mt-1 text-xs text-slate-500">{delta}</p>}
     </div>
   );
 }
