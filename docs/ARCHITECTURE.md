@@ -305,8 +305,8 @@ unified-m/
 │   ├── transformed/         # Model-ready features
 │   └── outputs/             # Results (JSON, Parquet)
 ├── models/                  # Trained model artifacts
-├── notebooks/               # Educational Jupyter notebooks
-├── tests/                   # Test suite
+├── scripts/                  # Runnable demos (reproducible, CI-friendly)
+├── tests/                    # Test suite
 ├── docs/                    # Documentation
 └── .github/workflows/       # CI/CD pipelines
 ```

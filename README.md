@@ -115,7 +115,7 @@ unified-m/
 │   │   ├── components/   # Reusable UI components
 │   │   └── lib/          # API client, utilities
 │   └── package.json      # Bun dependencies
-├── notebooks/            # Educational notebooks
+├── scripts/              # Runnable demos (data, transforms, evaluation)
 ├── tests/                # Test suite
 └── pyproject.toml        # Python dependencies
 ```
