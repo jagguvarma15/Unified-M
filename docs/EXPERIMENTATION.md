@@ -27,6 +27,13 @@ The previous **Jupyter notebook** (`notebooks/experimental_analysis.ipynb`) has 
 4. **CLI** (`cli demo`)
    - Synthetic data generation already lives in `cli demo`; scripts or docs can point users there instead of duplicating logic in a notebook.
 
+## Settings & requirements
+
+- **PYTHONPATH:** Run from repo root with `PYTHONPATH=src` so imports resolve (e.g. `transforms.adstock`, `models.evaluation`). The Makefile sets this for you: `make demo-transforms`, `make scripts SCRIPT=scripts/foo.py`.
+- **Config:** Optional. The pipeline and API use `config.yaml` (or `config/config.yaml`) in the project root. Override via CLI: `python -m cli run --config /path/to/config.yaml`.
+- **Data paths:** Scripts that need data use the same paths as the CLI (see `config.yaml` → `storage.processed_path`, `storage.runs_path`). Generate synthetic data first with `make dev` or `python -m cli demo`.
+- **Optional env (server/connectors):** See `docs/ENV_VARS.md` for `REDIS_URL`, `API_AUTH_TOKEN`, and ad-platform keys if you use those features.
+
 ## Next steps
 
 - Add `scripts/demo_transforms.py` (and optionally `demo_evaluation.py`) when you want runnable examples.

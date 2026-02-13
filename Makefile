@@ -65,6 +65,20 @@ docker-batch: ## Run batch pipeline in Docker
 docker-build: ## Build Docker images
 	docker compose build
 
+# ── Scripts (demos; replace notebooks) ────────────────────────
+
+.PHONY: scripts
+scripts: ## Run script with PYTHONPATH set (usage: make scripts SCRIPT=scripts/demo_transforms.py)
+	$(PYTHON) $(SCRIPT)
+
+.PHONY: demo-transforms
+demo-transforms: ## Demo adstock & saturation transforms (requires scripts/demo_transforms.py)
+	@test -f scripts/demo_transforms.py && $(PYTHON) scripts/demo_transforms.py || (echo "Add scripts/demo_transforms.py first. See scripts/README.md"; exit 1)
+
+.PHONY: demo-evaluation
+demo-evaluation: ## Demo evaluation metrics (requires scripts/demo_evaluation.py)
+	@test -f scripts/demo_evaluation.py && $(PYTHON) scripts/demo_evaluation.py || (echo "Add scripts/demo_evaluation.py first. See scripts/README.md"; exit 1)
+
 # ── Data & Quality ───────────────────────────────────────────
 
 .PHONY: ingest

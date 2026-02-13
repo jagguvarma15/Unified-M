@@ -1,6 +1,7 @@
 # Unified-M Configuration
 # =======================
 # Copy and customise for your environment.
+# Override path via CLI: python -m cli run --config /path/to/config.yaml
 
 project_name: "Unified-M"
 environment: "development"
@@ -45,6 +46,6 @@ optimization:
 server:
   api_host: "127.0.0.1"
   api_port: 8000
-  ui_port: 8501
+  ui_port: 5173
   cors_origins:
     - "*"
