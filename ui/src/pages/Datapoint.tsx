@@ -30,7 +30,14 @@ const DATA_TYPES = [
   { key: "controls", label: "Control Variables", required: false },
   { key: "incrementality_tests", label: "Incrementality Tests", required: false },
   { key: "attribution", label: "Attribution Data", required: false },
+  { key: "custom", label: "Custom (name below)", required: false },
 ] as const;
+
+/** Custom name allowed: letter then letters/numbers/underscores, max 64 chars */
+const CUSTOM_DATA_TYPE_REGEX = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
+function isValidCustomName(name: string): boolean {
+  return name.trim() !== "" && CUSTOM_DATA_TYPE_REGEX.test(name.trim());
+}
 
 export default function Datapoint() {
   const [connectionType, setConnectionType] = useState<"database" | "cloud" | "file">("file");
@@ -60,6 +67,7 @@ export default function Datapoint() {
   // File upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDataType, setUploadDataType] = useState("media_spend");
+  const [customDataTypeName, setCustomDataTypeName] = useState("");
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -188,8 +196,20 @@ export default function Datapoint() {
     }
   };
 
+  const resolveDataType = (): string => {
+    if (uploadDataType === "custom") {
+      return customDataTypeName.trim();
+    }
+    return uploadDataType;
+  };
+
   const handleFileUpload = async () => {
     if (!uploadFile) return;
+    const dataType = resolveDataType();
+    if (uploadDataType === "custom" && !isValidCustomName(customDataTypeName)) {
+      alert("Custom data type name must start with a letter and use only letters, numbers, and underscores (max 64 chars).");
+      return;
+    }
 
     setUploading(true);
     setFetchResult(null);
@@ -197,7 +217,7 @@ export default function Datapoint() {
     try {
       const formData = new FormData();
       formData.append("file", uploadFile);
-      formData.append("data_type", uploadDataType);
+      formData.append("data_type", dataType);
 
       const res = await fetch("/api/v1/datapoint/upload", {
         method: "POST",
@@ -273,6 +293,24 @@ export default function Datapoint() {
               </select>
             </div>
 
+            {uploadDataType === "custom" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Custom Data Type Name
+                </label>
+                <input
+                  type="text"
+                  value={customDataTypeName}
+                  onChange={(e) => setCustomDataTypeName(e.target.value)}
+                  placeholder="e.g. promo_flags, weather"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Letters, numbers, underscores only; must start with a letter (max 64 chars).
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 File
@@ -287,7 +325,11 @@ export default function Datapoint() {
 
             <button
               onClick={handleFileUpload}
-              disabled={!uploadFile || uploading}
+              disabled={
+                !uploadFile ||
+                uploading ||
+                (uploadDataType === "custom" && !isValidCustomName(customDataTypeName))
+              }
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {uploading ? (
@@ -445,21 +487,53 @@ export default function Datapoint() {
           )}
 
           {testResult?.connected && (
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Select Data Type to Import
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {DATA_TYPES.map((dt) => (
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Data Type to Import
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {DATA_TYPES.filter((dt) => dt.key !== "custom").map((dt) => (
+                    <button
+                      key={dt.key}
+                      onClick={() => handleFetchData(dt.key)}
+                      disabled={fetching || !dbQuery}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {fetching ? "Fetching..." : `Import as ${dt.label}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Or import as custom (name it)
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={customDataTypeName}
+                    onChange={(e) => setCustomDataTypeName(e.target.value)}
+                    placeholder="e.g. promo_flags, weather"
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-mono w-48 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
                   <button
-                    key={dt.key}
-                    onClick={() => handleFetchData(dt.key)}
-                    disabled={fetching || !dbQuery}
-                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={() => {
+                      if (!isValidCustomName(customDataTypeName)) {
+                        alert("Custom name: start with a letter, use only letters, numbers, underscores (max 64 chars).");
+                        return;
+                      }
+                      handleFetchData(customDataTypeName.trim());
+                    }}
+                    disabled={fetching || !dbQuery || !customDataTypeName.trim()}
+                    className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {fetching ? "Fetching..." : `Import as ${dt.label}`}
+                    {fetching ? "Fetching..." : "Import as custom"}
                   </button>
-                ))}
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Letters, numbers, underscores; must start with a letter.
+                </p>
               </div>
             </div>
           )}
@@ -636,21 +710,53 @@ export default function Datapoint() {
             )}
 
             {testResult?.connected && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select Data Type to Import
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {DATA_TYPES.map((dt) => (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Select Data Type to Import
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DATA_TYPES.filter((dt) => dt.key !== "custom").map((dt) => (
+                      <button
+                        key={dt.key}
+                        onClick={() => handleFetchData(dt.key)}
+                        disabled={fetching || !cloudPath}
+                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {fetching ? "Fetching..." : `Import as ${dt.label}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Or import as custom (name it)
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={customDataTypeName}
+                      onChange={(e) => setCustomDataTypeName(e.target.value)}
+                      placeholder="e.g. promo_flags, weather"
+                      className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-mono w-48 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
                     <button
-                      key={dt.key}
-                      onClick={() => handleFetchData(dt.key)}
-                      disabled={fetching || !cloudPath}
-                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      onClick={() => {
+                        if (!isValidCustomName(customDataTypeName)) {
+                          alert("Custom name: start with a letter, use only letters, numbers, underscores (max 64 chars).");
+                          return;
+                        }
+                        handleFetchData(customDataTypeName.trim());
+                      }}
+                      disabled={fetching || !cloudPath || !customDataTypeName.trim()}
+                      className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {fetching ? "Fetching..." : `Import as ${dt.label}`}
+                      {fetching ? "Fetching..." : "Import as custom"}
                     </button>
-                  ))}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Letters, numbers, underscores; must start with a letter.
+                  </p>
                 </div>
               </div>
             )}

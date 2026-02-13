@@ -22,9 +22,32 @@ import pandas as pd
 from pathlib import Path
 from typing import Any
 import json
+import re
 
 from core.artifacts import ArtifactStore
 from config import get_config
+
+
+# Known pipeline data types; custom names allowed via _is_valid_custom_data_type
+KNOWN_DATA_TYPES = frozenset({
+    "media_spend", "outcomes", "controls", "incrementality_tests", "attribution",
+})
+
+
+def _is_valid_data_type(data_type: str) -> bool:
+    """Accept known types or custom names: letter, then alphanumeric/underscore, 1–64 chars."""
+    if data_type in KNOWN_DATA_TYPES:
+        return True
+    return bool(re.match(r"^[a-zA-Z][a-zA-Z0-9_]{0,63}$", data_type))
+
+
+def _validate_data_type(data_type: str) -> None:
+    if not _is_valid_data_type(data_type):
+        raise HTTPException(
+            400,
+            "data_type must be one of media_spend, outcomes, controls, incrementality_tests, attribution, "
+            "or a custom name (letter followed by letters, numbers, underscores, max 64 chars)",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -409,16 +432,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         """
         Upload a data file (CSV or Parquet).
 
-        data_type: one of 'media_spend', 'outcomes', 'controls', 'incrementality_tests', 'attribution'
+        data_type: one of the known types or a custom name (e.g. promo_flags, weather).
         """
-        if data_type not in [
-            "media_spend",
-            "outcomes",
-            "controls",
-            "incrementality_tests",
-            "attribution",
-        ]:
-            raise HTTPException(400, f"Invalid data_type: {data_type}")
+        _validate_data_type(data_type)
 
         config = get_config()
         processed = config.storage.processed_path
@@ -713,12 +729,14 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         
         For databases: query_or_path is SQL query
         For cloud: query_or_path is file path
-        data_type: 'media_spend', 'outcomes', 'controls', etc.
+        data_type: known type or custom name (e.g. promo_flags).
         """
         import json
         import tempfile
         from pathlib import Path
-        
+
+        _validate_data_type(data_type)
+
         try:
             config = json.loads(connection_config)
             config_obj = get_config()
@@ -766,9 +784,11 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     ):
         """
         Upload a file (CSV, Parquet, Excel) as a datapoint.
-        
-        data_type: 'media_spend', 'outcomes', 'controls', etc.
+
+        data_type: known type or custom name (e.g. promo_flags).
         """
+        _validate_data_type(data_type)
+
         from connectors.local import auto_connect
         import tempfile
         import io
