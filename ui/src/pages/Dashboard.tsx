@@ -17,6 +17,9 @@ import {
   LineChart,
   Line,
   ReferenceLine,
+  ScatterChart,
+  Scatter,
+  ZAxis,
 } from "recharts";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
@@ -346,6 +349,171 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* ---- Current vs Optimal Allocation + Channel Efficiency ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Current vs Optimal Allocation */}
+        {optimization && optimization.current_allocation && optimization.optimal_allocation && (
+          <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight text-slate-700">Budget Allocation: Current vs Optimal</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Side-by-side comparison of where budget is vs where it should be</p>
+              </div>
+              <a href="/optimization" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                Optimizer &rarr;
+              </a>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={getAllocComparison(optimization)}
+                layout="vertical"
+                margin={{ left: 70, right: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                />
+                <YAxis type="category" dataKey="channel" tick={{ fontSize: 11 }} width={60} />
+                <Tooltip
+                  formatter={(v: number, name: string) => [`$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, name]}
+                  contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="current" name="Current" fill="#94a3b8" radius={[0, 3, 3, 0]} barSize={10} />
+                <Bar dataKey="optimal" name="Optimal" fill="#6366f1" radius={[0, 3, 3, 0]} barSize={10} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Channel Efficiency Scatter: spend vs ROAS */}
+        {roas && roas.channels.length > 0 && (
+          <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight text-slate-700">Channel Efficiency Map</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Spend vs ROAS — top-right quadrant is the sweet spot</p>
+              </div>
+              <a href="/channel-insights" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                Insights &rarr;
+              </a>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <ScatterChart margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis
+                  type="number"
+                  dataKey="spend"
+                  name="Total Spend"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                  label={{ value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "#94a3b8" }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="roas"
+                  name="ROAS"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: number) => `${v.toFixed(1)}x`}
+                  label={{ value: "ROAS", angle: -90, position: "insideLeft", fontSize: 10, fill: "#94a3b8" }}
+                />
+                <ZAxis type="number" dataKey="contribution" range={[60, 400]} name="Contribution" />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
+                  formatter={(v: number, name: string) => {
+                    if (name === "Total Spend" || name === "Contribution")
+                      return [`$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, name];
+                    return [`${v.toFixed(2)}x`, name];
+                  }}
+                  labelFormatter={(_, payload) => {
+                    const p = payload?.[0]?.payload;
+                    return p?.channel ?? "";
+                  }}
+                />
+                <ReferenceLine y={roas.summary.blended_roas} stroke="#94a3b8" strokeDasharray="4 4" />
+                <Scatter
+                  data={roas.channels.map((c) => ({
+                    channel: c.channel.replace(/_spend$/, ""),
+                    spend: c.total_spend,
+                    roas: c.roas,
+                    contribution: c.total_contribution,
+                  }))}
+                  fill="#6366f1"
+                >
+                  {roas.channels.map((c, i) => (
+                    <Cell
+                      key={i}
+                      fill={c.roas >= roas.summary.blended_roas ? "#10b981" : "#f59e0b"}
+                    />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* ---- Residuals distribution ---- */}
+      {diagnostics && diagnostics.chart.length > 0 && (
+        <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold tracking-tight text-slate-700">Prediction Residuals</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Difference between actual and predicted — should hover near zero</p>
+            </div>
+            {diagnostics.residual_stats && (
+              <div className="flex items-center gap-3 text-xs text-slate-500">
+                {diagnostics.residual_stats.mean != null && (
+                  <span>Mean: <span className="font-mono font-medium text-slate-700">{diagnostics.residual_stats.mean.toFixed(1)}</span></span>
+                )}
+                {diagnostics.residual_stats.std != null && (
+                  <span>Std: <span className="font-mono font-medium text-slate-700">{diagnostics.residual_stats.std.toFixed(1)}</span></span>
+                )}
+              </div>
+            )}
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart
+              data={diagnostics.chart.map((d) => ({
+                date: String(d.date).slice(0, 10),
+                residual: (d.actual ?? 0) - (d.predicted ?? 0),
+              }))}
+              margin={{ left: 10, right: 10, top: 5, bottom: 5 }}
+            >
+              <defs>
+                <linearGradient id="residPos" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="residNeg" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => (v / 1000).toFixed(0) + "k"} />
+              <Tooltip
+                formatter={(v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), "Residual"]}
+                contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
+              />
+              <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 4" />
+              <Area
+                type="monotone"
+                dataKey="residual"
+                stroke="#6366f1"
+                strokeWidth={1.5}
+                fill="url(#residPos)"
+                fillOpacity={1}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* ---- Timeline ---- */}
       {timeline.channels.length > 0 && (
         <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
@@ -455,6 +623,20 @@ function getReconBars(data: ReconciliationData | null) {
     ciHi: est.ci_upper,
     confidence: est.confidence_score,
   }));
+}
+
+function getAllocComparison(opt: OptimizationData) {
+  const channels = new Set([
+    ...Object.keys(opt.current_allocation ?? {}),
+    ...Object.keys(opt.optimal_allocation ?? {}),
+  ]);
+  return Array.from(channels)
+    .map((ch) => ({
+      channel: ch.replace(/_spend$/, ""),
+      current: opt.current_allocation?.[ch] ?? 0,
+      optimal: opt.optimal_allocation?.[ch] ?? 0,
+    }))
+    .sort((a, b) => b.optimal - a.optimal);
 }
 
 function buildWaterfall(data: WaterfallData | null) {
