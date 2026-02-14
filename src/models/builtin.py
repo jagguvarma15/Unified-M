@@ -59,6 +59,7 @@ class BuiltinMMM(BaseMMM):
         self._scaler: StandardScaler | None = None
         self._feature_cols: list[str] = []
         self._media_cols: list[str] = []
+        self._exposure_cols: list[str] = []
         self._control_cols: list[str] = []
         self._target_col: str = "y"
         self._date_col: str = "date"
@@ -100,6 +101,14 @@ class BuiltinMMM(BaseMMM):
         self._media_cols = media_cols or [c for c in df.columns if c.endswith("_spend")]
         self._control_cols = control_cols or []
 
+        # Auto-detect exposure columns: {channel}_{metric} where metric is
+        # impressions, reach, grp, clicks, etc. (not _spend and not _transformed)
+        exposure_suffixes = ("_impressions", "_reach", "_grp", "_clicks")
+        self._exposure_cols = [
+            c for c in df.columns
+            if any(c.endswith(s) for s in exposure_suffixes)
+        ]
+
         if not self._media_cols:
             raise ValueError("No media columns detected. Pass media_cols explicitly.")
 
@@ -114,10 +123,31 @@ class BuiltinMMM(BaseMMM):
             saturated = hill_saturation(adstocked, K=K, S=S)
             transformed[f"{col}_transformed"] = saturated
 
+        # 1b. Apply same adstock + saturation to exposure columns
+        for col in self._exposure_cols:
+            # Derive the channel name: e.g. google_impressions -> google_spend
+            ch_name = None
+            for s in exposure_suffixes:
+                if col.endswith(s):
+                    base = col[: -len(s)]
+                    ch_name = f"{base}_spend"
+                    break
+            alpha = self._adstock_alphas.get(ch_name or col, 0.5)
+            K_val = float(df[col].median()) + 1.0
+            S_val = 1.0
+            if ch_name:
+                K_val = self._saturation_K.get(ch_name, K_val)
+                S_val = self._saturation_S.get(ch_name, S_val)
+
+            adstocked = geometric_adstock(df[col].values, alpha=alpha, l_max=self._adstock_l_max)
+            saturated = hill_saturation(adstocked, K=K_val, S=S_val)
+            transformed[f"{col}_transformed"] = saturated
+
         self._transformed = transformed
 
         # 2. Build feature matrix
-        feature_cols = [f"{c}_transformed" for c in self._media_cols] + self._control_cols
+        all_media_like = self._media_cols + self._exposure_cols
+        feature_cols = [f"{c}_transformed" for c in all_media_like] + self._control_cols
         feature_cols = [c for c in feature_cols if c in transformed.columns]
         self._feature_cols = feature_cols
 
@@ -163,6 +193,7 @@ class BuiltinMMM(BaseMMM):
     def predict(self, df: pd.DataFrame) -> np.ndarray:
         self._check_fitted()
 
+        exposure_suffixes = ("_impressions", "_reach", "_grp", "_clicks")
         transformed = df.copy()
         for col in self._media_cols:
             alpha = self._adstock_alphas.get(col, 0.5)
@@ -171,6 +202,25 @@ class BuiltinMMM(BaseMMM):
 
             adstocked = geometric_adstock(df[col].values, alpha=alpha, l_max=self._adstock_l_max)
             saturated = hill_saturation(adstocked, K=K, S=S)
+            transformed[f"{col}_transformed"] = saturated
+
+        for col in self._exposure_cols:
+            if col not in df.columns:
+                continue
+            ch_name = None
+            for s in exposure_suffixes:
+                if col.endswith(s):
+                    base = col[: -len(s)]
+                    ch_name = f"{base}_spend"
+                    break
+            alpha = self._adstock_alphas.get(ch_name or col, 0.5)
+            K_val = float(self._data[col].median()) + 1.0
+            S_val = 1.0
+            if ch_name:
+                K_val = self._saturation_K.get(ch_name, K_val)
+                S_val = self._saturation_S.get(ch_name, S_val)
+            adstocked = geometric_adstock(df[col].values, alpha=alpha, l_max=self._adstock_l_max)
+            saturated = hill_saturation(adstocked, K=K_val, S=S_val)
             transformed[f"{col}_transformed"] = saturated
 
         feature_cols = [c for c in self._feature_cols if c in transformed.columns]
@@ -274,6 +324,7 @@ class BuiltinMMM(BaseMMM):
             "scaler": self._scaler,
             "feature_cols": self._feature_cols,
             "media_cols": self._media_cols,
+            "exposure_cols": self._exposure_cols,
             "control_cols": self._control_cols,
             "target_col": self._target_col,
             "date_col": self._date_col,
@@ -303,6 +354,7 @@ class BuiltinMMM(BaseMMM):
         self._scaler = state["scaler"]
         self._feature_cols = state["feature_cols"]
         self._media_cols = state["media_cols"]
+        self._exposure_cols = state.get("exposure_cols", [])
         self._control_cols = state["control_cols"]
         self._target_col = state["target_col"]
         self._date_col = state["date_col"]

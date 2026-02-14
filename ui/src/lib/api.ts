@@ -189,6 +189,70 @@ export interface DataQualityData {
 }
 
 // ---------------------------------------------------------------------------
+// Channel Insights
+// ---------------------------------------------------------------------------
+
+export interface ChannelInsight {
+  channel: string;
+  current_spend: number;
+  optimal_spend: number;
+  marginal_roi: number;
+  saturation_point: number;
+  headroom_pct: number;
+  status: "under-invested" | "efficient" | "over-saturated";
+  coefficient: number;
+}
+
+export interface ChannelInsightsData {
+  channels: ChannelInsight[];
+}
+
+// ---------------------------------------------------------------------------
+// Spend Pacing
+// ---------------------------------------------------------------------------
+
+export interface PacingChannel {
+  channel: string;
+  planned: number;
+  actual: number;
+  diff: number;
+  pacing_pct: number;
+  status: "on-track" | "over" | "under";
+}
+
+export interface SpendPacingData {
+  total_planned: number;
+  total_actual: number;
+  pacing_pct: number;
+  channels: PacingChannel[];
+  cumulative: { date: string; actual: number }[];
+}
+
+// ---------------------------------------------------------------------------
+// Executive Report
+// ---------------------------------------------------------------------------
+
+export interface ReportSummaryData {
+  run_id: string | null;
+  generated_at: string;
+  metrics: Record<string, number>;
+  roas_summary: Record<string, number>;
+  top_channels: { channel: string; contribution: number; share_pct: number }[];
+  recommendations: string[];
+  improvement_pct: number;
+}
+
+// ---------------------------------------------------------------------------
+// Run Comparison
+// ---------------------------------------------------------------------------
+
+export interface RunComparisonData {
+  run_a: string;
+  run_b: string;
+  [key: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------
 
@@ -231,4 +295,9 @@ export const api = {
   calibration: () => get<CalibrationData>("/api/v1/calibration"),
   stability: () => get<StabilityData>("/api/v1/stability"),
   dataQuality: () => get<DataQualityData>("/api/v1/data-quality"),
+  channelInsights: () => get<ChannelInsightsData>("/api/v1/channel-insights"),
+  spendPacing: () => get<SpendPacingData>("/api/v1/spend-pacing"),
+  reportSummary: () => get<ReportSummaryData>("/api/v1/report/summary"),
+  compareRuns: (runA: string, runB: string) =>
+    get<RunComparisonData>(`/api/v1/runs/compare?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`),
 };

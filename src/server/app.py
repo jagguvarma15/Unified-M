@@ -416,13 +416,20 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 info = {"exists": False}
             return info
 
-        return {
-            "media_spend": check_file("media_spend.parquet"),
-            "outcomes": check_file("outcomes.parquet"),
-            "controls": check_file("controls.parquet"),
-            "incrementality_tests": check_file("incrementality_tests.parquet"),
-            "attribution": check_file("attribution.parquet"),
-        }
+        # Start with the 5 known types
+        known = ["media_spend", "outcomes", "controls", "incrementality_tests", "attribution"]
+        result: dict[str, Any] = {}
+        for name in known:
+            result[name] = check_file(f"{name}.parquet")
+
+        # Discover any custom parquet files
+        if processed.exists():
+            for p in sorted(processed.glob("*.parquet")):
+                key = p.stem
+                if key not in result:
+                    result[key] = check_file(p.name)
+
+        return result
 
     @application.post("/api/v1/data/upload")
     async def upload_data(
@@ -649,6 +656,233 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         except Exception as e:
             logger.exception("Data-quality endpoint error: %s", e)
             return {**_empty_data_quality, "timestamp": datetime.now().isoformat()}
+
+    # ------------------------------------------------------------------
+    # Channel Insights (saturation alerts + marginal ROI)
+    # ------------------------------------------------------------------
+
+    @application.get("/api/v1/channel-insights")
+    def channel_insights():
+        """Per-channel saturation status, marginal ROI, and headroom."""
+        try:
+            optim_data = reader.get("optimization")
+            params = reader.get("parameters")
+            curves_raw = reader.get("response_curves")
+
+            if not optim_data or not params:
+                raise HTTPException(404, "No optimization or parameter data.")
+
+            current_alloc = optim_data.get("current_allocation", {})
+            optimal_alloc = optim_data.get("optimal_allocation", {})
+            channels = list(current_alloc.keys())
+            coefficients = params.get("coefficients", {})
+            sat_params = params.get("saturation", {})
+
+            insights = []
+            for ch in channels:
+                cur_spend = current_alloc.get(ch, 0)
+                opt_spend = optimal_alloc.get(ch, 0)
+                coeff = coefficients.get(ch, 0)
+
+                # Compute marginal ROI at current spend using saturation derivative
+                sp = sat_params.get(ch, {})
+                K = sp.get("K", cur_spend + 1) if isinstance(sp, dict) else (cur_spend + 1)
+                S = sp.get("S", 1.0) if isinstance(sp, dict) else 1.0
+
+                delta = max(cur_spend * 0.01, 1.0)
+                from transforms.saturation import hill_saturation as _hs  # noqa: E402
+                resp_at = float(_hs(np.array([cur_spend]), K=K, S=S)[0]) * coeff
+                resp_at_plus = float(_hs(np.array([cur_spend + delta]), K=K, S=S)[0]) * coeff
+                marginal_roi = (resp_at_plus - resp_at) / delta if delta > 0 else 0
+
+                # Saturation point: where marginal ROI drops below 10% of average ROI
+                avg_roi = resp_at / cur_spend if cur_spend > 0 else 1
+                threshold = avg_roi * 0.1
+                sat_point = cur_spend
+                for test_spend in np.linspace(cur_spend, cur_spend * 5 + 1, 200):
+                    r1 = float(_hs(np.array([test_spend]), K=K, S=S)[0]) * coeff
+                    r2 = float(_hs(np.array([test_spend + delta]), K=K, S=S)[0]) * coeff
+                    if (r2 - r1) / delta < threshold:
+                        sat_point = float(test_spend)
+                        break
+                else:
+                    sat_point = float(cur_spend * 5)
+
+                headroom_pct = round(((sat_point - cur_spend) / cur_spend * 100) if cur_spend > 0 else 100, 1)
+                if headroom_pct < 10:
+                    status = "over-saturated"
+                elif headroom_pct > 80:
+                    status = "under-invested"
+                else:
+                    status = "efficient"
+
+                insights.append({
+                    "channel": ch,
+                    "current_spend": round(cur_spend, 2),
+                    "optimal_spend": round(opt_spend, 2),
+                    "marginal_roi": round(marginal_roi, 6),
+                    "saturation_point": round(sat_point, 2),
+                    "headroom_pct": headroom_pct,
+                    "status": status,
+                    "coefficient": round(coeff, 6),
+                })
+
+            insights.sort(key=lambda x: x["marginal_roi"], reverse=True)
+            return {"channels": insights}
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.exception("Channel insights error: %s", e)
+            return {"channels": []}
+
+    # ------------------------------------------------------------------
+    # Spend Pacing (plan vs actual tracker)
+    # ------------------------------------------------------------------
+
+    @application.get("/api/v1/spend-pacing")
+    def spend_pacing():
+        """Compare planned (optimal) allocation vs actual spend from media data."""
+        try:
+            optim_data = reader.get("optimization")
+            contrib_data = reader.get_dataframe_as_dict("contributions")
+            config = get_config()
+            processed = config.storage.processed_path
+            ms_path = processed / "media_spend.parquet"
+
+            if not optim_data:
+                raise HTTPException(404, "No optimization data for pacing.")
+
+            optimal = optim_data.get("optimal_allocation", {})
+            channels = list(optimal.keys())
+
+            # Load actual spend from media_spend
+            actual_by_channel: dict[str, float] = {}
+            cumulative: list[dict] = []
+            if ms_path.exists():
+                ms_df = pd.read_parquet(ms_path)
+                if "channel" in ms_df.columns and "spend" in ms_df.columns:
+                    actual_by_channel = ms_df.groupby("channel")["spend"].sum().to_dict()
+                    if "date" in ms_df.columns:
+                        ms_df["date"] = pd.to_datetime(ms_df["date"])
+                        cum = ms_df.groupby("date")["spend"].sum().sort_index().cumsum().reset_index()
+                        step = max(1, len(cum) // 60)
+                        cumulative = [
+                            {"date": str(row["date"])[:10], "actual": round(float(row["spend"]), 2)}
+                            for _, row in cum.iloc[::step].iterrows()
+                        ]
+
+            total_planned = sum(optimal.values())
+            total_actual = sum(actual_by_channel.get(ch, 0) for ch in channels)
+            pacing_pct = round(total_actual / total_planned * 100, 1) if total_planned > 0 else 0
+
+            pacing_channels = []
+            for ch in channels:
+                planned = optimal.get(ch, 0)
+                actual = actual_by_channel.get(ch, 0)
+                ch_pacing = round(actual / planned * 100, 1) if planned > 0 else 0
+                diff = actual - planned
+                if ch_pacing > 115:
+                    ch_status = "over"
+                elif ch_pacing < 85:
+                    ch_status = "under"
+                else:
+                    ch_status = "on-track"
+                pacing_channels.append({
+                    "channel": ch,
+                    "planned": round(planned, 2),
+                    "actual": round(actual, 2),
+                    "diff": round(diff, 2),
+                    "pacing_pct": ch_pacing,
+                    "status": ch_status,
+                })
+            pacing_channels.sort(key=lambda x: abs(x["diff"]), reverse=True)
+
+            return {
+                "total_planned": round(total_planned, 2),
+                "total_actual": round(total_actual, 2),
+                "pacing_pct": pacing_pct,
+                "channels": pacing_channels,
+                "cumulative": cumulative,
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.exception("Spend pacing error: %s", e)
+            return {"total_planned": 0, "total_actual": 0, "pacing_pct": 0, "channels": [], "cumulative": []}
+
+    # ------------------------------------------------------------------
+    # Executive Summary / Report
+    # ------------------------------------------------------------------
+
+    @application.get("/api/v1/report/summary")
+    def report_summary():
+        """One-click executive summary payload."""
+        try:
+            run_id = store.get_latest_run_id()
+            contrib_data = reader.get_dataframe_as_dict("contributions")
+            optim_data = reader.get("optimization")
+            params = reader.get("parameters")
+            roas_data = None
+            try:
+                roas_data = get_roas()
+            except Exception:
+                pass
+            diag_data = None
+            try:
+                diag_data = get_diagnostics()
+            except Exception:
+                pass
+
+            metrics = {}
+            if diag_data and "metrics" in diag_data:
+                metrics = diag_data["metrics"]
+
+            # Top channels by contribution
+            top_channels = []
+            if contrib_data and contrib_data.get("data"):
+                rows = contrib_data["data"]
+                reserved = {"date", "actual", "predicted", "baseline"}
+                chs = [k for k in rows[0].keys() if k not in reserved]
+                ch_totals = [(ch, sum(float(r.get(ch, 0) or 0) for r in rows)) for ch in chs]
+                ch_totals.sort(key=lambda x: abs(x[1]), reverse=True)
+                total_contrib = sum(abs(v) for _, v in ch_totals)
+                for ch, val in ch_totals[:5]:
+                    pct = round(abs(val) / total_contrib * 100, 1) if total_contrib > 0 else 0
+                    top_channels.append({"channel": ch, "contribution": round(val, 2), "share_pct": pct})
+
+            # Key recommendations
+            recommendations = []
+            if optim_data:
+                current = optim_data.get("current_allocation", {})
+                optimal = optim_data.get("optimal_allocation", {})
+                changes = []
+                for ch in optimal:
+                    cur = current.get(ch, 0)
+                    opt = optimal.get(ch, 0)
+                    diff = opt - cur
+                    pct = round(diff / cur * 100, 1) if cur > 0 else 0
+                    changes.append((ch, diff, pct))
+                changes.sort(key=lambda x: abs(x[1]), reverse=True)
+                for ch, diff, pct in changes[:3]:
+                    action = "Increase" if diff > 0 else "Decrease"
+                    recommendations.append(f"{action} {ch} by ${abs(diff):,.0f} ({abs(pct):.0f}%)")
+
+            roas_summary = {}
+            if roas_data and "summary" in roas_data:
+                roas_summary = roas_data["summary"]
+
+            return {
+                "run_id": run_id,
+                "generated_at": datetime.now().isoformat(),
+                "metrics": metrics,
+                "roas_summary": roas_summary,
+                "top_channels": top_channels,
+                "recommendations": recommendations,
+                "improvement_pct": optim_data.get("improvement_pct", 0) if optim_data else 0,
+            }
+        except Exception as e:
+            logger.exception("Report summary error: %s", e)
+            return {"run_id": None, "generated_at": datetime.now().isoformat(), "metrics": {}, "roas_summary": {}, "top_channels": [], "recommendations": [], "improvement_pct": 0}
 
     # ------------------------------------------------------------------
     # Cache control

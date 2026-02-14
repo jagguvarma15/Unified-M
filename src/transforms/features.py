@@ -213,6 +213,7 @@ def create_mmm_features(
     add_time: bool = True,
     add_fourier: bool = True,
     fourier_order: int = 3,
+    exposure_cols: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Create a complete MMM-ready dataset from component DataFrames.
@@ -222,6 +223,7 @@ def create_mmm_features(
     2. Joins with outcomes
     3. Joins with control variables
     4. Adds time/seasonality features
+    5. Optionally pivots exposure columns (impressions, GRP, reach)
     
     Args:
         media_spend: Long-format media spend data
@@ -234,12 +236,17 @@ def create_mmm_features(
         add_time: Whether to add time features
         add_fourier: Whether to add Fourier seasonality features
         fourier_order: Number of Fourier terms
+        exposure_cols: Optional list of exposure metric columns present in
+            media_spend (e.g. ["impressions", "reach", "grp"]).  Each will be
+            pivoted to wide format as {channel}_{metric} and included alongside
+            spend columns.
     
     Returns:
         MMM-ready DataFrame with:
         - date: Date column
         - y: Target variable
         - {channel}_spend: One column per media channel
+        - {channel}_{exposure}: One column per exposure metric per channel
         - Control variables
         - Time/seasonality features (if enabled)
     """
@@ -250,6 +257,24 @@ def create_mmm_features(
         channel_col=channel_col,
         value_col=spend_col,
     )
+    
+    # 1b. Pivot exposure columns if provided
+    if exposure_cols:
+        for exp_col in exposure_cols:
+            if exp_col in media_spend.columns:
+                exp_wide = pivot_media_spend(
+                    media_spend,
+                    date_col=date_col,
+                    channel_col=channel_col,
+                    value_col=exp_col,
+                )
+                # Rename columns: {channel}_spend -> {channel}_{exp_col}
+                rename_map = {}
+                for col in exp_wide.columns:
+                    if col.endswith("_spend") and col != date_col:
+                        rename_map[col] = col.replace("_spend", f"_{exp_col}")
+                exp_wide = exp_wide.rename(columns=rename_map)
+                media_wide = media_wide.merge(exp_wide, on=date_col, how="left")
     
     # 2. Prepare outcomes
     outcomes_clean = outcomes[[date_col, target_col]].copy()

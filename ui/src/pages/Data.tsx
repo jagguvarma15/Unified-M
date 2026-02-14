@@ -10,38 +10,51 @@ import {
 } from "lucide-react";
 import { api, type DataStatus, type DataSourceStatus } from "../lib/api";
 
-const DATA_TYPES = [
-  {
-    key: "media_spend",
+const KNOWN_DATA_TYPES: Record<
+  string,
+  { label: string; description: string; required: boolean; group: "required" | "optional" }
+> = {
+  media_spend: {
     label: "Media Spend",
     description: "Daily/weekly spend by channel (date, channel, spend, impressions, clicks)",
     required: true,
+    group: "required",
   },
-  {
-    key: "outcomes",
+  outcomes: {
     label: "Outcomes",
     description: "Target metrics (date, revenue, conversions)",
     required: true,
+    group: "required",
   },
-  {
-    key: "controls",
+  controls: {
     label: "Control Variables",
     description: "Non-media factors (date, seasonality, promo, etc.)",
     required: false,
+    group: "optional",
   },
-  {
-    key: "incrementality_tests",
+  incrementality_tests: {
     label: "Incrementality Tests",
     description: "Test results (test_id, channel, start_date, end_date, lift_estimate, lift_ci_lower, lift_ci_upper)",
     required: false,
+    group: "optional",
   },
-  {
-    key: "attribution",
+  attribution: {
     label: "Attribution Data",
     description: "Attributed conversions/revenue (date, channel, attributed_conversions, attributed_revenue)",
     required: false,
+    group: "optional",
   },
-] as const;
+};
+
+function getTypeInfo(key: string) {
+  if (key in KNOWN_DATA_TYPES) return KNOWN_DATA_TYPES[key];
+  return {
+    label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    description: "Custom data source",
+    required: false,
+    group: "custom" as const,
+  };
+}
 
 export default function Data() {
   const [status, setStatus] = useState<DataStatus | null>(null);
@@ -94,13 +107,16 @@ export default function Data() {
     if (!status) return;
 
     // Check required files
-    const missing = DATA_TYPES.filter(
-      (dt) => dt.required && !status[dt.key as keyof DataStatus]?.exists,
+    const requiredKeys = Object.keys(KNOWN_DATA_TYPES).filter(
+      (k) => KNOWN_DATA_TYPES[k].required,
+    );
+    const missing = requiredKeys.filter(
+      (k) => !(status[k] as DataSourceStatus | undefined)?.exists,
     );
 
     if (missing.length > 0) {
       setRunResult(
-        `Missing required data: ${missing.map((m) => m.label).join(", ")}`,
+        `Missing required data: ${missing.map((m) => KNOWN_DATA_TYPES[m]?.label ?? m).join(", ")}`,
       );
       return;
     }
@@ -131,10 +147,16 @@ export default function Data() {
     );
   }
 
+  // Build grouped data sources from the dynamic status response
+  const allKeys = status ? Object.keys(status) : [];
+  const grouped = {
+    required: allKeys.filter((k) => getTypeInfo(k).group === "required"),
+    optional: allKeys.filter((k) => getTypeInfo(k).group === "optional"),
+    custom: allKeys.filter((k) => getTypeInfo(k).group === "custom"),
+  };
+
   const hasRequired = status
-    ? DATA_TYPES.filter((dt) => dt.required).every(
-        (dt) => status[dt.key as keyof DataStatus]?.exists,
-      )
+    ? grouped.required.every((k) => (status[k] as DataSourceStatus | undefined)?.exists)
     : false;
 
   return (
@@ -177,117 +199,136 @@ export default function Data() {
         </div>
       )}
 
-      {/* Data source cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {DATA_TYPES.map((dataType) => {
-          const sourceStatus = status?.[dataType.key as keyof DataStatus] as
-            | DataSourceStatus
-            | undefined;
-          const exists = sourceStatus?.exists ?? false;
-          const isUploading = uploading === dataType.key;
+      {/* Sections: Required / Optional / Custom */}
+      {(["required", "optional", "custom"] as const).map((section) => {
+        const keys = grouped[section];
+        if (!keys.length) return null;
+        const sectionLabel =
+          section === "required" ? "Required Data Sources" :
+          section === "optional" ? "Optional Data Sources" :
+          "Custom Data Sources";
+        return (
+          <div key={section} className="mb-8">
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">
+              {sectionLabel}
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {keys.map((key) => {
+                const info = getTypeInfo(key);
+                const sourceStatus = status?.[key] as DataSourceStatus | undefined;
+                const exists = sourceStatus?.exists ?? false;
+                const isUploading = uploading === key;
 
-          return (
-            <div
-              key={dataType.key}
-              className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FileText size={20} className="text-slate-600" />
-                  <h3 className="font-semibold text-slate-900">{dataType.label}</h3>
-                  {dataType.required && (
-                    <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
-                      Required
-                    </span>
-                  )}
-                </div>
-                {exists ? (
-                  <CheckCircle2 size={20} className="text-emerald-500" />
-                ) : (
-                  <XCircle size={20} className="text-slate-300" />
-                )}
-              </div>
-
-              <p className="text-xs text-slate-500 mb-4">{dataType.description}</p>
-
-              {exists && sourceStatus && (
-                <div className="mb-4 p-3 bg-slate-50 rounded-lg text-xs">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-slate-500">Rows:</span>{" "}
-                      <span className="font-medium">{sourceStatus.rows?.toLocaleString()}</span>
+                return (
+                  <div
+                    key={key}
+                    className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <FileText size={20} className="text-slate-600" />
+                        <h3 className="font-semibold text-slate-900">{info.label}</h3>
+                        {info.required && (
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                            Required
+                          </span>
+                        )}
+                        {section === "custom" && (
+                          <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full">
+                            Custom
+                          </span>
+                        )}
+                      </div>
+                      {exists ? (
+                        <CheckCircle2 size={20} className="text-emerald-500" />
+                      ) : (
+                        <XCircle size={20} className="text-slate-300" />
+                      )}
                     </div>
-                    <div>
-                      <span className="text-slate-500">Size:</span>{" "}
-                      <span className="font-medium">
-                        {sourceStatus.size_bytes
-                          ? `${(sourceStatus.size_bytes / 1024).toFixed(1)} KB`
-                          : "—"}
-                      </span>
-                    </div>
+
+                    <p className="text-xs text-slate-500 mb-4">{info.description}</p>
+
+                    {exists && sourceStatus && (
+                      <div className="mb-4 p-3 bg-slate-50 rounded-lg text-xs">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-slate-500">Rows:</span>{" "}
+                            <span className="font-medium">{sourceStatus.rows?.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Size:</span>{" "}
+                            <span className="font-medium">
+                              {sourceStatus.size_bytes
+                                ? `${(sourceStatus.size_bytes / 1024).toFixed(1)} KB`
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
+                        {sourceStatus.columns && (
+                          <div className="mt-2">
+                            <span className="text-slate-500">Columns:</span>{" "}
+                            <span className="font-mono text-xs">
+                              {sourceStatus.columns.slice(0, 5).join(", ")}
+                              {sourceStatus.columns.length > 5 && "..."}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {sourceStatus?.error && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                        <AlertCircle size={14} />
+                        {sourceStatus.error}
+                      </div>
+                    )}
+
+                    <label className="block">
+                      <input
+                        ref={(el) => {
+                          fileInputs.current[key] = el;
+                        }}
+                        type="file"
+                        accept=".csv,.parquet"
+                        onChange={(e) => handleFileSelect(key, e)}
+                        className="hidden"
+                        disabled={isUploading}
+                      />
+                      <div
+                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-colors cursor-pointer ${
+                          isUploading
+                            ? "border-indigo-300 bg-indigo-50"
+                            : "border-slate-300 hover:border-indigo-400 hover:bg-slate-50"
+                        }`}
+                        onClick={() => fileInputs.current[key]?.click()}
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin text-indigo-600" />
+                            <span className="text-sm font-medium text-indigo-600">
+                              Uploading...
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} className="text-slate-600" />
+                            <span className="text-sm font-medium text-slate-700">
+                              {exists ? "Replace" : "Upload"} File
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </label>
                   </div>
-                  {sourceStatus.columns && (
-                    <div className="mt-2">
-                      <span className="text-slate-500">Columns:</span>{" "}
-                      <span className="font-mono text-xs">
-                        {sourceStatus.columns.slice(0, 5).join(", ")}
-                        {sourceStatus.columns.length > 5 && "..."}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {sourceStatus?.error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                  <AlertCircle size={14} />
-                  {sourceStatus.error}
-                </div>
-              )}
-
-              <label className="block">
-                <input
-                  ref={(el) => {
-                    fileInputs.current[dataType.key] = el;
-                  }}
-                  type="file"
-                  accept=".csv,.parquet"
-                  onChange={(e) => handleFileSelect(dataType.key, e)}
-                  className="hidden"
-                  disabled={isUploading}
-                />
-                <div
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-colors cursor-pointer ${
-                    isUploading
-                      ? "border-indigo-300 bg-indigo-50"
-                      : "border-slate-300 hover:border-indigo-400 hover:bg-slate-50"
-                  }`}
-                  onClick={() => fileInputs.current[dataType.key]?.click()}
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin text-indigo-600" />
-                      <span className="text-sm font-medium text-indigo-600">
-                        Uploading...
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={16} className="text-slate-600" />
-                      <span className="text-sm font-medium text-slate-700">
-                        {exists ? "Replace" : "Upload"} File
-                      </span>
-                    </>
-                  )}
-                </div>
-              </label>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
 
       {/* Instructions */}
-      <div className="mt-8 bg-slate-50 rounded-xl p-6 border border-slate-200">
+      <div className="mt-4 bg-slate-50 rounded-xl p-6 border border-slate-200">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
           <AlertCircle size={18} className="text-slate-600" />
           Data Format Requirements

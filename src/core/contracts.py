@@ -276,6 +276,13 @@ class ChannelResult(BaseModel):
     roas: float = 0.0
     marginal_roi: float = 0.0
 
+    # Exposure metrics (optional — populated when reach/frequency data is present)
+    exposure_contribution: float | None = Field(
+        default=None,
+        description="Contribution attributed to exposure (impressions/reach/GRP) signal, "
+        "separate from the spend-driven contribution.",
+    )
+
     # Source signal weights
     mmm_weight_used: float = 0.0
     incrementality_weight_used: float = 0.0

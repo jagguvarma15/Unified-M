@@ -20,6 +20,9 @@ const ROASAnalysis = lazy(() => import("./pages/ROASAnalysis"));
 const ScenarioPlanner = lazy(() => import("./pages/ScenarioPlanner"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Datapoint = lazy(() => import("./pages/Datapoint"));
+const ChannelInsights = lazy(() => import("./pages/ChannelInsights"));
+const SpendPacing = lazy(() => import("./pages/SpendPacing"));
+const Report = lazy(() => import("./pages/Report"));
 
 function PageLoader() {
   return (
@@ -49,6 +52,9 @@ export default function App() {
             <Route path="/calibration" element={<Calibration />} />
             <Route path="/stability" element={<Stability />} />
             <Route path="/data-quality" element={<DataQuality />} />
+            <Route path="/channel-insights" element={<ChannelInsights />} />
+            <Route path="/spend-pacing" element={<SpendPacing />} />
+            <Route path="/report" element={<Report />} />
         </Route>
       </Routes>
       </Suspense>

@@ -16,6 +16,9 @@ import {
   Crosshair,
   Shield,
   ClipboardCheck,
+  Zap,
+  Gauge,
+  FileText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -45,9 +48,10 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "Analysis",
     items: [
-  { to: "/contributions", label: "Contributions", icon: BarChart3 },
-  { to: "/curves", label: "Response Curves", icon: TrendingUp },
+      { to: "/contributions", label: "Contributions", icon: BarChart3 },
+      { to: "/curves", label: "Response Curves", icon: TrendingUp },
       { to: "/roas", label: "ROAS Analysis", icon: DollarSign },
+      { to: "/channel-insights", label: "Channel Insights", icon: Zap },
       { to: "/diagnostics", label: "Diagnostics", icon: Stethoscope },
     ],
   },
@@ -56,6 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/optimization", label: "Budget Optimizer", icon: Target },
       { to: "/scenarios", label: "Scenario Planner", icon: Calculator },
+      { to: "/spend-pacing", label: "Spend Pacing", icon: Gauge },
     ],
   },
   {
@@ -64,6 +69,12 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/calibration", label: "Calibration", icon: Crosshair },
       { to: "/stability", label: "Stability", icon: Shield },
       { to: "/data-quality", label: "Data Quality", icon: ClipboardCheck },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [
+      { to: "/report", label: "Executive Summary", icon: FileText },
     ],
   },
   {
