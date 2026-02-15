@@ -122,7 +122,7 @@ export default function Dashboard() {
       />
 
       {/* ---- Metric cards ---- */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 min-w-0">
         <MetricCard
           label="R-squared"
           value={metrics?.r_squared?.toFixed(3) ?? "\u2014"}
