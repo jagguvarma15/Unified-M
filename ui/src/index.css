@@ -5,3 +5,9 @@
 body {
   font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
+
+/* Focus visible for keyboard nav (Grafana / shadcn style) */
+*:focus-visible {
+  outline: 2px solid theme("colors.indigo.500");
+  outline-offset: 2px;
+}

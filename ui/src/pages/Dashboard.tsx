@@ -35,7 +35,9 @@ import {
   type DiagnosticsData,
   type ROASData,
 } from "../lib/api";
-import { COLORS } from "../lib/colors";
+import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
+import { formatCurrency, formatPercent, formatROAS } from "../lib/format";
+import ChartCard from "../components/ChartCard";
 
 // ---------------------------------------------------------------------------
 
@@ -78,13 +80,32 @@ export default function Dashboard() {
   }
 
   const latestRun = runs?.runs?.[0];
-  if (!latestRun) return <EmptyState />;
+  if (!latestRun)
+    return (
+      <EmptyState
+        title="No pipeline runs"
+        message="Run the pipeline to generate your first set of results."
+        action={{ label: "Go to Data", href: "/data" }}
+        secondaryAction={{ label: "Connect Datapoint", href: "/datapoint" }}
+      />
+    );
 
   const metrics = latestRun.metrics;
   const contribShares = getContribShares(contributions);
   const timeline = getTimeline(contributions);
   const reconBars = getReconBars(reconciliation);
   const waterfallBars = buildWaterfall(waterfall);
+  const sparklineActual = diagnostics?.chart?.map((d) => d.actual ?? 0).slice(-30) ?? [];
+  const sparklineContribution =
+    timeline.rows.length > 0
+      ? timeline.rows.slice(-24).map((r) => {
+          let sum = 0;
+          for (const k of timeline.channels) {
+            sum += Number((r as Record<string, unknown>)[k]) || 0;
+          }
+          return sum;
+        })
+      : [];
 
   return (
     <div>
@@ -111,10 +132,11 @@ export default function Dashboard() {
         />
         <MetricCard
           label="MAPE"
-          value={metrics?.mape ? `${metrics.mape.toFixed(1)}%` : "\u2014"}
+          value={metrics?.mape != null ? formatPercent(metrics.mape, 1) : "\u2014"}
           icon={Percent}
           color="emerald"
           tooltip="Mean Absolute Percentage Error. Lower is better."
+          sparkline={sparklineActual.length > 0 ? sparklineActual : undefined}
         />
         <MetricCard
           label="Channels"
@@ -127,7 +149,7 @@ export default function Dashboard() {
           label="Optim. Uplift"
           value={
             optimization != null && optimization.improvement_pct != null
-              ? `${optimization.improvement_pct >= 0 ? "+" : ""}${optimization.improvement_pct.toFixed(1)}%`
+              ? (optimization.improvement_pct >= 0 ? "+" : "") + formatPercent(optimization.improvement_pct, 1)
               : "\u2014"
           }
           icon={TrendingUp}
@@ -136,22 +158,15 @@ export default function Dashboard() {
         />
         <MetricCard
           label="Total Spend"
-          value={
-            roas
-              ? `$${(roas.summary.total_spend / 1000).toFixed(0)}k`
-              : "\u2014"
-          }
+          value={roas ? formatCurrency(roas.summary.total_spend, true) : "\u2014"}
           icon={DollarSign}
           color="emerald"
           tooltip="Sum of spend across all channels in the latest run."
+          sparkline={sparklineContribution.length > 0 ? sparklineContribution : undefined}
         />
         <MetricCard
           label="Blended ROAS"
-          value={
-            roas
-              ? `${roas.summary.blended_roas.toFixed(2)}x`
-              : "\u2014"
-          }
+          value={roas ? formatROAS(roas.summary.blended_roas) : "\u2014"}
           icon={TrendingUp}
           color="amber"
           tooltip="Return on ad spend: total contribution ÷ total spend."
@@ -160,37 +175,38 @@ export default function Dashboard() {
 
       {/* ---- Actual vs Predicted mini ---- */}
       {diagnostics && diagnostics.chart.length > 0 && (
-        <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-semibold tracking-tight text-slate-700">Model Fit: Actual vs Predicted</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Daily actual outcome vs model prediction</p>
-            </div>
-            <a href="/diagnostics" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
-              View diagnostics &rarr;
-            </a>
-          </div>
+        <ChartCard
+          className="mt-6"
+          title="Model Fit: Actual vs Predicted"
+          description="Daily actual outcome vs model prediction"
+          actionHref="/diagnostics"
+          actionLabel="View diagnostics →"
+          minHeight={260}
+        >
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={diagnostics.chart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => (v / 1000).toFixed(0) + "k"} />
               <Tooltip
-                formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
+                formatter={(v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), ""]}
               />
               <Line type="monotone" dataKey="actual" stroke="#334155" strokeWidth={1.5} dot={false} name="Actual" />
               <Line type="monotone" dataKey="predicted" stroke="#6366f1" strokeWidth={1.5} dot={false} strokeDasharray="5 3" name="Predicted" />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
       )}
 
       {/* ---- Charts row ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Contribution donut */}
-        <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Contribution Share</h2>
-          <p className="mb-4 mt-0.5 text-xs text-slate-500">How much each channel contributes to the outcome</p>
+        <ChartCard
+          title="Contribution Share"
+          description="How much each channel contributes to the outcome"
+          minHeight={320}
+        >
           {contribShares.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
@@ -229,16 +245,18 @@ export default function Dashboard() {
               No contribution data
             </p>
           )}
-        </div>
+        </ChartCard>
 
         {/* Waterfall chart */}
-        <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Response Waterfall Decomposition</h2>
-          <p className="mb-4 mt-0.5 text-xs text-slate-500">Baseline + channel lift building to total response</p>
+        <ChartCard
+          title="Response Waterfall Decomposition"
+          description="Baseline + channel lift building to total response"
+          minHeight={320}
+        >
           {waterfallBars.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={waterfallBars} margin={{ left: 10, right: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} />
                 <Tooltip
@@ -257,15 +275,17 @@ export default function Dashboard() {
               No waterfall data
             </p>
           )}
-        </div>
+        </ChartCard>
       </div>
 
       {/* ---- Reconciled lift + ROAS row ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Reconciled lift bars */}
-        <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Reconciled Lift by Channel</h2>
-          <p className="mb-4 mt-0.5 text-xs text-slate-500">Experiment-calibrated lift with 95% CI</p>
+        <ChartCard
+          title="Reconciled Lift by Channel"
+          description="Experiment-calibrated lift with 95% CI"
+          minHeight={320}
+        >
           {reconBars.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart
@@ -275,7 +295,7 @@ export default function Dashboard() {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#e2e8f0"
+                  stroke={CHART_GRID}
                   horizontal={false}
                 />
                 <XAxis type="number" tick={{ fontSize: 12 }} />
@@ -314,26 +334,23 @@ export default function Dashboard() {
               No reconciliation data
             </p>
           )}
-        </div>
+        </ChartCard>
 
         {/* ROAS by channel */}
         {roas && roas.channels.length > 0 && (
-          <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-semibold tracking-tight text-slate-700">ROAS by Channel</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Return on ad spend per channel vs blended average</p>
-              </div>
-              <a href="/roas" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                Full analysis &rarr;
-              </a>
-            </div>
+          <ChartCard
+            title="ROAS by Channel"
+            description="Return on ad spend per channel vs blended average"
+            actionHref="/roas"
+            actionLabel="Full analysis →"
+            minHeight={320}
+          >
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={roas.channels} layout="vertical" margin={{ left: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `${v.toFixed(1)}x`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v: number) => formatROAS(v, 1)} />
                 <YAxis type="category" dataKey="channel" tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v: number) => `${v.toFixed(2)}x`} />
+                <Tooltip contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }} formatter={(v: number) => [formatROAS(v), "ROAS"]} />
                 <ReferenceLine x={roas.summary.blended_roas} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: "Avg", fontSize: 10 }} />
                 <Bar dataKey="roas" radius={[0, 4, 4, 0]} name="ROAS">
                   {roas.channels.map((c, i) => (
@@ -345,7 +362,7 @@ export default function Dashboard() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </ChartCard>
         )}
       </div>
 
@@ -353,27 +370,24 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Current vs Optimal Allocation */}
         {optimization && optimization.current_allocation && optimization.optimal_allocation && (
-          <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-semibold tracking-tight text-slate-700">Budget Allocation: Current vs Optimal</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Side-by-side comparison of where budget is vs where it should be</p>
-              </div>
-              <a href="/optimization" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                Optimizer &rarr;
-              </a>
-            </div>
+          <ChartCard
+            title="Budget Allocation: Current vs Optimal"
+            description="Side-by-side comparison of where budget is vs where it should be"
+            actionHref="/optimization"
+            actionLabel="Optimizer →"
+            minHeight={320}
+          >
             <ResponsiveContainer width="100%" height={280}>
               <BarChart
                 data={getAllocComparison(optimization)}
                 layout="vertical"
                 margin={{ left: 70, right: 10 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
                 <XAxis
                   type="number"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                  tickFormatter={(v: number) => formatCurrency(v, true)}
                 />
                 <YAxis type="category" dataKey="channel" tick={{ fontSize: 11 }} width={60} />
                 <Tooltip
@@ -385,30 +399,27 @@ export default function Dashboard() {
                 <Bar dataKey="optimal" name="Optimal" fill="#6366f1" radius={[0, 3, 3, 0]} barSize={10} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </ChartCard>
         )}
 
         {/* Channel Efficiency Scatter: spend vs ROAS */}
         {roas && roas.channels.length > 0 && (
-          <div className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-semibold tracking-tight text-slate-700">Channel Efficiency Map</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Spend vs ROAS — top-right quadrant is the sweet spot</p>
-              </div>
-              <a href="/channel-insights" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                Insights &rarr;
-              </a>
-            </div>
+          <ChartCard
+            title="Channel Efficiency Map"
+            description="Spend vs ROAS — top-right quadrant is the sweet spot"
+            actionHref="/channel-insights"
+            actionLabel="Insights →"
+            minHeight={320}
+          >
             <ResponsiveContainer width="100%" height={280}>
               <ScatterChart margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                 <XAxis
                   type="number"
                   dataKey="spend"
                   name="Total Spend"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                  tickFormatter={(v: number) => formatCurrency(v, true)}
                   label={{ value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "#94a3b8" }}
                 />
                 <YAxis
@@ -416,7 +427,7 @@ export default function Dashboard() {
                   dataKey="roas"
                   name="ROAS"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => `${v.toFixed(1)}x`}
+                  tickFormatter={(v: number) => formatROAS(v, 1)}
                   label={{ value: "ROAS", angle: -90, position: "insideLeft", fontSize: 10, fill: "#94a3b8" }}
                 />
                 <ZAxis type="number" dataKey="contribution" range={[60, 400]} name="Contribution" />
@@ -452,19 +463,20 @@ export default function Dashboard() {
                 </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
-          </div>
+          </ChartCard>
         )}
       </div>
 
       {/* ---- Residuals distribution ---- */}
       {diagnostics && diagnostics.chart.length > 0 && (
-        <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-semibold tracking-tight text-slate-700">Prediction Residuals</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Difference between actual and predicted — should hover near zero</p>
-            </div>
-            {diagnostics.residual_stats && (
+        <ChartCard
+          className="mt-6"
+          title="Prediction Residuals"
+          description="Difference between actual and predicted — should hover near zero"
+          actionHref="/diagnostics"
+          actionLabel="View diagnostics →"
+          rightSlot={
+            diagnostics.residual_stats && (
               <div className="flex items-center gap-3 text-xs text-slate-500">
                 {diagnostics.residual_stats.mean != null && (
                   <span>Mean: <span className="font-mono font-medium text-slate-700">{diagnostics.residual_stats.mean.toFixed(1)}</span></span>
@@ -473,8 +485,10 @@ export default function Dashboard() {
                   <span>Std: <span className="font-mono font-medium text-slate-700">{diagnostics.residual_stats.std.toFixed(1)}</span></span>
                 )}
               </div>
-            )}
-          </div>
+            )
+          }
+          minHeight={220}
+        >
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart
               data={diagnostics.chart.map((d) => ({
@@ -511,14 +525,17 @@ export default function Dashboard() {
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
       )}
 
       {/* ---- Timeline ---- */}
       {timeline.channels.length > 0 && (
-        <div className="mt-6 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold tracking-tight text-slate-700">Contributions Over Time</h2>
-          <p className="mb-4 mt-0.5 text-xs text-slate-500">Stacked daily contribution by channel</p>
+        <ChartCard
+          className="mt-6"
+          title="Contributions Over Time"
+          description="Stacked daily contribution by channel"
+          minHeight={340}
+        >
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={timeline.rows}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -539,7 +556,7 @@ export default function Dashboard() {
               ))}
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
       )}
     </div>
   );
