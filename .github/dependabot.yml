@@ -6,7 +6,9 @@
 version: 2
 registries: {}
 updates:
-  # Python (pip): requirements.txt and pyproject.toml
+  # Python (uv): reads pyproject.toml, updates uv.lock
+  # Dependabot uses the "pip" ecosystem but detects pyproject.toml automatically.
+  # After merge, CI runs `uv lock` to keep uv.lock in sync.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -24,7 +26,7 @@ updates:
       - "dependencies"
       - "python"
     commit-message:
-      prefix: "deps(pip)"
+      prefix: "deps(python)"
 
   # Docker: Dockerfile and docker-compose base images (group all in one PR)
   - package-ecosystem: "docker"

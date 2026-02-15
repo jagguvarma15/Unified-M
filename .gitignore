@@ -87,6 +87,9 @@ secrets/
 *.key
 .env
 
+# uv / pip (requirements.txt is generated from uv.lock; commit uv.lock instead)
+requirements.txt
+
 # Node / Bun (React UI)
 node_modules/
 ui/dist/

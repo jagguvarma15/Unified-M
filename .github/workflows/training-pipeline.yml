@@ -15,6 +15,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  UV_VERSION: 'latest'
 
 jobs:
   # Data Ingestion & Validation
@@ -26,26 +27,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --frozen --no-dev
       
       - name: Run data ingestion
         run: |
-          python -m cli ingest \
+          uv run python -m cli ingest \
             --source data/raw \
             --output data/validated
       
       - name: Validate data schemas
         run: |
-          python -m cli validate \
+          uv run python -m cli validate \
             --input data/validated
       
       - name: Upload validated data
@@ -65,16 +66,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --frozen --no-dev
       
       - name: Download validated data
         uses: actions/download-artifact@v4
@@ -84,7 +85,7 @@ jobs:
       
       - name: Run transformations
         run: |
-          python -m cli transform \
+          uv run python -m cli transform \
             --input data/validated \
             --output data/transformed
       
@@ -106,16 +107,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --frozen --no-dev
       
       - name: Download transformed data
         uses: actions/download-artifact@v4
@@ -125,7 +126,7 @@ jobs:
       
       - name: Train MMM model
         run: |
-          python -m cli train \
+          uv run python -m cli train \
             --input data/transformed \
             --output models/ \
             --samples 1000 \
@@ -153,16 +154,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --frozen --no-dev
       
       - name: Download model artifacts
         uses: actions/download-artifact@v4
@@ -172,7 +173,7 @@ jobs:
       
       - name: Run reconciliation
         run: |
-          python -m cli reconcile \
+          uv run python -m cli reconcile \
             --mmm-results data/outputs/mmm_results.json \
             --output data/outputs/reconciliation.json
       
@@ -193,16 +194,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          version: ${{ env.UV_VERSION }}
+      
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --frozen --no-dev
       
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -218,7 +219,7 @@ jobs:
       
       - name: Run optimization
         run: |
-          python -m cli optimize \
+          uv run python -m cli optimize \
             --mmm-results data/outputs/mmm_results.json \
             --output data/outputs/optimization.json
       
@@ -295,4 +296,3 @@ jobs:
         run: |
           echo "Pipeline failed - check logs"
           # Add Slack/email notification here if needed
-

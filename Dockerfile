@@ -1,7 +1,9 @@
 # Unified-M Pipeline & API Image
 # ================================
 # Multi-stage build: slim runtime with only what's needed.
+# Uses uv lockfile for fast, reproducible, hash-verified installs.
 
+# ---- Python API stage ----
 FROM python:3.11-slim AS base
 
 WORKDIR /app
@@ -12,17 +14,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt pyproject.toml ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Install uv (advanced Python package manager — lockfile = reproducible retrieval)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Copy dependency manifests first (Docker layer caching)
+COPY pyproject.toml uv.lock ./
+
+# Install from lockfile: fast, deterministic, hash-verified
+# --frozen: fail if lockfile is out of date (CI safety net)
+# --no-dev: skip dev dependencies in production image
+# --no-editable: install as a regular package (not editable)
+RUN uv sync --frozen --no-dev --no-editable
+
+# Copy application source
 COPY src/ src/
 COPY config.yaml ./
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-# Default: run the API server
-CMD ["python", "-m", "cli", "serve", "--host", "0.0.0.0", "--port", "8000"]
+# Default: run the API server via the uv-managed virtualenv
+CMD ["uv", "run", "python", "-m", "cli", "serve", "--host", "0.0.0.0", "--port", "8000"]
 
 # ---- UI build stage ----
 FROM node:20-slim AS ui-build
@@ -51,8 +63,7 @@ RUN printf 'server {\n\
     }\n\
     location / {\n\
         try_files $uri $uri/ /index.html;\n\
-    }\n\
-}\n' > /etc/nginx/conf.d/default.conf
+    }\n}\n' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

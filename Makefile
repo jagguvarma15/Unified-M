@@ -1,8 +1,9 @@
 # Unified-M Makefile
 # ===================
-# Developer workflow targets for all run modes.
+# Developer workflow targets. Uses uv for all Python operations.
 
-PYTHON   := PYTHONPATH=src python
+UV       := uv
+PYTHON   := $(UV) run python
 SHELL    := /bin/bash
 .DEFAULT_GOAL := help
 
@@ -10,33 +11,33 @@ SHELL    := /bin/bash
 
 .PHONY: dev
 dev: ## Local dev run (fast Ridge model, sample data)
-	$(PYTHON) -m cli demo
+	PYTHONPATH=src $(PYTHON) -m cli demo
 
 .PHONY: run
 run: ## Full pipeline run with builtin model
-	$(PYTHON) -m cli run --model builtin --target revenue
+	PYTHONPATH=src $(PYTHON) -m cli run --model builtin --target revenue
 
 .PHONY: weekly-prod
 weekly-prod: ## Weekly production run (full Bayesian model)
-	$(PYTHON) -m cli run --model pymc --mode weekly-prod
+	PYTHONPATH=src $(PYTHON) -m cli run --model pymc --mode weekly-prod
 
 .PHONY: backfill
 backfill: ## Backfill run for a date range (usage: make backfill START=2024-01-01 END=2024-12-31)
-	$(PYTHON) -m cli run --mode backfill --start $(START) --end $(END)
+	PYTHONPATH=src $(PYTHON) -m cli run --mode backfill --start $(START) --end $(END)
 
 .PHONY: what-if
 what-if: ## What-if scenario (no retraining, usage: make what-if BUDGET=120000)
-	$(PYTHON) -m cli scenario --budget $(BUDGET)
+	PYTHONPATH=src $(PYTHON) -m cli scenario --budget $(BUDGET)
 
 .PHONY: calibrate
 calibrate: ## Experiment calibration run (usage: make calibrate TEST_FILE=data/raw/test.parquet)
-	$(PYTHON) -m cli calibrate --test-file $(TEST_FILE)
+	PYTHONPATH=src $(PYTHON) -m cli calibrate --test-file $(TEST_FILE)
 
 # ── Serving ──────────────────────────────────────────────────
 
 .PHONY: serve
 serve: ## Start FastAPI server
-	$(PYTHON) -m cli serve --port 8000
+	PYTHONPATH=src $(PYTHON) -m cli serve --port 8000
 
 .PHONY: ui
 ui: ## Start React dev server
@@ -44,7 +45,7 @@ ui: ## Start React dev server
 
 .PHONY: serve-all
 serve-all: ## Start API + UI in background
-	$(PYTHON) -m cli serve --port 8000 &
+	PYTHONPATH=src $(PYTHON) -m cli serve --port 8000 &
 	cd ui && bun dev
 
 # ── Docker ───────────────────────────────────────────────────
@@ -69,43 +70,43 @@ docker-build: ## Build Docker images
 
 .PHONY: scripts
 scripts: ## Run script with PYTHONPATH set (usage: make scripts SCRIPT=scripts/demo_transforms.py)
-	$(PYTHON) $(SCRIPT)
+	PYTHONPATH=src $(PYTHON) $(SCRIPT)
 
 .PHONY: demo-transforms
 demo-transforms: ## Demo adstock & saturation transforms (requires scripts/demo_transforms.py)
-	@test -f scripts/demo_transforms.py && $(PYTHON) scripts/demo_transforms.py || (echo "Add scripts/demo_transforms.py first. See scripts/README.md"; exit 1)
+	@test -f scripts/demo_transforms.py && PYTHONPATH=src $(PYTHON) scripts/demo_transforms.py || (echo "Add scripts/demo_transforms.py first. See scripts/README.md"; exit 1)
 
 .PHONY: demo-evaluation
 demo-evaluation: ## Demo evaluation metrics (requires scripts/demo_evaluation.py)
-	@test -f scripts/demo_evaluation.py && $(PYTHON) scripts/demo_evaluation.py || (echo "Add scripts/demo_evaluation.py first. See scripts/README.md"; exit 1)
+	@test -f scripts/demo_evaluation.py && PYTHONPATH=src $(PYTHON) scripts/demo_evaluation.py || (echo "Add scripts/demo_evaluation.py first. See scripts/README.md"; exit 1)
 
 # ── Data & Quality ───────────────────────────────────────────
 
 .PHONY: ingest
 ingest: ## Ingest raw data sources
-	$(PYTHON) -m cli ingest --source data/raw --output data/bronze
+	PYTHONPATH=src $(PYTHON) -m cli ingest --source data/raw --output data/bronze
 
 .PHONY: validate
 validate: ## Run data quality gates
-	$(PYTHON) -m cli validate --input data/bronze
+	PYTHONPATH=src $(PYTHON) -m cli validate --input data/bronze
 
 .PHONY: transform
 transform: ## Transform bronze -> silver -> gold
-	$(PYTHON) -m cli transform --input data/bronze --output data/gold
+	PYTHONPATH=src $(PYTHON) -m cli transform --input data/bronze --output data/gold
 
 # ── Testing & Linting ────────────────────────────────────────
 
 .PHONY: test
 test: ## Run test suite
-	pytest tests/ -v --cov=src
+	$(UV) run pytest tests/ -v --cov=src
 
 .PHONY: lint
 lint: ## Run linter
-	ruff check src/
+	$(UV) run ruff check src/
 
 .PHONY: typecheck
 typecheck: ## Run type checker
-	mypy src/
+	$(UV) run mypy src/
 
 .PHONY: check
 check: lint typecheck test ## Run all checks
@@ -113,15 +114,27 @@ check: lint typecheck test ## Run all checks
 # ── Utilities ────────────────────────────────────────────────
 
 .PHONY: install
-install: ## Install Python dependencies
-	pip install -e ".[dev]"
+install: ## Install Python dependencies (via uv lockfile)
+	$(UV) sync
+
+.PHONY: install-dev
+install-dev: ## Install with dev dependencies
+	$(UV) sync --all-extras
 
 .PHONY: install-ui
 install-ui: ## Install UI dependencies
 	cd ui && bun install
 
 .PHONY: install-all
-install-all: install install-ui ## Install everything
+install-all: install-dev install-ui ## Install everything
+
+.PHONY: lock
+lock: ## Update uv.lock from pyproject.toml
+	$(UV) lock
+
+.PHONY: export-requirements
+export-requirements: ## Export requirements.txt from lockfile (for legacy tools)
+	$(UV) export --no-dev -o requirements.txt
 
 .PHONY: clean
 clean: ## Remove generated artifacts
@@ -131,4 +144,4 @@ clean: ## Remove generated artifacts
 .PHONY: help
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}'
