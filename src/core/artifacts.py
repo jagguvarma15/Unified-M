@@ -152,6 +152,21 @@ class ArtifactStore:
         with open(path) as f:
             return json.load(f)
 
+    def load_json_if_exists(self, run_id: str, name: str) -> Any | None:
+        """Load a JSON artifact if present; return None if missing (for optional artifacts in compare)."""
+        path = self._run_dir(run_id) / f"{name}.json"
+        if not path.exists():
+            return None
+        with open(path) as f:
+            return json.load(f)
+
+    def load_dataframe_if_exists(self, run_id: str, name: str) -> pd.DataFrame | None:
+        """Load a Parquet artifact if present; return None if missing."""
+        path = self._run_dir(run_id) / f"{name}.parquet"
+        if not path.exists():
+            return None
+        return pd.read_parquet(path)
+
     def load_manifest(self, run_id: str) -> RunManifest:
         """Load the manifest for a run."""
         data = self.load_json(run_id, "manifest")
@@ -193,34 +208,154 @@ class ArtifactStore:
 
     def compare_runs(self, run_a: str, run_b: str) -> dict:
         """
-        Return a diff-style comparison of two runs.
+        Return an advanced, verifiable comparison of two runs.
 
-        Useful for answering "why did results change between runs?"
+        Loads manifests as raw JSON (no Pydantic validation) so older or
+        partial manifests still work. Loads parameters, optimization, and
+        optionally contributions from each run's artifacts.
         """
-        ma = self.load_manifest(run_a)
-        mb = self.load_manifest(run_b)
+        # Load manifests as raw JSON so we don't fail on schema/validation (e.g. older manifests)
+        ma = self._load_manifest_dict(run_a)
+        mb = self._load_manifest_dict(run_b)
 
-        diff: dict[str, Any] = {
+        # Optional artifacts (per-run; may be missing for failed or partial runs)
+        params_a = self.load_json_if_exists(run_a, "parameters")
+        params_b = self.load_json_if_exists(run_b, "parameters")
+        opt_a = self.load_json_if_exists(run_a, "optimization")
+        opt_b = self.load_json_if_exists(run_b, "optimization")
+        contrib_df_a = self.load_dataframe_if_exists(run_a, "contributions")
+        contrib_df_b = self.load_dataframe_if_exists(run_b, "contributions")
+
+        def _metrics_dict(m: Any) -> dict[str, Any]:
+            if m is None:
+                return {}
+            if isinstance(m, dict):
+                return m
+            if hasattr(m, "model_dump"):
+                return m.model_dump()
+            return {}
+
+        metrics_a_raw = _metrics_dict(ma.get("metrics"))
+        metrics_b_raw = _metrics_dict(mb.get("metrics"))
+
+        # Verification: run ids and data fingerprints so clients can verify they're comparing the right runs
+        data_hash_a = ma.get("data_hash") or ""
+        data_hash_b = mb.get("data_hash") or ""
+        model_backend_a = ma.get("model_backend") or ""
+        model_backend_b = mb.get("model_backend") or ""
+        verification = {
             "run_a": run_a,
             "run_b": run_b,
+            "timestamp_a": ma.get("timestamp") or "",
+            "timestamp_b": mb.get("timestamp") or "",
+            "data_hash_a": data_hash_a,
+            "data_hash_b": data_hash_b,
+            "data_hash_changed": data_hash_a != data_hash_b,
+            "model_backend_a": model_backend_a,
+            "model_backend_b": model_backend_b,
+            "model_backend_changed": model_backend_a != model_backend_b,
         }
 
-        # Config diff
-        diff["config_changes"] = _dict_diff(ma.config_snapshot, mb.config_snapshot)
+        # Metrics: raw and deltas (delta = B − A)
+        metrics_a: dict[str, Any] = metrics_a_raw
+        metrics_b: dict[str, Any] = metrics_b_raw
+        metrics_delta: dict[str, float] = {}
+        for key in set(metrics_a.keys()) | set(metrics_b.keys()):
+            va = metrics_a.get(key)
+            vb = metrics_b.get(key)
+            if isinstance(va, (int, float)) and isinstance(vb, (int, float)):
+                metrics_delta[key] = round(float(vb) - float(va), 6)
 
-        # Data diff
-        diff["data_hash_changed"] = ma.data_hash != mb.data_hash
-        diff["n_rows_change"] = mb.n_rows - ma.n_rows
-        diff["n_channels_change"] = mb.n_channels - ma.n_channels
+        # Coefficients: from parameters.json (coefficients key)
+        coefficients_a: dict[str, float] = {}
+        coefficients_b: dict[str, float] = {}
+        if params_a and isinstance(params_a.get("coefficients"), dict):
+            coefficients_a = {k: float(v) for k, v in params_a["coefficients"].items()}
+        if params_b and isinstance(params_b.get("coefficients"), dict):
+            coefficients_b = {k: float(v) for k, v in params_b["coefficients"].items()}
+        all_coef_channels = sorted(set(coefficients_a.keys()) | set(coefficients_b.keys()))
+        coefficient_diff = {ch: round(coefficients_b.get(ch, 0) - coefficients_a.get(ch, 0), 6) for ch in all_coef_channels}
 
-        # Metrics diff
-        if ma.metrics and mb.metrics:
-            diff["metrics_a"] = ma.metrics.model_dump()
-            diff["metrics_b"] = mb.metrics.model_dump()
+        # Allocations: from optimization.json (optimal_allocation or channel_allocations)
+        def _get_allocation(opt: dict | None) -> dict[str, float]:
+            if not opt:
+                return {}
+            alloc = opt.get("optimal_allocation") or opt.get("channel_allocations") or {}
+            return {k: float(v) for k, v in alloc.items()}
 
-        diff["model_backend_changed"] = ma.model_backend != mb.model_backend
+        allocation_a = _get_allocation(opt_a)
+        allocation_b = _get_allocation(opt_b)
+        all_alloc_channels = sorted(set(allocation_a.keys()) | set(allocation_b.keys()))
+        allocation_diff = {ch: round(allocation_b.get(ch, 0) - allocation_a.get(ch, 0), 2) for ch in all_alloc_channels}
 
-        return diff
+        # Current allocation (baseline) if present
+        def _get_current_allocation(opt: dict | None) -> dict[str, float]:
+            if not opt:
+                return {}
+            curr = opt.get("current_allocation") or opt.get("current_allocations") or {}
+            return {k: float(v) for k, v in curr.items()}
+
+        current_allocation_a = _get_current_allocation(opt_a)
+        current_allocation_b = _get_current_allocation(opt_b)
+
+        # Contribution totals per channel (from contributions.parquet) for verifiable contribution shift
+        def _contribution_totals(df: pd.DataFrame | None) -> dict[str, float]:
+            if df is None or df.empty:
+                return {}
+            reserved = {"date", "actual", "predicted", "baseline"}
+            cols = [c for c in df.columns if c not in reserved]
+            totals = {}
+            for c in cols:
+                try:
+                    totals[c] = round(float(df[c].abs().sum()), 2)
+                except (TypeError, ValueError):
+                    pass
+            return totals
+
+        contribution_totals_a = _contribution_totals(contrib_df_a)
+        contribution_totals_b = _contribution_totals(contrib_df_b)
+        contrib_channels = sorted(set(contribution_totals_a.keys()) | set(contribution_totals_b.keys()))
+        contribution_diff = {
+            ch: round(contribution_totals_b.get(ch, 0) - contribution_totals_a.get(ch, 0), 2)
+            for ch in contrib_channels
+        }
+
+        # Config diff (shallow)
+        config_changes = _dict_diff(ma.get("config_snapshot") or {}, mb.get("config_snapshot") or {})
+
+        n_rows_a = ma.get("n_rows") or 0
+        n_rows_b = mb.get("n_rows") or 0
+        n_channels_a = ma.get("n_channels") or 0
+        n_channels_b = mb.get("n_channels") or 0
+
+        return {
+            "verification": verification,
+            "run_a": run_a,
+            "run_b": run_b,
+            "config_changes": config_changes,
+            "n_rows_a": n_rows_a,
+            "n_rows_b": n_rows_b,
+            "n_rows_change": n_rows_b - n_rows_a,
+            "n_channels_a": n_channels_a,
+            "n_channels_b": n_channels_b,
+            "n_channels_change": n_channels_b - n_channels_a,
+            "metrics_a": metrics_a,
+            "metrics_b": metrics_b,
+            "metrics_delta": metrics_delta,
+            "coefficients_a": coefficients_a,
+            "coefficients_b": coefficients_b,
+            "coefficient_diff": coefficient_diff,
+            "allocation_a": allocation_a,
+            "allocation_b": allocation_b,
+            "current_allocation_a": current_allocation_a,
+            "current_allocation_b": current_allocation_b,
+            "allocation_diff": allocation_diff,
+            "contribution_totals_a": contribution_totals_a,
+            "contribution_totals_b": contribution_totals_b,
+            "contribution_diff": contribution_diff,
+            "data_hash_changed": verification["data_hash_changed"],
+            "model_backend_changed": verification["model_backend_changed"],
+        }
 
     # ------------------------------------------------------------------
     # Static helpers
@@ -250,6 +385,10 @@ class ArtifactStore:
         if not d.exists():
             raise ArtifactError(f"Run directory not found: {run_id}", run_id=run_id)
         return d
+
+    def _load_manifest_dict(self, run_id: str) -> dict[str, Any]:
+        """Load manifest.json as a raw dict (no Pydantic validation). Raises if run or manifest missing."""
+        return self.load_json(run_id, "manifest")
 
     def _write_manifest(self, run_id: str, manifest: RunManifest) -> None:
         path = self._run_dir(run_id) / "manifest.json"

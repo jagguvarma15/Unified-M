@@ -5,7 +5,8 @@ import Sparkline from "./Sparkline";
 interface Props {
   label: string;
   value: string | number;
-  icon: LucideIcon;
+  /** Optional: omit for a clean label + value only card */
+  icon?: LucideIcon;
   delta?: string;
   color?: "indigo" | "emerald" | "amber" | "red";
   /** Short explanation for the metric (shown in tooltip on label hover) */
@@ -41,9 +42,13 @@ export default function MetricCard({
 
   return (
     <div className="min-w-0 rounded-xl border border-slate-200/60 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 overflow-hidden">
-      {/* Header: label gets all remaining space, icon has fixed reserved space so they never overlap */}
-      <div className="grid min-h-[28px] grid-cols-[1fr_auto] items-center gap-3">
-        <div className="min-w-0 overflow-hidden">
+      <div className="flex min-h-[24px] items-center gap-2">
+        {Icon && (
+          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${iconBg[color]}`} aria-hidden>
+            <Icon size={14} />
+          </div>
+        )}
+        <div className="min-w-0 flex-1 overflow-hidden">
           {tooltip ? (
             <Tooltip content={tooltip} side="top">
               <span className="block truncate cursor-help text-sm font-medium text-slate-500 border-b border-dotted border-slate-400/50">
@@ -54,11 +59,10 @@ export default function MetricCard({
             <p className="truncate text-sm font-medium text-slate-500">{label}</p>
           )}
         </div>
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg[color]}`}>
-          <Icon size={16} aria-hidden />
-        </div>
       </div>
-      <p className="mt-2 truncate text-2xl font-bold tabular-nums text-slate-900" title={typeof value === "string" ? value : String(value)}>{value}</p>
+      <p className="mt-2 truncate text-2xl font-bold tabular-nums text-slate-900" title={typeof value === "string" ? value : String(value)}>
+        {value}
+      </p>
       {delta && <p className="mt-1 truncate text-xs text-slate-500">{delta}</p>}
       {sparkline && sparkline.length > 0 && (
         <div className="mt-2 flex justify-end">

@@ -27,6 +27,7 @@ export default function Runs() {
   const [selected, setSelected] = useState<string[]>([]);
   const [comparison, setComparison] = useState<RunComparisonData | null>(null);
   const [comparing, setComparing] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -43,16 +44,19 @@ export default function Runs() {
       return [...prev, runId];
     });
     setComparison(null);
+    setCompareError(null);
   };
 
   const handleCompare = async () => {
     if (selected.length !== 2) return;
     setComparing(true);
+    setCompareError(null);
     try {
       const result = await api.compareRuns(selected[0], selected[1]);
       setComparison(result);
-    } catch {
+    } catch (err) {
       setComparison(null);
+      setCompareError(err instanceof Error ? err.message : "Compare failed. Check that both runs exist and the API is reachable.");
     } finally {
       setComparing(false);
     }
@@ -151,8 +155,19 @@ export default function Runs() {
         </div>
       </div>
 
+      {/* Compare error */}
+      {compareError && (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-medium">Comparison failed</p>
+          <p className="mt-1">{compareError}</p>
+          <p className="mt-2 text-xs text-red-600">
+            Ensure the API server is running (e.g. <code className="bg-red-100 px-1 rounded">PYTHONPATH=src python -m cli serve</code>) and that both run directories exist under <code className="bg-red-100 px-1 rounded">runs/</code>.
+          </p>
+        </div>
+      )}
+
       {/* Comparison panel */}
-      {comparison && <ComparisonPanel data={comparison} onClose={() => setComparison(null)} />}
+      {comparison && <ComparisonPanel data={comparison} onClose={() => { setComparison(null); setCompareError(null); }} />}
     </div>
   );
 }
@@ -214,39 +229,30 @@ function ComparisonPanel({
   data: RunComparisonData;
   onClose: () => void;
 }) {
-  // Extract metrics diff
-  const metricsA = (data as Record<string, unknown>).metrics_a as Record<string, number> | undefined;
-  const metricsB = (data as Record<string, unknown>).metrics_b as Record<string, number> | undefined;
-  const coeffA = (data as Record<string, unknown>).coefficients_a as Record<string, number> | undefined;
-  const coeffB = (data as Record<string, unknown>).coefficients_b as Record<string, number> | undefined;
-  const allocA = (data as Record<string, unknown>).allocation_a as Record<string, number> | undefined;
-  const allocB = (data as Record<string, unknown>).allocation_b as Record<string, number> | undefined;
+  const verification = data.verification;
+  const metricsA = data.metrics_a;
+  const metricsB = data.metrics_b;
+  const metricsDelta = data.metrics_delta ?? {};
+  const coeffA = data.coefficients_a;
+  const coeffB = data.coefficients_b;
+  const coefficientDiff = data.coefficient_diff ?? {};
+  const allocA = data.allocation_a ?? {};
+  const allocB = data.allocation_b ?? {};
+  const allocationDiff = data.allocation_diff ?? {};
+  const contributionDiff = data.contribution_diff ?? {};
 
-  // Build coefficient diff chart data
-  const coeffDiff: { channel: string; diff: number }[] = [];
-  if (coeffA && coeffB) {
-    const allChs = new Set([...Object.keys(coeffA), ...Object.keys(coeffB)]);
-    allChs.forEach((ch) => {
-      coeffDiff.push({
-        channel: ch.replace(/_spend$/, ""),
-        diff: (coeffB[ch] ?? 0) - (coeffA[ch] ?? 0),
-      });
-    });
-    coeffDiff.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
-  }
+  // Chart/table data from API (coefficient_diff and allocation_diff are authoritative)
+  const coeffDiff: { channel: string; diff: number }[] = Object.entries(coefficientDiff)
+    .map(([ch, diff]) => ({ channel: ch.replace(/_spend$/, ""), diff }))
+    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
-  // Build allocation diff
-  const allocDiff: { channel: string; a: number; b: number }[] = [];
-  if (allocA && allocB) {
-    const allChs = new Set([...Object.keys(allocA), ...Object.keys(allocB)]);
-    allChs.forEach((ch) => {
-      allocDiff.push({
-        channel: ch.replace(/_spend$/, ""),
-        a: allocA[ch] ?? 0,
-        b: allocB[ch] ?? 0,
-      });
-    });
-  }
+  const allocChannels = [...new Set([...Object.keys(allocA), ...Object.keys(allocB)])].sort();
+  const allocDiffRows = allocChannels.map((ch) => ({
+    channel: ch.replace(/_spend$/, ""),
+    a: allocA[ch] ?? 0,
+    b: allocB[ch] ?? 0,
+    diff: allocationDiff[ch] ?? (allocB[ch] ?? 0) - (allocA[ch] ?? 0),
+  }));
 
   const metricKeys = ["r_squared", "mape", "rmse", "mae"];
 
@@ -256,17 +262,80 @@ function ComparisonPanel({
         <div>
           <h2 className="text-base font-semibold text-slate-800">Run Comparison</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            <span className="font-mono">{data.run_a?.toString().slice(0, 12)}</span>
+            <span className="font-mono" title={data.run_a}>{data.run_a?.toString().slice(0, 18)}</span>
             {" vs "}
-            <span className="font-mono">{data.run_b?.toString().slice(0, 12)}</span>
+            <span className="font-mono" title={data.run_b}>{data.run_b?.toString().slice(0, 18)}</span>
           </p>
         </div>
-        <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-200 transition-colors">
+        <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-200 transition-colors" aria-label="Close comparison">
           <X size={18} className="text-slate-500" />
         </button>
       </div>
 
       <div className="p-5 space-y-6">
+        {/* Verification: run ids and data hashes for audit */}
+        {verification && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Verification</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div>
+                <span className="text-slate-500">Run A:</span>{" "}
+                <span className="text-slate-800" title={verification.run_a}>{verification.run_a}</span>
+                {verification.data_hash_a && (
+                  <span className="block mt-0.5 text-slate-500" title={verification.data_hash_a}>
+                    data_hash: {verification.data_hash_a.slice(0, 12)}…
+                  </span>
+                )}
+                {verification.model_backend_a && (
+                  <span className="block text-slate-500">backend: {verification.model_backend_a}</span>
+                )}
+              </div>
+              <div>
+                <span className="text-slate-500">Run B:</span>{" "}
+                <span className="text-slate-800" title={verification.run_b}>{verification.run_b}</span>
+                {verification.data_hash_b && (
+                  <span className="block mt-0.5 text-slate-500" title={verification.data_hash_b}>
+                    data_hash: {verification.data_hash_b.slice(0, 12)}…
+                  </span>
+                )}
+                {verification.model_backend_b && (
+                  <span className="block text-slate-500">backend: {verification.model_backend_b}</span>
+                )}
+              </div>
+            </div>
+            {(verification.data_hash_changed || verification.model_backend_changed) && (
+              <p className="mt-2 text-xs text-amber-700">
+                {verification.data_hash_changed && "Data hash changed. "}
+                {verification.model_backend_changed && "Model backend changed."}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Metrics delta at a glance */}
+        {Object.keys(metricsDelta).length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">Metric Deltas (B − A)</h3>
+            <p className="text-xs text-slate-500 mb-2">Positive = Run B higher. For R² higher is better; for MAPE/RMSE/MAE lower is better.</p>
+            <div className="flex flex-wrap gap-2">
+              {metricKeys.filter((k) => metricsDelta[k] != null).map((key) => {
+                const d = metricsDelta[key]!;
+                const improved = key === "r_squared" ? d > 0 : d < 0;
+                return (
+                  <span
+                    key={key}
+                    className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium tabular-nums ${
+                      improved ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    {key.replace("_", " ")}: {d >= 0 ? "+" : ""}{key === "mape" ? d.toFixed(2) + "%" : d.toFixed(4)}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Metric comparison */}
         {metricsA && metricsB && (
           <div>
@@ -320,9 +389,9 @@ function ComparisonPanel({
         )}
 
         {/* Allocation diff table */}
-        {allocDiff.length > 0 && (
+        {allocDiffRows.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Allocation Comparison</h3>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Optimal Allocation Comparison</h3>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
               <table className="w-full text-sm">
                 <thead>
@@ -330,20 +399,50 @@ function ComparisonPanel({
                     <th className="text-left py-2 px-3 font-semibold text-slate-600">Channel</th>
                     <th className="text-right py-2 px-3 font-semibold text-slate-600">Run A</th>
                     <th className="text-right py-2 px-3 font-semibold text-slate-600">Run B</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-600">Diff</th>
+                    <th className="text-right py-2 px-3 font-semibold text-slate-600">Diff (B − A)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {allocDiff.map((row) => (
+                  {allocDiffRows.map((row) => (
                     <tr key={row.channel} className="border-b border-slate-100">
                       <td className="py-2 px-3 font-medium text-slate-700">{row.channel}</td>
                       <td className="text-right py-2 px-3 tabular-nums">${row.a.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                       <td className="text-right py-2 px-3 tabular-nums">${row.b.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                      <td className={`text-right py-2 px-3 tabular-nums font-medium ${row.b - row.a > 0 ? "text-emerald-600" : row.b - row.a < 0 ? "text-red-600" : "text-slate-500"}`}>
-                        {row.b - row.a > 0 ? "+" : ""}{(row.b - row.a).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      <td className={`text-right py-2 px-3 tabular-nums font-medium ${row.diff > 0 ? "text-emerald-600" : row.diff < 0 ? "text-red-600" : "text-slate-500"}`}>
+                        {row.diff > 0 ? "+" : ""}{row.diff.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Contribution diff (from contributions.parquet totals) */}
+        {Object.keys(contributionDiff).length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Contribution Totals Diff (B − A)</h3>
+            <p className="text-xs text-slate-500 mb-2">Per-channel contribution sum from each run’s contributions.parquet.</p>
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left py-2 px-3 font-semibold text-slate-600">Channel</th>
+                    <th className="text-right py-2 px-3 font-semibold text-slate-600">Diff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(contributionDiff)
+                    .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a))
+                    .map(([ch, diff]) => (
+                      <tr key={ch} className="border-b border-slate-100">
+                        <td className="py-2 px-3 font-medium text-slate-700">{ch.replace(/_spend$/, "")}</td>
+                        <td className={`text-right py-2 px-3 tabular-nums font-medium ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-600" : "text-slate-500"}`}>
+                          {diff > 0 ? "+" : ""}{diff.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

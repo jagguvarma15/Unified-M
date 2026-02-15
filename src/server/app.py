@@ -199,14 +199,20 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
     @application.get("/api/v1/runs/compare")
     def compare_runs(
-        run_a: str = Query(...),
-        run_b: str = Query(...),
+        run_a: str = Query(..., description="First run ID"),
+        run_b: str = Query(..., description="Second run ID"),
     ):
-        """Compare two runs (config diff, metric diff)."""
+        """Compare two runs (config diff, metrics, coefficients, allocations)."""
+        if run_a == run_b:
+            raise HTTPException(400, "Cannot compare a run to itself. Select two different runs.")
         try:
+            from core.exceptions import ArtifactError
             return store.compare_runs(run_a, run_b)
-        except Exception as e:
+        except ArtifactError as e:
             raise HTTPException(404, str(e))
+        except Exception as e:
+            logger.exception("Run compare failed: %s", e)
+            raise HTTPException(400, str(e))
 
     # ------------------------------------------------------------------
     # Results (from latest run)

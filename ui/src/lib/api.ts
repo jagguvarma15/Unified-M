@@ -243,12 +243,49 @@ export interface ReportSummaryData {
 }
 
 // ---------------------------------------------------------------------------
-// Run Comparison
+// Run Comparison (advanced, verifiable)
 // ---------------------------------------------------------------------------
+
+export interface RunComparisonVerification {
+  run_a: string;
+  run_b: string;
+  timestamp_a: string;
+  timestamp_b: string;
+  data_hash_a: string;
+  data_hash_b: string;
+  data_hash_changed: boolean;
+  model_backend_a: string;
+  model_backend_b: string;
+  model_backend_changed: boolean;
+}
 
 export interface RunComparisonData {
   run_a: string;
   run_b: string;
+  verification?: RunComparisonVerification;
+  config_changes?: Record<string, { before: unknown; after: unknown }>;
+  n_rows_a?: number;
+  n_rows_b?: number;
+  n_rows_change?: number;
+  n_channels_a?: number;
+  n_channels_b?: number;
+  n_channels_change?: number;
+  metrics_a?: Record<string, number>;
+  metrics_b?: Record<string, number>;
+  metrics_delta?: Record<string, number>;
+  coefficients_a?: Record<string, number>;
+  coefficients_b?: Record<string, number>;
+  coefficient_diff?: Record<string, number>;
+  allocation_a?: Record<string, number>;
+  allocation_b?: Record<string, number>;
+  current_allocation_a?: Record<string, number>;
+  current_allocation_b?: Record<string, number>;
+  allocation_diff?: Record<string, number>;
+  contribution_totals_a?: Record<string, number>;
+  contribution_totals_b?: Record<string, number>;
+  contribution_diff?: Record<string, number>;
+  data_hash_changed?: boolean;
+  model_backend_changed?: boolean;
   [key: string]: unknown;
 }
 

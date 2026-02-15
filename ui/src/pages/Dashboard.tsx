@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart2, Percent, Layers, TrendingUp, DollarSign, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -126,23 +126,17 @@ export default function Dashboard() {
         <MetricCard
           label="R-squared"
           value={metrics?.r_squared?.toFixed(3) ?? "\u2014"}
-          icon={BarChart2}
-          color="indigo"
           tooltip="Variance in the target explained by the model. Higher is better (0–1)."
         />
         <MetricCard
           label="MAPE"
           value={metrics?.mape != null ? formatPercent(metrics.mape, 1) : "\u2014"}
-          icon={Percent}
-          color="emerald"
           tooltip="Mean Absolute Percentage Error. Lower is better."
           sparkline={sparklineActual.length > 0 ? sparklineActual : undefined}
         />
         <MetricCard
           label="Channels"
           value={latestRun.n_channels}
-          icon={Layers}
-          color="amber"
           tooltip="Number of media channels in the model."
         />
         <MetricCard
@@ -152,23 +146,17 @@ export default function Dashboard() {
               ? (optimization.improvement_pct >= 0 ? "+" : "") + formatPercent(optimization.improvement_pct, 1)
               : "\u2014"
           }
-          icon={TrendingUp}
-          color="indigo"
           tooltip="Expected response gain from reallocating to the optimal budget mix."
         />
         <MetricCard
           label="Total Spend"
           value={roas ? formatCurrency(roas.summary.total_spend, true) : "\u2014"}
-          icon={DollarSign}
-          color="emerald"
           tooltip="Sum of spend across all channels in the latest run."
           sparkline={sparklineContribution.length > 0 ? sparklineContribution : undefined}
         />
         <MetricCard
           label="Blended ROAS"
           value={roas ? formatROAS(roas.summary.blended_roas) : "\u2014"}
-          icon={TrendingUp}
-          color="amber"
           tooltip="Return on ad spend: total contribution ÷ total spend."
         />
       </div>
