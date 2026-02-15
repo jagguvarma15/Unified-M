@@ -114,7 +114,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     """Create and configure the FastAPI application."""
 
     config = get_config()
-    _runs_dir = Path(runs_dir) if runs_dir else config.storage.runs_path
+    _runs_dir = (Path(runs_dir) if runs_dir else config.storage.runs_path).resolve()
     store = ArtifactStore(_runs_dir)
     reader = ArtifactReader(store)
 
@@ -197,7 +197,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         except Exception:
             raise HTTPException(404, f"Run '{run_id}' not found")
 
-    @application.get("/api/v1/runs/compare")
+    @application.get("/api/v1/compare-runs")
     def compare_runs(
         run_a: str = Query(..., description="First run ID"),
         run_b: str = Query(..., description="Second run ID"),
@@ -209,7 +209,11 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             from core.exceptions import ArtifactError
             return store.compare_runs(run_a, run_b)
         except ArtifactError as e:
-            raise HTTPException(404, str(e))
+            detail = str(e)
+            if getattr(e, "run_id", None):
+                detail += f" (run: {e.run_id})"
+            logger.warning("Compare runs failed: %s", detail)
+            raise HTTPException(404, detail)
         except Exception as e:
             logger.exception("Run compare failed: %s", e)
             raise HTTPException(400, str(e))

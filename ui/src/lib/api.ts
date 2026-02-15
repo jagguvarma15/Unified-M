@@ -336,5 +336,5 @@ export const api = {
   spendPacing: () => get<SpendPacingData>("/api/v1/spend-pacing"),
   reportSummary: () => get<ReportSummaryData>("/api/v1/report/summary"),
   compareRuns: (runA: string, runB: string) =>
-    get<RunComparisonData>(`/api/v1/runs/compare?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`),
+    get<RunComparisonData>(`/api/v1/compare-runs?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`),
 };

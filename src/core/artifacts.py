@@ -141,14 +141,14 @@ class ArtifactStore:
         """Load a Parquet artifact."""
         path = self._run_dir(run_id) / f"{name}.parquet"
         if not path.exists():
-            raise ArtifactError(f"Artifact '{name}.parquet' not found", run_id=run_id)
+            raise ArtifactError(f"Artifact '{name}.parquet' not found for run {run_id}", run_id=run_id)
         return pd.read_parquet(path)
 
     def load_json(self, run_id: str, name: str) -> Any:
         """Load a JSON artifact."""
         path = self._run_dir(run_id) / f"{name}.json"
         if not path.exists():
-            raise ArtifactError(f"Artifact '{name}.json' not found", run_id=run_id)
+            raise ArtifactError(f"Artifact '{name}.json' not found for run {run_id}", run_id=run_id)
         with open(path) as f:
             return json.load(f)
 
