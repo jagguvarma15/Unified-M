@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import PageErrorBoundary from "./PageErrorBoundary";
+import PipelineRunner from "./PipelineRunner";
 import {
   LayoutDashboard,
   BarChart3,
@@ -12,13 +13,14 @@ import {
   Calculator,
   Settings,
   ChevronDown,
-  Plug,
+  Link2,
   Crosshair,
   Shield,
   ClipboardCheck,
   Zap,
   Gauge,
   FileText,
+  Play,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -41,7 +43,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
       { to: "/data", label: "Data", icon: Database },
-      { to: "/datapoint", label: "Connect to Datapoint", icon: Plug },
+      { to: "/datapoint", label: "Connections", icon: Link2 },
       { to: "/runs", label: "Runs", icon: History },
     ],
   },
@@ -88,6 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
 export default function Layout() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [pipelineOpen, setPipelineOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -111,7 +114,7 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* ---- Sidebar ---- */}
+      {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 flex flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50">
         <div className="px-5 pt-6 pb-4">
           <h1 className="text-lg font-bold tracking-tight text-white">
@@ -120,6 +123,17 @@ export default function Layout() {
           <p className="mt-0.5 text-[11px] text-slate-400">
             Marketing Measurement
           </p>
+        </div>
+
+        {/* Run Pipeline button */}
+        <div className="px-3 pb-3">
+          <button
+            onClick={() => setPipelineOpen(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          >
+            <Play size={14} />
+            Run Pipeline
+          </button>
         </div>
 
         <nav className="flex-1 px-2.5 space-y-3 overflow-y-auto py-2">
@@ -181,7 +195,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* ---- Main ---- */}
+      {/* Main */}
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-7xl px-6 py-8 min-h-[400px]">
           <PageErrorBoundary>
@@ -189,6 +203,9 @@ export default function Layout() {
           </PageErrorBoundary>
         </div>
       </main>
+
+      {/* Pipeline Runner slide-out */}
+      <PipelineRunner open={pipelineOpen} onClose={() => setPipelineOpen(false)} />
     </div>
   );
 }

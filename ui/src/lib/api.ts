@@ -290,8 +290,71 @@ export interface RunComparisonData {
 }
 
 // ---------------------------------------------------------------------------
+// Pipeline Jobs
+// ---------------------------------------------------------------------------
+
+export interface PipelineJob {
+  job_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  current_step: string;
+  progress_pct: number;
+  logs: string[];
+  error: string | null;
+  run_id: string | null;
+  metrics: Record<string, number>;
+  created_at: string;
+  finished_at: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Connectors
+// ---------------------------------------------------------------------------
+
+export interface SavedConnector {
+  id: string;
+  name: string;
+  type: string;
+  subtype: string;
+  config?: Record<string, unknown>;
+  created_at: string;
+  last_tested: string | null;
+  status: "untested" | "connected" | "failed";
+}
+
+// ---------------------------------------------------------------------------
+// Adapters
+// ---------------------------------------------------------------------------
+
+export interface AdapterBackend {
+  name: string;
+  available: boolean;
+  install_hint: string | null;
+}
+
+export interface AdaptersData {
+  model_backends: AdapterBackend[];
+  connectors: {
+    database: string[];
+    cloud: string[];
+    ad_platforms: string[];
+  };
+  cache: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------
+
+function postForm<T>(path: string, data: Record<string, string>): Promise<T> {
+  const formData = new FormData();
+  for (const [k, v] of Object.entries(data)) {
+    if (v != null) formData.append(k, v);
+  }
+  return fetch(`${BASE}${path}`, { method: "POST", body: formData }).then((r) => {
+    if (!r.ok) throw new Error(r.statusText);
+    return r.json();
+  });
+}
 
 export const api = {
   health: () => get<HealthData>("/health"),
@@ -320,15 +383,51 @@ export const api = {
       return r.json();
     });
   },
-  triggerPipeline: (model = "builtin", target = "revenue") => {
+
+  // Pipeline jobs (async)
+  triggerPipeline: (model = "builtin", target = "revenue") =>
+    postForm<{ job_id: string; status: string }>("/api/v1/pipeline/run", { model, target }),
+  listJobs: (limit = 20) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`),
+  getJob: (jobId: string) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`),
+
+  // Connectors CRUD
+  listConnectors: () => get<{ connectors: SavedConnector[] }>("/api/v1/connectors"),
+  getConnector: (id: string) => get<SavedConnector>(`/api/v1/connectors/${id}`),
+  createConnector: (name: string, type: string, subtype: string, config: Record<string, unknown>) =>
+    postForm<SavedConnector>("/api/v1/connectors", {
+      name,
+      connector_type: type,
+      subtype,
+      connector_config: JSON.stringify(config),
+    }),
+  updateConnector: (id: string, name?: string, config?: Record<string, unknown>) => {
     const formData = new FormData();
-    formData.append("model", model);
-    formData.append("target", target);
-    return fetch(`${BASE}/api/v1/pipeline/run`, { method: "POST", body: formData }).then((r) => {
+    if (name != null) formData.append("name", name);
+    if (config != null) formData.append("connector_config", JSON.stringify(config));
+    return fetch(`${BASE}/api/v1/connectors/${id}`, { method: "PUT", body: formData }).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<{ run_id: string; metrics: { mape?: number; r_squared?: number } }>;
+      return r.json() as Promise<SavedConnector>;
     });
   },
+  deleteConnector: (id: string) =>
+    fetch(`${BASE}/api/v1/connectors/${id}`, { method: "DELETE" }).then((r) => {
+      if (!r.ok) throw new Error(r.statusText);
+      return r.json();
+    }),
+  testConnector: (id: string) =>
+    postForm<{ status: string; connected: boolean; message: string }>(
+      `/api/v1/connectors/${id}/test`,
+      {},
+    ),
+  fetchFromConnector: (id: string, queryOrPath: string, dataType: string) =>
+    postForm<{ status: string; rows: number; columns: string[]; data_type: string }>(
+      `/api/v1/connectors/${id}/fetch`,
+      { query_or_path: queryOrPath, data_type: dataType },
+    ),
+
+  // Adapters
+  adapters: () => get<AdaptersData>("/api/v1/adapters"),
+
   calibration: () => get<CalibrationData>("/api/v1/calibration"),
   stability: () => get<StabilityData>("/api/v1/stability"),
   dataQuality: () => get<DataQualityData>("/api/v1/data-quality"),
