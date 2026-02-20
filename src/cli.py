@@ -129,6 +129,284 @@ def run(
 
 
 # ---------------------------------------------------------------------------
+# Individual pipeline steps (for CI / granular execution)
+# ---------------------------------------------------------------------------
+
+@app.command()
+def ingest(
+    source: Path = typer.Option(Path("data/raw"), "--source", "-s", help="Source directory with raw data files"),
+    output: Path = typer.Option(Path("data/gold"), "--output", "-o", help="Output directory for validated data"),
+):
+    """
+    Ingest raw data files into the processing zone.
+
+    Copies parquet/CSV files from source to output, coercing dates and
+    validating that minimum required files (media_spend, outcomes) exist.
+    """
+    from connectors.local import load_file
+
+    source = Path(source)
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+
+    REQUIRED = ["media_spend", "outcomes"]
+    OPTIONAL = ["controls", "incrementality_tests", "attribution"]
+
+    found = []
+    for name in REQUIRED + OPTIONAL:
+        for ext in [".parquet", ".csv", ".xlsx"]:
+            src_path = source / f"{name}{ext}"
+            if src_path.exists():
+                df = load_file(src_path)
+                if "date" in df.columns:
+                    df["date"] = pd.to_datetime(df["date"])
+                out_path = output / f"{name}.parquet"
+                df.to_parquet(out_path, index=False)
+                found.append(name)
+                logger.info(f"Ingested {name}: {len(df)} rows -> {out_path}")
+                break
+
+    missing = [r for r in REQUIRED if r not in found]
+    if missing:
+        logger.error(f"Missing required data files: {missing}")
+        raise typer.Exit(1)
+
+    logger.info(f"Ingest complete: {len(found)} file(s) written to {output}")
+
+
+@app.command()
+def validate(
+    input_dir: Path = typer.Option(Path("data/gold"), "--input", "-i", help="Directory with ingested data"),
+    target: str = typer.Option("revenue", "--target", "-t", help="Target column in outcomes"),
+):
+    """
+    Run data quality gates on ingested data.
+
+    Checks schema validity, completeness, anomalies, staleness, and
+    cross-source consistency.  Exits non-zero if critical gates fail.
+    """
+    from quality.gates import run_quality_gates
+
+    input_dir = Path(input_dir)
+
+    media_path = input_dir / "media_spend.parquet"
+    outcomes_path = input_dir / "outcomes.parquet"
+
+    if not media_path.exists() or not outcomes_path.exists():
+        logger.error(f"Required files not found in {input_dir}. Run 'ingest' first.")
+        raise typer.Exit(1)
+
+    media_spend = pd.read_parquet(media_path)
+    outcomes = pd.read_parquet(outcomes_path)
+
+    report = run_quality_gates(media_spend=media_spend, outcomes=outcomes, target_col=target)
+
+    logger.info(f"Quality gates: {report.n_passed} passed, {report.n_warnings} warnings, {report.n_failed} failures")
+
+    if not report.overall_pass:
+        logger.warning("Quality gates produced failures -- review before training")
+        for gate in report.results:
+            if not gate.passed:
+                logger.warning(f"  FAIL: {gate.gate_name} -- {gate.message}")
+    else:
+        logger.info("All quality gates passed")
+
+
+@app.command()
+def transform(
+    input_dir: Path = typer.Option(Path("data/gold"), "--input", "-i", help="Directory with ingested data"),
+    output: Path = typer.Option(Path("data/gold/mmm_input.parquet"), "--output", "-o", help="Path for MMM-ready parquet"),
+    target: str = typer.Option("revenue", "--target", "-t", help="Target column"),
+):
+    """
+    Transform raw data into MMM-ready features.
+
+    Creates adstock, saturation, and time features from ingested media
+    spend, outcomes, and controls data.
+    """
+    from transforms.features import create_mmm_features
+
+    input_dir = Path(input_dir)
+    output = Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    media_spend = pd.read_parquet(input_dir / "media_spend.parquet")
+    outcomes = pd.read_parquet(input_dir / "outcomes.parquet")
+    controls = None
+    controls_path = input_dir / "controls.parquet"
+    if controls_path.exists():
+        controls = pd.read_parquet(controls_path)
+
+    mmm_df = create_mmm_features(
+        media_spend=media_spend,
+        outcomes=outcomes,
+        controls=controls,
+        target_col=target,
+    )
+
+    mmm_df.to_parquet(output, index=False)
+    media_cols = [c for c in mmm_df.columns if c.endswith("_spend")]
+    logger.info(f"Transform complete: {len(mmm_df)} rows, {len(media_cols)} media channels -> {output}")
+
+
+@app.command()
+def train(
+    input_dir: Path = typer.Option(Path("data/gold"), "--input", "-i", help="Directory with ingested data"),
+    model: str = typer.Option("builtin", "--model", "-m", help="Model backend"),
+    target: str = typer.Option("revenue", "--target", "-t", help="Target column"),
+    budget: Optional[float] = typer.Option(None, "--budget", "-b", help="Total budget for optimisation"),
+    samples: int = typer.Option(1000, "--samples", help="MCMC samples (Bayesian backends)"),
+    chains: int = typer.Option(4, "--chains", help="MCMC chains (Bayesian backends)"),
+    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
+):
+    """
+    Train an MMM model on prepared data.
+
+    Runs the full train->reconcile->optimise pipeline and writes versioned
+    artifacts to the runs/ directory.
+    """
+    from config import load_config
+    from pipeline.runner import Pipeline
+
+    cfg = load_config(config_path)
+    cfg.ensure_directories()
+
+    input_dir = Path(input_dir)
+
+    pipe = Pipeline(config=cfg.to_flat_dict(), runs_dir=cfg.storage.runs_path)
+    pipe.connect(
+        media_spend=input_dir / "media_spend.parquet"
+        if (input_dir / "media_spend.parquet").exists() else None,
+        outcomes=input_dir / "outcomes.parquet"
+        if (input_dir / "outcomes.parquet").exists() else None,
+        controls=input_dir / "controls.parquet"
+        if (input_dir / "controls.parquet").exists() else None,
+        incrementality_tests=input_dir / "incrementality_tests.parquet"
+        if (input_dir / "incrementality_tests.parquet").exists() else None,
+        attribution=input_dir / "attribution.parquet"
+        if (input_dir / "attribution.parquet").exists() else None,
+    )
+
+    model_kwargs = {}
+    if model in ("pymc", "numpyro"):
+        model_kwargs = {"n_samples": samples, "n_chains": chains}
+
+    results = pipe.run(
+        model=model,
+        target_col=target,
+        total_budget=budget,
+        model_kwargs=model_kwargs if model_kwargs else None,
+    )
+
+    logger.info(f"Train complete: run_id={pipe.run_id}")
+    metrics = results.get("metrics", {})
+    logger.info(f"  MAPE : {metrics.get('mape', 'N/A')}%")
+    logger.info(f"  R2   : {metrics.get('r_squared', 'N/A')}")
+
+
+@app.command()
+def reconcile(
+    run_id: Optional[str] = typer.Option(None, "--run-id", help="Run ID to reconcile (latest if omitted)"),
+    config_path: Optional[Path] = typer.Option(None, "--config", "-c"),
+):
+    """
+    Re-run reconciliation on an existing run's artifacts.
+
+    Reads MMM parameters and experiment data from a completed run and
+    re-computes the reconciled channel estimates.
+    """
+    from config import load_config
+    from core.artifacts import ArtifactStore
+    from reconciliation.engine import ReconciliationEngine
+    import json
+
+    cfg = load_config(config_path)
+    store = ArtifactStore(cfg.storage.runs_path)
+    rid = run_id or store.get_latest_run_id()
+
+    if rid is None:
+        logger.error("No runs found. Run 'train' first.")
+        raise typer.Exit(1)
+
+    params = store.load_json(rid, "parameters")
+    if params is None:
+        logger.error(f"No parameters in run {rid}")
+        raise typer.Exit(1)
+
+    engine = ReconciliationEngine(
+        mmm_weight=cfg.reconciliation.mmm_weight,
+        incrementality_weight=cfg.reconciliation.incrementality_weight,
+        attribution_weight=cfg.reconciliation.attribution_weight,
+    )
+
+    media_cols = list(params.get("coefficients", {}).keys())
+    tests_path = cfg.storage.processed_path / "incrementality_tests.parquet"
+    tests_df = pd.read_parquet(tests_path) if tests_path.exists() else None
+
+    result = engine.reconcile(
+        mmm_results=params,
+        incrementality_tests=tests_df,
+        attribution_data=None,
+        channels=media_cols,
+    )
+
+    store.save_json(rid, "reconciliation", result.to_dict())
+    logger.info(f"Reconciliation saved to run {rid}")
+
+
+@app.command()
+def optimize(
+    run_id: Optional[str] = typer.Option(None, "--run-id", help="Run ID (latest if omitted)"),
+    budget: Optional[float] = typer.Option(None, "--budget", "-b", help="Override total budget"),
+    config_path: Optional[Path] = typer.Option(None, "--config", "-c"),
+):
+    """
+    Re-run budget optimisation on an existing run's response curves.
+
+    Useful for what-if analysis without retraining the model.
+    """
+    from config import load_config
+    from core.artifacts import ArtifactStore
+    from optimization.allocator import BudgetOptimizer
+    import json
+
+    cfg = load_config(config_path)
+    store = ArtifactStore(cfg.storage.runs_path)
+    rid = run_id or store.get_latest_run_id()
+
+    if rid is None:
+        logger.error("No runs found. Run 'train' first.")
+        raise typer.Exit(1)
+
+    curves_data = store.load_json(rid, "response_curves")
+    if curves_data is None:
+        logger.error(f"No response curves in run {rid}")
+        raise typer.Exit(1)
+
+    response_fns = {}
+    for ch, curve in curves_data.items():
+        spend_pts = np.array(curve["spend"])
+        resp_pts = np.array(curve["response"])
+        response_fns[ch] = lambda s, sp=spend_pts, rp=resp_pts: float(np.interp(s, sp, rp))
+
+    total_budget = budget
+    if total_budget is None:
+        media_path = cfg.storage.processed_path / "media_spend.parquet"
+        if media_path.exists():
+            total_budget = float(pd.read_parquet(media_path)["spend"].sum())
+        else:
+            total_budget = 100_000.0
+
+    optimizer = BudgetOptimizer(response_curves=response_fns, total_budget=total_budget)
+    result = optimizer.optimize()
+    store.save_json(rid, "optimization", result.to_dict())
+
+    logger.info(f"Optimisation saved to run {rid}")
+    logger.info(f"  Budget:   ${total_budget:,.0f}")
+    logger.info(f"  Expected: ${result.expected_response:,.0f}")
+
+
+# ---------------------------------------------------------------------------
 # scenario (what-if)
 # ---------------------------------------------------------------------------
 

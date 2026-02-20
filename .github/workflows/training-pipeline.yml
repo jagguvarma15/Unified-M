@@ -2,297 +2,244 @@ name: MMM Training Pipeline
 
 on:
   schedule:
-    # Run weekly on Sunday at 2 AM UTC
-    - cron: '0 2 * * 0'
-  
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 2 AM UTC
+
   workflow_dispatch:
     inputs:
-      full_retrain:
-        description: 'Full model retrain (vs incremental)'
+      model:
+        description: 'Model backend (builtin, pymc, meridian)'
         required: false
-        default: false
-        type: boolean
+        default: 'builtin'
+        type: string
+      target:
+        description: 'Target column in outcomes'
+        required: false
+        default: 'revenue'
+        type: string
 
 env:
   PYTHON_VERSION: '3.11'
   UV_VERSION: 'latest'
+  DATA_DIR: data/gold
 
 jobs:
-  # Data Ingestion & Validation
+  # ---------------------------------------------------------------
+  # 1. Ingest & Validate
+  # ---------------------------------------------------------------
   ingest:
     name: Ingest & Validate Data
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
-      
+        uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           version: ${{ env.UV_VERSION }}
-      
+
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install dependencies
         run: uv sync --frozen --no-dev
-      
-      - name: Run data ingestion
+
+      - name: Ingest raw data
         run: |
           uv run python -m cli ingest \
             --source data/raw \
-            --output data/validated
-      
-      - name: Validate data schemas
+            --output ${{ env.DATA_DIR }}
+
+      - name: Validate data quality
         run: |
           uv run python -m cli validate \
-            --input data/validated
-      
-      - name: Upload validated data
+            --input ${{ env.DATA_DIR }} \
+            --target ${{ inputs.target || 'revenue' }}
+
+      - name: Upload ingested data
         uses: actions/upload-artifact@v4
         with:
-          name: validated-data
-          path: data/validated/
+          name: ingested-data
+          path: ${{ env.DATA_DIR }}/
           retention-days: 7
 
-  # Feature Engineering & Transformation
+  # ---------------------------------------------------------------
+  # 2. Transform
+  # ---------------------------------------------------------------
   transform:
     name: Transform & Feature Engineering
     runs-on: ubuntu-latest
     needs: ingest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
-      
+        uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           version: ${{ env.UV_VERSION }}
-      
+
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install dependencies
         run: uv sync --frozen --no-dev
-      
-      - name: Download validated data
+
+      - name: Download ingested data
         uses: actions/download-artifact@v4
         with:
-          name: validated-data
-          path: data/validated/
-      
+          name: ingested-data
+          path: ${{ env.DATA_DIR }}/
+
       - name: Run transformations
         run: |
           uv run python -m cli transform \
-            --input data/validated \
-            --output data/transformed
-      
+            --input ${{ env.DATA_DIR }} \
+            --output ${{ env.DATA_DIR }}/mmm_input.parquet \
+            --target ${{ inputs.target || 'revenue' }}
+
       - name: Upload transformed data
         uses: actions/upload-artifact@v4
         with:
           name: transformed-data
-          path: data/transformed/
+          path: ${{ env.DATA_DIR }}/
           retention-days: 7
 
-  # MMM Training
+  # ---------------------------------------------------------------
+  # 3. Train (includes reconcile + optimise internally)
+  # ---------------------------------------------------------------
   train:
     name: Train MMM Model
     runs-on: ubuntu-latest
     needs: transform
-    timeout-minutes: 180  # 3 hour limit for model training
-    
+    timeout-minutes: 180
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
-      
+        uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           version: ${{ env.UV_VERSION }}
-      
+
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install dependencies
         run: uv sync --frozen --no-dev
-      
+
       - name: Download transformed data
         uses: actions/download-artifact@v4
         with:
           name: transformed-data
-          path: data/transformed/
-      
+          path: ${{ env.DATA_DIR }}/
+
       - name: Train MMM model
         run: |
           uv run python -m cli train \
-            --input data/transformed \
-            --output models/ \
-            --samples 1000 \
-            --chains 4
-      
-      - name: Upload model artifacts
+            --input ${{ env.DATA_DIR }} \
+            --model ${{ inputs.model || 'builtin' }} \
+            --target ${{ inputs.target || 'revenue' }}
+
+      - name: Upload run artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mmm-model
-          path: |
-            models/
-            data/outputs/mmm_results.json
-            data/outputs/contributions.parquet
+          name: run-artifacts
+          path: runs/
           retention-days: 30
 
-
-  # Reconciliation
-  
-  reconcile:
-    name: Reconcile Measurements
-    runs-on: ubuntu-latest
-    needs: train
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      
-      - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
-        run: uv sync --frozen --no-dev
-      
-      - name: Download model artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mmm-model
-          path: ./
-      
-      - name: Run reconciliation
-        run: |
-          uv run python -m cli reconcile \
-            --mmm-results data/outputs/mmm_results.json \
-            --output data/outputs/reconciliation.json
-      
-      - name: Upload reconciliation results
-        uses: actions/upload-artifact@v4
-        with:
-          name: reconciliation
-          path: data/outputs/reconciliation.json
-          retention-days: 30
-
-  # Budget Optimization
-  optimize:
-    name: Optimize Budget
-    runs-on: ubuntu-latest
-    needs: reconcile
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-      
-      - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
-        run: uv sync --frozen --no-dev
-      
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mmm-model
-          path: ./
-      
-      - name: Download reconciliation
-        uses: actions/download-artifact@v4
-        with:
-          name: reconciliation
-          path: data/outputs/
-      
-      - name: Run optimization
-        run: |
-          uv run python -m cli optimize \
-            --mmm-results data/outputs/mmm_results.json \
-            --output data/outputs/optimization.json
-      
-      - name: Upload optimization results
-        uses: actions/upload-artifact@v4
-        with:
-          name: optimization
-          path: |
-            data/outputs/optimization.json
-            data/outputs/response_curves.json
-            data/outputs/scenarios.json
-          retention-days: 30
-
-  # Publish Results
+  # ---------------------------------------------------------------
+  # 4. Publish Results
+  # ---------------------------------------------------------------
   publish:
     name: Publish Results
     runs-on: ubuntu-latest
-    needs: optimize
-    
+    needs: train
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
-      
-      - name: Download all outputs
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev
+
+      - name: Download run artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/
-      
-      - name: Consolidate outputs
+          name: run-artifacts
+          path: runs/
+
+      - name: Download data
+        uses: actions/download-artifact@v4
+        with:
+          name: transformed-data
+          path: ${{ env.DATA_DIR }}/
+
+      - name: List latest run
+        id: latest
         run: |
-          mkdir -p data/outputs
-          cp -r artifacts/mmm-model/* ./
-          cp -r artifacts/reconciliation/* data/outputs/
-          cp -r artifacts/optimization/* data/outputs/
-      
+          RUN_ID=$(uv run python -c "
+          from core.artifacts import ArtifactStore
+          s = ArtifactStore('runs')
+          rid = s.get_latest_run_id()
+          print(rid or '')
+          " 2>/dev/null)
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+        env:
+          PYTHONPATH: src
+
       - name: Commit results to repository
+        if: steps.latest.outputs.run_id != ''
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add data/outputs/
-          git diff --staged --quiet || git commit -m "Update MMM results [skip ci]"
+          git add runs/ ${{ env.DATA_DIR }}/
+          git diff --staged --quiet || git commit -m "Update MMM results (${{ steps.latest.outputs.run_id }}) [skip ci]"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Create summary
+        if: always()
         run: |
-          echo "## Pipeline Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## MMM Training Pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- MMM model trained successfully" >> $GITHUB_STEP_SUMMARY
-          echo "- Reconciliation completed" >> $GITHUB_STEP_SUMMARY
-          echo "- Budget optimization generated" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Run ID | \`${{ steps.latest.outputs.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Model | ${{ inputs.model || 'builtin' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | ${{ inputs.target || 'revenue' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "Results are available in \`data/outputs/\`" >> $GITHUB_STEP_SUMMARY
+          echo "Run artifacts stored in \`runs/${{ steps.latest.outputs.run_id }}/\`" >> $GITHUB_STEP_SUMMARY
 
-  # Notify (optional)
+  # ---------------------------------------------------------------
+  # 5. Notify
+  # ---------------------------------------------------------------
   notify:
     name: Send Notification
     runs-on: ubuntu-latest
     needs: publish
     if: always()
-    
+
     steps:
       - name: Notify on success
-        if: ${{ needs.publish.result == 'success' }}
-        run: |
-          echo "Pipeline completed successfully"
-          # Add Slack/email notification here if needed
-      
+        if: needs.publish.result == 'success'
+        run: echo "Pipeline completed successfully"
+
       - name: Notify on failure
-        if: ${{ needs.publish.result != 'success' }}
+        if: needs.publish.result != 'success'
         run: |
-          echo "Pipeline failed - check logs"
-          # Add Slack/email notification here if needed
+          echo "::error::Pipeline failed -- check logs"
+          exit 1
