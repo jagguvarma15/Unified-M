@@ -6,6 +6,12 @@ import {
   Server,
   Cpu,
   HardDrive,
+  CheckCircle2,
+  XCircle,
+  Blocks,
+  Database,
+  Cloud,
+  Megaphone,
 } from "lucide-react";
 import {
   BarChart,
@@ -18,20 +24,22 @@ import {
   Cell,
 } from "recharts";
 import EmptyState from "../components/EmptyState";
-import { api, type ParametersData, type HealthData } from "../lib/api";
+import { api, type ParametersData, type HealthData, type AdaptersData } from "../lib/api";
 import { COLORS } from "../lib/colors";
 
 export default function Settings() {
   const [params, setParams] = useState<ParametersData | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [adapters, setAdapters] = useState<AdaptersData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"parameters" | "adstock" | "saturation" | "system">("parameters");
+  const [activeTab, setActiveTab] = useState<"parameters" | "adstock" | "saturation" | "adapters" | "system">("parameters");
 
   useEffect(() => {
     Promise.allSettled([
       api.parameters().then(setParams),
       api.health().then(setHealth),
+      api.adapters().then(setAdapters),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -72,6 +80,7 @@ export default function Settings() {
     { key: "parameters" as const, label: "Coefficients" },
     { key: "adstock" as const, label: "Adstock" },
     { key: "saturation" as const, label: "Saturation" },
+    { key: "adapters" as const, label: "Adapters" },
     { key: "system" as const, label: "System" },
   ];
 
@@ -126,6 +135,7 @@ export default function Settings() {
         {activeTab === "parameters" && <CoefficientsTab params={params} />}
         {activeTab === "adstock" && <AdstockTab params={params} />}
         {activeTab === "saturation" && <SaturationTab params={params} />}
+        {activeTab === "adapters" && <AdaptersTab adapters={adapters} />}
         {activeTab === "system" && <SystemTab health={health} />}
       </div>
     </div>
@@ -387,6 +397,119 @@ function SaturationTab({ params }: { params: ParametersData | null }) {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdaptersTab({ adapters }: { adapters: AdaptersData | null }) {
+  if (!adapters) {
+    return <EmptyState title="Loading adapters..." message="Could not fetch adapter information from the API." />;
+  }
+
+  const cacheInfo = adapters.cache;
+
+  return (
+    <div className="space-y-6">
+      {/* Model Backends */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+        <h2 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <Blocks size={16} />
+          Model Backends
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {adapters.model_backends.map((b) => (
+            <div
+              key={b.name}
+              className={`flex items-center justify-between rounded-lg border p-4 ${
+                b.available ? "border-emerald-200 bg-emerald-50/50" : "border-slate-200 bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {b.available ? (
+                  <CheckCircle2 size={18} className="text-emerald-500" />
+                ) : (
+                  <XCircle size={18} className="text-slate-400" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{b.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {b.available ? "Installed & ready" : b.install_hint || "Not installed"}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  b.available ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+                }`}
+              >
+                {b.available ? "Active" : "Unavailable"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Connectors */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+        <h2 className="text-sm font-semibold text-slate-700 mb-4">Supported Connectors</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <Database size={14} /> Databases
+            </div>
+            <ul className="space-y-1">
+              {adapters.connectors.database.map((d) => (
+                <li key={d} className="text-sm text-slate-700 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {d}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <Cloud size={14} /> Cloud Storage
+            </div>
+            <ul className="space-y-1">
+              {adapters.connectors.cloud.map((c) => (
+                <li key={c} className="text-sm text-slate-700 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <Megaphone size={14} /> Ad Platforms
+            </div>
+            <ul className="space-y-1">
+              {adapters.connectors.ad_platforms.map((a) => (
+                <li key={a} className="text-sm text-slate-700 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {a}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Cache */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+        <h2 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <Cpu size={16} />
+          Cache Backend
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {Object.entries(cacheInfo).map(([key, val]) => (
+            <div key={key} className="p-3 bg-slate-50 rounded-lg">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">{key.replace(/_/g, " ")}</p>
+              <p className="text-sm font-semibold text-slate-900 tabular-nums">{String(val)}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

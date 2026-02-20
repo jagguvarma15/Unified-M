@@ -126,12 +126,8 @@ export default function Data() {
 
     try {
       const result = await api.triggerPipeline("builtin", "revenue");
-      setRunResult(
-        `Pipeline completed! Run ID: ${result.run_id}\n` +
-          `MAPE: ${result.metrics.mape?.toFixed(2)}% | R²: ${result.metrics.r_squared?.toFixed(3)}`,
-      );
-      // Refresh status after a delay to let artifacts settle
-      setTimeout(loadStatus, 1000);
+      setRunResult(`Pipeline job started (job: ${result.job_id}). Track progress via the Run Pipeline panel.`);
+      setTimeout(loadStatus, 5000);
     } catch (err) {
       setRunResult(`Pipeline failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

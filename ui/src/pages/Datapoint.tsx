@@ -1,795 +1,470 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Database,
   Cloud,
   Upload,
+  Plus,
   TestTube,
   CheckCircle2,
   XCircle,
   Loader2,
-  FileText,
+  Trash2,
+  Download,
+  X,
 } from "lucide-react";
+import PageHeader from "../components/PageHeader";
+import { api, type SavedConnector } from "../lib/api";
+import { useToast } from "../lib/toast";
 
-interface ConnectionTestResult {
-  status: string;
-  connected: boolean;
-  message: string;
-}
-
-interface FetchResult {
-  status: string;
-  rows: number;
-  columns: string[];
-  path: string;
-  data_type: string;
-}
-
-const DATA_TYPES = [
-  { key: "media_spend", label: "Media Spend", required: true },
-  { key: "outcomes", label: "Outcomes", required: true },
-  { key: "controls", label: "Control Variables", required: false },
-  { key: "incrementality_tests", label: "Incrementality Tests", required: false },
-  { key: "attribution", label: "Attribution Data", required: false },
-  { key: "custom", label: "Custom (name below)", required: false },
+const CONNECTOR_TYPES = [
+  {
+    type: "database",
+    label: "Database",
+    icon: Database,
+    subtypes: [
+      { key: "postgresql", label: "PostgreSQL" },
+      { key: "mysql", label: "MySQL" },
+      { key: "sqlserver", label: "SQL Server" },
+      { key: "sqlite", label: "SQLite" },
+    ],
+  },
+  {
+    type: "cloud",
+    label: "Cloud Storage",
+    icon: Cloud,
+    subtypes: [
+      { key: "s3", label: "AWS S3" },
+      { key: "azure", label: "Azure Blob" },
+    ],
+  },
 ] as const;
 
-/** Custom name allowed: letter then letters/numbers/underscores, max 64 chars */
-const CUSTOM_DATA_TYPE_REGEX = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
-function isValidCustomName(name: string): boolean {
-  return name.trim() !== "" && CUSTOM_DATA_TYPE_REGEX.test(name.trim());
+const STATUS_COLORS: Record<string, string> = {
+  connected: "bg-emerald-400",
+  failed: "bg-red-400",
+  untested: "bg-slate-300",
+};
+
+const DATA_TYPES = ["media_spend", "outcomes", "controls", "incrementality_tests", "attribution"];
+
+function ConnectorCard({
+  connector,
+  onTest,
+  onDelete,
+  onFetch,
+}: {
+  connector: SavedConnector;
+  onTest: () => void;
+  onDelete: () => void;
+  onFetch: () => void;
+}) {
+  const typeInfo = CONNECTOR_TYPES.find((t) => t.type === connector.type);
+  const Icon = typeInfo?.icon ?? Database;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+            <Icon size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{connector.name}</p>
+            <p className="text-xs text-slate-500">
+              {connector.subtype} &middot; {connector.type}
+            </p>
+          </div>
+        </div>
+        <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[connector.status] ?? "bg-slate-300"}`} />
+      </div>
+
+      {connector.last_tested && (
+        <p className="text-xs text-slate-400">
+          Tested: {new Date(connector.last_tested).toLocaleString()}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={onTest}
+          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          <TestTube size={12} /> Test
+        </button>
+        <button
+          onClick={onFetch}
+          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          <Download size={12} /> Fetch
+        </button>
+        <button
+          onClick={onDelete}
+          className="flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-auto"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function Datapoint() {
-  const [connectionType, setConnectionType] = useState<"database" | "cloud" | "file">("file");
-  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
-  const [fetchResult, setFetchResult] = useState<FetchResult | null>(null);
-  const [testing, setTesting] = useState(false);
+  const [connectors, setConnectors] = useState<SavedConnector[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showFetch, setShowFetch] = useState<string | null>(null);
+  const { addToast } = useToast();
+
+  // Add form
+  const [name, setName] = useState("");
+  const [connType, setConnType] = useState("database");
+  const [subtype, setSubtype] = useState("postgresql");
+  const [configFields, setConfigFields] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Fetch form
+  const [fetchQuery, setFetchQuery] = useState("");
+  const [fetchDataType, setFetchDataType] = useState("media_spend");
   const [fetching, setFetching] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
-  // Database form state
-  const [dbType, setDbType] = useState("postgresql");
-  const [dbHost, setDbHost] = useState("");
-  const [dbPort, setDbPort] = useState("");
-  const [dbDatabase, setDbDatabase] = useState("");
-  const [dbUser, setDbUser] = useState("");
-  const [dbPassword, setDbPassword] = useState("");
-  const [dbQuery, setDbQuery] = useState("");
-
-  // Cloud form state
-  const [cloudType, setCloudType] = useState("s3");
-  const [cloudBucket, setCloudBucket] = useState("");
-  const [cloudAccessKey, setCloudAccessKey] = useState("");
-  const [cloudSecretKey, setCloudSecretKey] = useState("");
-  const [cloudRegion, setCloudRegion] = useState("us-east-1");
-  const [cloudPath, setCloudPath] = useState("");
-
-  // File upload state
+  // File upload
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDataType, setUploadDataType] = useState("media_spend");
-  const [customDataTypeName, setCustomDataTypeName] = useState("");
+  const [uploading, setUploading] = useState(false);
 
-  const handleTestConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
+  const refresh = () => {
+    api.listConnectors().then((r) => setConnectors(r.connectors)).catch(() => {}).finally(() => setLoading(false));
+  };
 
+  useEffect(refresh, []);
+
+  const selectedType = CONNECTOR_TYPES.find((t) => t.type === connType);
+
+  const handleCreate = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
     try {
-      let config: Record<string, unknown> = {};
-
-      if (connectionType === "database") {
-        config = {
-          db_type: dbType,
-          host: dbHost,
-          port: parseInt(dbPort) || (dbType === "postgresql" ? 5432 : 3306),
-          database: dbDatabase,
-          user: dbUser,
-          password: dbPassword,
-        };
-      } else if (connectionType === "cloud") {
-        if (cloudType === "s3") {
-          config = {
-            cloud_type: "s3",
-            bucket: cloudBucket,
-            aws_access_key_id: cloudAccessKey,
-            aws_secret_access_key: cloudSecretKey,
-            region_name: cloudRegion,
-          };
-        } else if (cloudType === "azure") {
-          config = {
-            cloud_type: "azure",
-            account_name: cloudBucket,
-            container_name: cloudPath.split("/")[0] || "",
-            account_key: cloudAccessKey,
-          };
-        }
-      }
-
-      const formData = new FormData();
-      formData.append("connection_type", connectionType);
-      formData.append("connection_config", JSON.stringify(config));
-
-      const res = await fetch("/api/v1/datapoint/test", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await res.json();
-      setTestResult(result);
-    } catch (err) {
-      setTestResult({
-        status: "error",
-        connected: false,
-        message: err instanceof Error ? err.message : "Connection test failed",
-      });
+      await api.createConnector(name, connType, subtype, configFields);
+      addToast("success", `Connection "${name}" saved`);
+      setShowAdd(false);
+      setName("");
+      setConfigFields({});
+      refresh();
+    } catch (e: any) {
+      addToast("error", e.message);
     } finally {
-      setTesting(false);
+      setSaving(false);
     }
   };
 
-  const handleFetchData = async (dataType: string) => {
-    setFetching(true);
-    setFetchResult(null);
-
+  const handleTest = async (id: string) => {
     try {
-      let config: Record<string, unknown> = {};
-      let queryOrPath = "";
-
-      if (connectionType === "database") {
-        config = {
-          db_type: dbType,
-          host: dbHost,
-          port: parseInt(dbPort) || (dbType === "postgresql" ? 5432 : 3306),
-          database: dbDatabase,
-          user: dbUser,
-          password: dbPassword,
-        };
-        queryOrPath = dbQuery;
-      } else if (connectionType === "cloud") {
-        if (cloudType === "s3") {
-          config = {
-            cloud_type: "s3",
-            bucket: cloudBucket,
-            aws_access_key_id: cloudAccessKey,
-            aws_secret_access_key: cloudSecretKey,
-            region_name: cloudRegion,
-          };
-        } else if (cloudType === "azure") {
-          config = {
-            cloud_type: "azure",
-            account_name: cloudBucket,
-            container_name: cloudPath.split("/")[0] || "",
-            account_key: cloudAccessKey,
-          };
-        }
-        queryOrPath = cloudPath;
+      const res = await api.testConnector(id);
+      if (res.connected) {
+        addToast("success", "Connection successful");
+      } else {
+        addToast("error", res.message || "Connection failed");
       }
+      refresh();
+    } catch (e: any) {
+      addToast("error", e.message);
+    }
+  };
 
-      const formData = new FormData();
-      formData.append("connection_type", connectionType);
-      formData.append("connection_config", JSON.stringify(config));
-      formData.append("query_or_path", queryOrPath);
-      formData.append("data_type", dataType);
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteConnector(id);
+      addToast("info", "Connection deleted");
+      refresh();
+    } catch (e: any) {
+      addToast("error", e.message);
+    }
+  };
 
-      const res = await fetch("/api/v1/datapoint/fetch", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || "Fetch failed");
-      }
-
-      const result = await res.json();
-      setFetchResult(result);
-    } catch (err) {
-      setFetchResult({
-        status: "error",
-        rows: 0,
-        columns: [],
-        path: "",
-        data_type: dataType,
-      });
-      alert(err instanceof Error ? err.message : "Failed to fetch data");
+  const handleFetchData = async () => {
+    if (!showFetch || !fetchQuery.trim()) return;
+    setFetching(true);
+    try {
+      const res = await api.fetchFromConnector(showFetch, fetchQuery, fetchDataType);
+      addToast("success", `Imported ${res.rows} rows as ${res.data_type}`);
+      setShowFetch(null);
+      setFetchQuery("");
+    } catch (e: any) {
+      addToast("error", e.message);
     } finally {
       setFetching(false);
     }
   };
 
-  const resolveDataType = (): string => {
-    if (uploadDataType === "custom") {
-      return customDataTypeName.trim();
-    }
-    return uploadDataType;
-  };
-
   const handleFileUpload = async () => {
     if (!uploadFile) return;
-    const dataType = resolveDataType();
-    if (uploadDataType === "custom" && !isValidCustomName(customDataTypeName)) {
-      alert("Custom data type name must start with a letter and use only letters, numbers, and underscores (max 64 chars).");
-      return;
-    }
-
     setUploading(true);
-    setFetchResult(null);
-
     try {
-      const formData = new FormData();
-      formData.append("file", uploadFile);
-      formData.append("data_type", dataType);
-
-      const res = await fetch("/api/v1/datapoint/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || "Upload failed");
-      }
-
-      const result = await res.json();
-      setFetchResult(result);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to upload file");
+      const res = await api.uploadFile(uploadDataType, uploadFile);
+      addToast("success", `Uploaded ${res.rows} rows as ${uploadDataType}`);
+      setUploadFile(null);
+    } catch (e: any) {
+      addToast("error", e.message);
     } finally {
       setUploading(false);
     }
   };
 
+  const fieldFor = (key: string, label: string, type = "text") => (
+    <div key={key}>
+      <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+      <input
+        type={type}
+        value={configFields[key] ?? ""}
+        onChange={(e) => setConfigFields((p) => ({ ...p, [key]: e.target.value }))}
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+      />
+    </div>
+  );
+
+  const renderConfigForm = () => {
+    if (connType === "database") {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          {fieldFor("host", "Host")}
+          {fieldFor("port", "Port")}
+          {fieldFor("database", "Database")}
+          {fieldFor("user", "Username")}
+          {fieldFor("password", "Password", "password")}
+        </div>
+      );
+    }
+    if (subtype === "s3") {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          {fieldFor("bucket", "Bucket")}
+          {fieldFor("aws_access_key_id", "Access Key ID")}
+          {fieldFor("aws_secret_access_key", "Secret Access Key", "password")}
+          {fieldFor("region_name", "Region")}
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {fieldFor("account_name", "Account Name")}
+        {fieldFor("container_name", "Container")}
+        {fieldFor("account_key", "Account Key", "password")}
+      </div>
+    );
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Connect to a Datapoint</h1>
-      <p className="text-sm text-slate-500 mt-1">
-        Connect to databases, cloud storage, or upload files to import data
-      </p>
+      <PageHeader
+        title="Connections"
+        description="Manage data source connections and file uploads"
+      />
 
-      {/* Connection type selector */}
-      <div className="mt-6 flex gap-2 bg-slate-100 rounded-lg p-1 w-fit">
-        {[
-          { key: "file" as const, label: "File Upload", icon: Upload },
-          { key: "database" as const, label: "Database", icon: Database },
-          { key: "cloud" as const, label: "Cloud Storage", icon: Cloud },
-        ].map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setConnectionType(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              connectionType === key
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+      {/* Quick file upload strip */}
+      <div className="rounded-lg border border-slate-200 bg-white p-4 flex flex-wrap items-end gap-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <Upload size={16} /> Quick Upload
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Data type</label>
+          <select
+            value={uploadDataType}
+            onChange={(e) => setUploadDataType(e.target.value)}
+            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
           >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
+            {DATA_TYPES.map((dt) => (
+              <option key={dt} value={dt}>{dt}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">File</label>
+          <input
+            type="file"
+            accept=".csv,.parquet,.xlsx,.xls"
+            onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+            className="text-sm"
+          />
+        </div>
+        <button
+          onClick={handleFileUpload}
+          disabled={!uploadFile || uploading}
+          className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          Upload
+        </button>
       </div>
 
-      {/* File Upload Form */}
-      {connectionType === "file" && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">Upload File</h2>
-          <p className="text-xs text-slate-500 mb-4">
-            Supported formats: CSV, Parquet, Excel (.xlsx, .xls)
-          </p>
+      {/* Saved connections grid */}
+      <div className="mt-6 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">Saved Connections</h2>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+        >
+          <Plus size={14} /> Add Connection
+        </button>
+      </div>
 
-          <div className="space-y-4">
+      {loading ? (
+        <div className="mt-4 flex justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-slate-400" />
+        </div>
+      ) : connectors.length === 0 ? (
+        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+          <Database size={32} className="mx-auto text-slate-300" />
+          <p className="mt-2 text-sm text-slate-500">No saved connections yet</p>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            Add your first connection
+          </button>
+        </div>
+      ) : (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {connectors.map((c) => (
+            <ConnectorCard
+              key={c.id}
+              connector={c}
+              onTest={() => handleTest(c.id)}
+              onDelete={() => handleDelete(c.id)}
+              onFetch={() => { setShowFetch(c.id); setFetchQuery(""); }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Add Connection Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/20" onClick={() => setShowAdd(false)} />
+          <div className="relative w-full max-w-lg rounded-xl bg-white shadow-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">New Connection</h3>
+              <button onClick={() => setShowAdd(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Data Type
-              </label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="My PostgreSQL"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Type</label>
+                <select
+                  value={connType}
+                  onChange={(e) => {
+                    setConnType(e.target.value);
+                    const t = CONNECTOR_TYPES.find((ct) => ct.type === e.target.value);
+                    if (t) setSubtype(t.subtypes[0].key);
+                    setConfigFields({});
+                  }}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  {CONNECTOR_TYPES.map((t) => (
+                    <option key={t.type} value={t.type}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Provider</label>
+                <select
+                  value={subtype}
+                  onChange={(e) => { setSubtype(e.target.value); setConfigFields({}); }}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  {selectedType?.subtypes.map((s) => (
+                    <option key={s.key} value={s.key}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {renderConfigForm()}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowAdd(false)}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!name.trim() || saving}
+                className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                Save Connection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fetch Data Modal */}
+      {showFetch && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/20" onClick={() => setShowFetch(null)} />
+          <div className="relative w-full max-w-md rounded-xl bg-white shadow-xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">Fetch Data</h3>
+              <button onClick={() => setShowFetch(null)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">SQL Query or File Path</label>
+              <textarea
+                value={fetchQuery}
+                onChange={(e) => setFetchQuery(e.target.value)}
+                rows={3}
+                placeholder="SELECT * FROM media_spend"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Import as</label>
               <select
-                value={uploadDataType}
-                onChange={(e) => setUploadDataType(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                value={fetchDataType}
+                onChange={(e) => setFetchDataType(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               >
                 {DATA_TYPES.map((dt) => (
-                  <option key={dt.key} value={dt.key}>
-                    {dt.label} {dt.required && "(Required)"}
-                  </option>
+                  <option key={dt} value={dt}>{dt}</option>
                 ))}
               </select>
             </div>
 
-            {uploadDataType === "custom" && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Custom Data Type Name
-                </label>
-                <input
-                  type="text"
-                  value={customDataTypeName}
-                  onChange={(e) => setCustomDataTypeName(e.target.value)}
-                  placeholder="e.g. promo_flags, weather"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  Letters, numbers, underscores only; must start with a letter (max 64 chars).
-                </p>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                File
-              </label>
-              <input
-                type="file"
-                accept=".csv,.parquet,.xlsx,.xls"
-                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            <button
-              onClick={handleFileUpload}
-              disabled={
-                !uploadFile ||
-                uploading ||
-                (uploadDataType === "custom" && !isValidCustomName(customDataTypeName))
-              }
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload size={16} />
-                  Upload File
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Database Form */}
-      {connectionType === "database" && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">Database Connection</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Database Type
-              </label>
-              <select
-                value={dbType}
-                onChange={(e) => setDbType(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowFetch(null)}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                <option value="postgresql">PostgreSQL</option>
-                <option value="mysql">MySQL</option>
-                <option value="sqlserver">SQL Server</option>
-                <option value="sqlite">SQLite</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Host / Server
-              </label>
-              <input
-                type="text"
-                value={dbHost}
-                onChange={(e) => setDbHost(e.target.value)}
-                placeholder="localhost"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Port
-              </label>
-              <input
-                type="number"
-                value={dbPort}
-                onChange={(e) => setDbPort(e.target.value)}
-                placeholder={dbType === "postgresql" ? "5432" : "3306"}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Database Name
-              </label>
-              <input
-                type="text"
-                value={dbDatabase}
-                onChange={(e) => setDbDatabase(e.target.value)}
-                placeholder="database_name"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                value={dbUser}
-                onChange={(e) => setDbUser(e.target.value)}
-                placeholder="username"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={dbPassword}
-                onChange={(e) => setDbPassword(e.target.value)}
-                placeholder="password"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              SQL Query
-            </label>
-            <textarea
-              value={dbQuery}
-              onChange={(e) => setDbQuery(e.target.value)}
-              placeholder="SELECT * FROM media_spend WHERE date >= '2024-01-01'"
-              rows={4}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={handleTestConnection}
-              disabled={testing}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 disabled:opacity-50 transition-colors"
-            >
-              {testing ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                <>
-                  <TestTube size={16} />
-                  Test Connection
-                </>
-              )}
-            </button>
-          </div>
-
-          {testResult && (
-            <div
-              className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
-                testResult.connected
-                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                  : "bg-red-50 text-red-800 border border-red-200"
-              }`}
-            >
-              {testResult.connected ? (
-                <CheckCircle2 size={16} />
-              ) : (
-                <XCircle size={16} />
-              )}
-              <span className="text-sm">{testResult.message}</span>
-            </div>
-          )}
-
-          {testResult?.connected && (
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select Data Type to Import
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {DATA_TYPES.filter((dt) => dt.key !== "custom").map((dt) => (
-                    <button
-                      key={dt.key}
-                      onClick={() => handleFetchData(dt.key)}
-                      disabled={fetching || !dbQuery}
-                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {fetching ? "Fetching..." : `Import as ${dt.label}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Or import as custom (name it)
-                </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={customDataTypeName}
-                    onChange={(e) => setCustomDataTypeName(e.target.value)}
-                    placeholder="e.g. promo_flags, weather"
-                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-mono w-48 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                  <button
-                    onClick={() => {
-                      if (!isValidCustomName(customDataTypeName)) {
-                        alert("Custom name: start with a letter, use only letters, numbers, underscores (max 64 chars).");
-                        return;
-                      }
-                      handleFetchData(customDataTypeName.trim());
-                    }}
-                    disabled={fetching || !dbQuery || !customDataTypeName.trim()}
-                    className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {fetching ? "Fetching..." : "Import as custom"}
-                  </button>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Letters, numbers, underscores; must start with a letter.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Cloud Storage Form */}
-      {connectionType === "cloud" && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4">Cloud Storage Connection</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Cloud Provider
-              </label>
-              <select
-                value={cloudType}
-                onChange={(e) => setCloudType(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                Cancel
+              </button>
+              <button
+                onClick={handleFetchData}
+                disabled={!fetchQuery.trim() || fetching}
+                className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
               >
-                <option value="s3">AWS S3</option>
-                <option value="azure">Azure Blob Storage</option>
-              </select>
+                {fetching ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                Fetch
+              </button>
             </div>
-
-            {cloudType === "s3" && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    S3 Bucket Name
-                  </label>
-                  <input
-                    type="text"
-                    value={cloudBucket}
-                    onChange={(e) => setCloudBucket(e.target.value)}
-                    placeholder="my-bucket"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      AWS Access Key ID
-                    </label>
-                    <input
-                      type="text"
-                      value={cloudAccessKey}
-                      onChange={(e) => setCloudAccessKey(e.target.value)}
-                      placeholder="AKIA..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      AWS Secret Access Key
-                    </label>
-                    <input
-                      type="password"
-                      value={cloudSecretKey}
-                      onChange={(e) => setCloudSecretKey(e.target.value)}
-                      placeholder="secret"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Region
-                  </label>
-                  <input
-                    type="text"
-                    value={cloudRegion}
-                    onChange={(e) => setCloudRegion(e.target.value)}
-                    placeholder="us-east-1"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    File Path in Bucket
-                  </label>
-                  <input
-                    type="text"
-                    value={cloudPath}
-                    onChange={(e) => setCloudPath(e.target.value)}
-                    placeholder="data/media_spend.parquet"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-              </>
-            )}
-
-            {cloudType === "azure" && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Storage Account Name
-                  </label>
-                  <input
-                    type="text"
-                    value={cloudBucket}
-                    onChange={(e) => setCloudBucket(e.target.value)}
-                    placeholder="mystorageaccount"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Account Key
-                  </label>
-                  <input
-                    type="password"
-                    value={cloudAccessKey}
-                    onChange={(e) => setCloudAccessKey(e.target.value)}
-                    placeholder="account key"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Container/Blob Path
-                  </label>
-                  <input
-                    type="text"
-                    value={cloudPath}
-                    onChange={(e) => setCloudPath(e.target.value)}
-                    placeholder="container/data/media_spend.parquet"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-              </>
-            )}
-
-            <button
-              onClick={handleTestConnection}
-              disabled={testing}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 disabled:opacity-50 transition-colors"
-            >
-              {testing ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                <>
-                  <TestTube size={16} />
-                  Test Connection
-                </>
-              )}
-            </button>
-
-            {testResult && (
-              <div
-                className={`p-3 rounded-lg flex items-center gap-2 ${
-                  testResult.connected
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : "bg-red-50 text-red-800 border border-red-200"
-                }`}
-              >
-                {testResult.connected ? (
-                  <CheckCircle2 size={16} />
-                ) : (
-                  <XCircle size={16} />
-                )}
-                <span className="text-sm">{testResult.message}</span>
-              </div>
-            )}
-
-            {testResult?.connected && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Select Data Type to Import
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {DATA_TYPES.filter((dt) => dt.key !== "custom").map((dt) => (
-                      <button
-                        key={dt.key}
-                        onClick={() => handleFetchData(dt.key)}
-                        disabled={fetching || !cloudPath}
-                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {fetching ? "Fetching..." : `Import as ${dt.label}`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Or import as custom (name it)
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="text"
-                      value={customDataTypeName}
-                      onChange={(e) => setCustomDataTypeName(e.target.value)}
-                      placeholder="e.g. promo_flags, weather"
-                      className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-mono w-48 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                    <button
-                      onClick={() => {
-                        if (!isValidCustomName(customDataTypeName)) {
-                          alert("Custom name: start with a letter, use only letters, numbers, underscores (max 64 chars).");
-                          return;
-                        }
-                        handleFetchData(customDataTypeName.trim());
-                      }}
-                      disabled={fetching || !cloudPath || !customDataTypeName.trim()}
-                      className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {fetching ? "Fetching..." : "Import as custom"}
-                    </button>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Letters, numbers, underscores; must start with a letter.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Fetch Result */}
-      {fetchResult && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-          <h2 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <FileText size={16} />
-            Import Result
-          </h2>
-          <div
-            className={`p-4 rounded-lg ${
-              fetchResult.status === "success"
-                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                : "bg-red-50 text-red-800 border border-red-200"
-            }`}
-          >
-            {fetchResult.status === "success" ? (
-              <div className="space-y-2">
-                <p className="font-medium">Data imported successfully!</p>
-                <p className="text-sm">
-                  Rows: {fetchResult.rows.toLocaleString()} | Columns: {fetchResult.columns.length}
-                </p>
-                <p className="text-sm">Data Type: {fetchResult.data_type}</p>
-                <p className="text-xs font-mono">{fetchResult.path}</p>
-              </div>
-            ) : (
-              <p>Import failed. Please check the error message above.</p>
-            )}
           </div>
         </div>
       )}
