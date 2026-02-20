@@ -138,6 +138,7 @@ class Pipeline:
         total_budget: float | None = None,
         model_kwargs: dict[str, Any] | None = None,
         reconciliation_weights: dict[str, float] | None = None,
+        on_progress: Any | None = None,
     ) -> dict[str, Any]:
         """
         Execute the full pipeline and return results.
@@ -148,6 +149,8 @@ class Pipeline:
             total_budget:  Budget for optimization (auto-computed if None).
             model_kwargs:  Extra keyword arguments for the model's fit().
             reconciliation_weights: Override weights for reconciliation.
+            on_progress:   Optional callback ``(step: str, message: str) -> None``
+                           invoked at the start of each pipeline stage.
 
         Returns:
             Dictionary with keys: metrics, contributions, reconciliation,
@@ -156,7 +159,16 @@ class Pipeline:
         if self._media_spend is None:
             raise PipelineError("Call connect() before run()", step="run")
 
+        def _emit(step: str, msg: str = "") -> None:
+            if on_progress is not None:
+                try:
+                    on_progress(step, msg)
+                except Exception:
+                    pass
+
         t0 = time.time()
+
+        _emit("connect", "Creating artifact run")
 
         # Create a new artifact run
         self._run_id = self._store.create_run(config_snapshot={
@@ -170,6 +182,7 @@ class Pipeline:
 
         try:
             # -- Quality gates (pre-flight) --------------------------------
+            _emit("quality_gates", "Running data quality checks")
             logger.info("Pipeline step: quality gates")
             try:
                 from quality.gates import run_quality_gates
@@ -204,11 +217,13 @@ class Pipeline:
                 logger.warning(f"Quality gates failed (non-fatal): {dq_exc}")
 
             # -- Transform ------------------------------------------------
+            _emit("transform", "Creating MMM features")
             logger.info("Pipeline step: transform")
             self._transform(target_col)
             self._store.save_dataframe(self._run_id, "mmm_input", self._mmm_input)
 
             # -- Train ----------------------------------------------------
+            _emit("train", f"Fitting model (backend={model})")
             logger.info(f"Pipeline step: train (backend={model})")
             mmm = get_model(model, **(model_kwargs or {}))
             fit_meta = mmm.fit(
@@ -247,12 +262,14 @@ class Pipeline:
             results["parameters"] = params
 
             # -- Reconcile ------------------------------------------------
+            _emit("reconcile", "Fusing MMM + experiments + attribution")
             logger.info("Pipeline step: reconcile")
             recon_result = self._reconcile(params, reconciliation_weights)
             self._store.save_json(self._run_id, "reconciliation", recon_result)
             results["reconciliation"] = recon_result
 
             # -- Optimise -------------------------------------------------
+            _emit("optimise", "Running budget optimisation")
             logger.info("Pipeline step: optimise")
             budget = total_budget or float(self._media_spend["spend"].sum())
             opt_result = self._optimise(curves, params, budget)
@@ -301,6 +318,7 @@ class Pipeline:
                 logger.warning(f"Stability metrics failed (non-fatal): {stab_exc}")
 
             # -- Finalise -------------------------------------------------
+            _emit("finalise", "Writing artifacts and finalising run")
             duration = time.time() - t0
             data_hash = ArtifactStore.compute_data_hash(self._mmm_input)
 

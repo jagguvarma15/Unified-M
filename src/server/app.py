@@ -489,6 +489,43 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             logger.exception(f"Failed to upload {data_type}")
             raise HTTPException(500, f"Upload failed: {str(e)}")
 
+    from server.jobs import JobManager
+    job_manager = JobManager()
+
+    def _run_pipeline_sync(
+        model: str,
+        target: str,
+        budget: float | None,
+        on_progress: Any = None,
+    ) -> dict:
+        from pipeline.runner import Pipeline
+        from config import load_config as _load_cfg
+
+        cfg = _load_cfg()
+        cfg.ensure_directories()
+        processed = cfg.storage.processed_path
+
+        pipe = Pipeline(config=cfg.to_flat_dict(), runs_dir=cfg.storage.runs_path)
+        pipe.connect(
+            media_spend=processed / "media_spend.parquet"
+            if (processed / "media_spend.parquet").exists() else None,
+            outcomes=processed / "outcomes.parquet"
+            if (processed / "outcomes.parquet").exists() else None,
+            controls=processed / "controls.parquet"
+            if (processed / "controls.parquet").exists() else None,
+            incrementality_tests=processed / "incrementality_tests.parquet"
+            if (processed / "incrementality_tests.parquet").exists() else None,
+            attribution=processed / "attribution.parquet"
+            if (processed / "attribution.parquet").exists() else None,
+        )
+        results = pipe.run(
+            model=model,
+            target_col=target,
+            total_budget=budget,
+            on_progress=on_progress,
+        )
+        return {"run_id": pipe.run_id, "metrics": results.get("metrics", {})}
+
     @application.post("/api/v1/pipeline/run")
     async def trigger_pipeline(
         model: str = Form(default="builtin"),
@@ -496,56 +533,32 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         budget: float | None = Form(default=None),
     ):
         """
-        Trigger a pipeline run with the current data sources.
-
-        This is a long-running operation. In production, you'd want to
-        use a task queue (Celery, RQ, etc.) and return a job ID.
+        Trigger a pipeline run asynchronously. Returns a job_id that can
+        be polled via GET /api/v1/pipeline/jobs/{job_id}.
         """
-        try:
-            from pipeline.runner import Pipeline
-            from config import load_config
+        job = job_manager.create_job()
+        job_manager.start_pipeline(
+            job,
+            _run_pipeline_sync,
+            on_complete=lambda: (reader.invalidate(), cache.clear()),
+            model=model,
+            target=target,
+            budget=budget,
+        )
+        return {"job_id": job.job_id, "status": "pending"}
 
-            config = load_config()
-            config.ensure_directories()
+    @application.get("/api/v1/pipeline/jobs")
+    def list_jobs(limit: int = Query(default=20, ge=1, le=100)):
+        """List recent pipeline jobs."""
+        return {"jobs": job_manager.list_jobs(limit=limit)}
 
-            processed = config.storage.processed_path
-
-            pipe = Pipeline(
-                config=config.to_flat_dict(),
-                runs_dir=config.storage.runs_path,
-            )
-
-            pipe.connect(
-                media_spend=processed / "media_spend.parquet"
-                if (processed / "media_spend.parquet").exists()
-                else None,
-                outcomes=processed / "outcomes.parquet"
-                if (processed / "outcomes.parquet").exists()
-                else None,
-                controls=processed / "controls.parquet"
-                if (processed / "controls.parquet").exists()
-                else None,
-                incrementality_tests=processed / "incrementality_tests.parquet"
-                if (processed / "incrementality_tests.parquet").exists()
-                else None,
-                attribution=processed / "attribution.parquet"
-                if (processed / "attribution.parquet").exists()
-                else None,
-            )
-
-            results = pipe.run(model=model, target_col=target, total_budget=budget)
-
-            # Invalidate cache so new results are visible
-            reader.invalidate()
-
-            return {
-                "status": "success",
-                "run_id": pipe.run_id,
-                "metrics": results.get("metrics", {}),
-            }
-        except Exception as e:
-            logger.exception("Pipeline run failed")
-            raise HTTPException(500, f"Pipeline failed: {str(e)}")
+    @application.get("/api/v1/pipeline/jobs/{job_id}")
+    def get_job(job_id: str):
+        """Get status of a pipeline job."""
+        job = job_manager.get_job(job_id)
+        if job is None:
+            raise HTTPException(404, f"Job '{job_id}' not found")
+        return job.to_dict()
 
     # ------------------------------------------------------------------
     # Calibration, Stability, Data Quality
