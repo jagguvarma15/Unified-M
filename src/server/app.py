@@ -179,6 +179,41 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         }
 
     # ------------------------------------------------------------------
+    # Adapter Discovery
+    # ------------------------------------------------------------------
+
+    @application.get("/api/v1/adapters")
+    def list_adapters():
+        """Discover available model backends, connectors, and cache status."""
+        from models.registry import list_backends, _REGISTRY, _auto_discover
+        _auto_discover()
+
+        backend_info = []
+        known_backends = {
+            "builtin": None,
+            "pymc": "pip install pymc-marketing",
+            "meridian": "pip install google-meridian",
+            "numpyro": "pip install numpyro",
+        }
+        available = set(list_backends())
+        for name, hint in known_backends.items():
+            backend_info.append({
+                "name": name,
+                "available": name in available,
+                "install_hint": hint if name not in available else None,
+            })
+
+        return {
+            "model_backends": backend_info,
+            "connectors": {
+                "database": ["postgresql", "mysql", "sqlite", "sqlserver"],
+                "cloud": ["s3", "azure"],
+                "ad_platforms": ["google_ads", "meta_ads", "tiktok_ads", "amazon_ads"],
+            },
+            "cache": cache.stats(),
+        }
+
+    # ------------------------------------------------------------------
     # Runs
     # ------------------------------------------------------------------
 

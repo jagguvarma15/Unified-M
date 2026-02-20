@@ -1,15 +1,14 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import Layout from "./components/Layout";
+import { ToastProvider } from "./lib/toast";
+import ToastContainer from "./components/Toast";
 
-// Eagerly load the dashboard (landing page)
 import Dashboard from "./pages/Dashboard";
-// Eagerly load monitoring pages so they never show blank (no lazy chunk errors)
 import Calibration from "./pages/Calibration";
 import Stability from "./pages/Stability";
 import DataQuality from "./pages/DataQuality";
 
-// Lazy-load secondary pages for smaller initial bundle
 const Data = lazy(() => import("./pages/Data"));
 const Contributions = lazy(() => import("./pages/Contributions"));
 const Optimization = lazy(() => import("./pages/Optimization"));
@@ -34,30 +33,33 @@ function PageLoader() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="/data" element={<Data />} />
-          <Route path="/contributions" element={<Contributions />} />
-          <Route path="/optimization" element={<Optimization />} />
-          <Route path="/curves" element={<ResponseCurves />} />
-          <Route path="/runs" element={<Runs />} />
-            <Route path="/diagnostics" element={<Diagnostics />} />
-          <Route path="/roas" element={<ROASAnalysis />} />
-            <Route path="/scenarios" element={<ScenarioPlanner />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/datapoint" element={<Datapoint />} />
-            <Route path="/calibration" element={<Calibration />} />
-            <Route path="/stability" element={<Stability />} />
-            <Route path="/data-quality" element={<DataQuality />} />
-            <Route path="/channel-insights" element={<ChannelInsights />} />
-            <Route path="/spend-pacing" element={<SpendPacing />} />
-            <Route path="/report" element={<Report />} />
-        </Route>
-      </Routes>
-      </Suspense>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="/data" element={<Data />} />
+              <Route path="/contributions" element={<Contributions />} />
+              <Route path="/optimization" element={<Optimization />} />
+              <Route path="/curves" element={<ResponseCurves />} />
+              <Route path="/runs" element={<Runs />} />
+              <Route path="/diagnostics" element={<Diagnostics />} />
+              <Route path="/roas" element={<ROASAnalysis />} />
+              <Route path="/scenarios" element={<ScenarioPlanner />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/datapoint" element={<Datapoint />} />
+              <Route path="/calibration" element={<Calibration />} />
+              <Route path="/stability" element={<Stability />} />
+              <Route path="/data-quality" element={<DataQuality />} />
+              <Route path="/channel-insights" element={<ChannelInsights />} />
+              <Route path="/spend-pacing" element={<SpendPacing />} />
+              <Route path="/report" element={<Report />} />
+            </Route>
+          </Routes>
+        </Suspense>
+        <ToastContainer />
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
