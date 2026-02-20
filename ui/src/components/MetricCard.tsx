@@ -5,13 +5,10 @@ import Sparkline from "./Sparkline";
 interface Props {
   label: string;
   value: string | number;
-  /** Optional: omit for a clean label + value only card */
   icon?: LucideIcon;
   delta?: string;
   color?: "indigo" | "emerald" | "amber" | "red";
-  /** Short explanation for the metric (shown in tooltip on label hover) */
   tooltip?: string;
-  /** Optional sparkline data (Tremor-style micro chart) */
   sparkline?: number[];
 }
 
@@ -40,33 +37,31 @@ export default function MetricCard({
           : "neutral"
       : undefined;
 
+  const labelEl = tooltip ? (
+    <Tooltip content={tooltip} side="top">
+      <span className="cursor-help border-b border-dotted border-slate-300">{label}</span>
+    </Tooltip>
+  ) : (
+    label
+  );
+
   return (
-    <div className="min-w-0 rounded-xl border border-slate-200/60 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 overflow-hidden">
-      <div className="flex min-h-[24px] items-center gap-2">
+    <div className="min-w-0 rounded-lg border border-slate-200/80 bg-white px-4 py-3 overflow-hidden">
+      <p className="flex items-center gap-2 text-xs font-medium text-slate-500 truncate">
         {Icon && (
-          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${iconBg[color]}`} aria-hidden>
-            <Icon size={14} />
-          </div>
+          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color]}`} aria-hidden>
+            <Icon size={12} />
+          </span>
         )}
-        <div className="min-w-0 flex-1 overflow-hidden">
-          {tooltip ? (
-            <Tooltip content={tooltip} side="top">
-              <span className="block truncate cursor-help text-sm font-medium text-slate-500 border-b border-dotted border-slate-400/50">
-                {label}
-              </span>
-            </Tooltip>
-          ) : (
-            <p className="truncate text-sm font-medium text-slate-500">{label}</p>
-          )}
-        </div>
-      </div>
-      <p className="mt-2 truncate text-2xl font-bold tabular-nums text-slate-900" title={typeof value === "string" ? value : String(value)}>
+        {labelEl}
+      </p>
+      <p className="mt-1 truncate text-lg font-semibold tabular-nums text-slate-900" title={String(value)}>
         {value}
       </p>
-      {delta && <p className="mt-1 truncate text-xs text-slate-500">{delta}</p>}
+      {delta && <p className="mt-0.5 text-xs text-slate-500 truncate">{delta}</p>}
       {sparkline && sparkline.length > 0 && (
-        <div className="mt-2 flex justify-end">
-          <Sparkline data={sparkline} trend={trend} height={20} width={64} className="shrink-0" />
+        <div className="mt-1.5 flex justify-end">
+          <Sparkline data={sparkline} trend={trend} height={16} width={56} className="shrink-0 opacity-80" />
         </div>
       )}
     </div>

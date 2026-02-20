@@ -95,17 +95,6 @@ export default function Dashboard() {
   const timeline = getTimeline(contributions);
   const reconBars = getReconBars(reconciliation);
   const waterfallBars = buildWaterfall(waterfall);
-  const sparklineActual = diagnostics?.chart?.map((d) => d.actual ?? 0).slice(-30) ?? [];
-  const sparklineContribution =
-    timeline.rows.length > 0
-      ? timeline.rows.slice(-24).map((r) => {
-          let sum = 0;
-          for (const k of timeline.channels) {
-            sum += Number((r as Record<string, unknown>)[k]) || 0;
-          }
-          return sum;
-        })
-      : [];
 
   return (
     <div>
@@ -121,44 +110,22 @@ export default function Dashboard() {
         hint="Metrics from latest pipeline run"
       />
 
-      {/* ---- Metric cards ---- */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 min-w-0">
-        <MetricCard
-          label="R-squared"
-          value={metrics?.r_squared?.toFixed(3) ?? "\u2014"}
-          tooltip="Variance in the target explained by the model. Higher is better (0–1)."
-        />
-        <MetricCard
-          label="MAPE"
-          value={metrics?.mape != null ? formatPercent(metrics.mape, 1) : "\u2014"}
-          tooltip="Mean Absolute Percentage Error. Lower is better."
-          sparkline={sparklineActual.length > 0 ? sparklineActual : undefined}
-        />
-        <MetricCard
-          label="Channels"
-          value={latestRun.n_channels}
-          tooltip="Number of media channels in the model."
-        />
+      {/* Metric cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 min-w-0">
+        <MetricCard label="R²" value={metrics?.r_squared?.toFixed(3) ?? "—"} tooltip="Variance explained (0–1). Higher is better." />
+        <MetricCard label="MAPE" value={metrics?.mape != null ? formatPercent(metrics.mape, 1) : "—"} tooltip="Mean Absolute % Error. Lower is better." />
+        <MetricCard label="Channels" value={latestRun.n_channels} tooltip="Media channels in the model." />
         <MetricCard
           label="Optim. Uplift"
           value={
-            optimization != null && optimization.improvement_pct != null
+            optimization?.improvement_pct != null
               ? (optimization.improvement_pct >= 0 ? "+" : "") + formatPercent(optimization.improvement_pct, 1)
-              : "\u2014"
+              : "—"
           }
-          tooltip="Expected response gain from reallocating to the optimal budget mix."
+          tooltip="Expected gain from optimal budget mix."
         />
-        <MetricCard
-          label="Total Spend"
-          value={roas ? formatCurrency(roas.summary.total_spend, true) : "\u2014"}
-          tooltip="Sum of spend across all channels in the latest run."
-          sparkline={sparklineContribution.length > 0 ? sparklineContribution : undefined}
-        />
-        <MetricCard
-          label="Blended ROAS"
-          value={roas ? formatROAS(roas.summary.blended_roas) : "\u2014"}
-          tooltip="Return on ad spend: total contribution ÷ total spend."
-        />
+        <MetricCard label="Total Spend" value={roas ? formatCurrency(roas.summary.total_spend, true) : "—"} tooltip="Sum of spend across channels." />
+        <MetricCard label="Blended ROAS" value={roas ? formatROAS(roas.summary.blended_roas) : "—"} tooltip="Total contribution ÷ total spend." />
       </div>
 
       {/* ---- Actual vs Predicted mini ---- */}

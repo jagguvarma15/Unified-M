@@ -14,12 +14,9 @@ export function Skeleton({ className = "" }: SkeletonProps) {
 /** Placeholder for metric card during load */
 export function MetricCardSkeleton() {
   return (
-    <div className="rounded-xl border border-slate-200/60 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-9 w-9 rounded-lg" />
-      </div>
-      <Skeleton className="mt-3 h-8 w-20" />
+    <div className="rounded-lg border border-slate-200/80 bg-white px-4 py-3">
+      <Skeleton className="h-3.5 w-20" />
+      <Skeleton className="mt-1.5 h-5 w-16" />
     </div>
   );
 }
