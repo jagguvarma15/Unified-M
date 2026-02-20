@@ -1094,6 +1094,152 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             logger.exception(f"Failed to upload datapoint file: {data_type}")
             raise HTTPException(500, f"Upload failed: {str(e)}")
 
+    # ------------------------------------------------------------------
+    # Connector Registry (saved connections CRUD)
+    # ------------------------------------------------------------------
+
+    from connectors.registry import ConnectorStore
+    connector_store = ConnectorStore(config.storage.raw_path.parent / "connectors")
+
+    @application.get("/api/v1/connectors")
+    def list_connectors():
+        """List all saved connections (configs omitted for security)."""
+        return {"connectors": connector_store.list()}
+
+    @application.post("/api/v1/connectors")
+    async def create_connector(
+        name: str = Form(...),
+        connector_type: str = Form(...),
+        subtype: str = Form(...),
+        connector_config: str = Form(...),
+    ):
+        """Create a saved connection."""
+        try:
+            cfg = json.loads(connector_config)
+        except json.JSONDecodeError:
+            raise HTTPException(400, "connector_config must be valid JSON")
+        record = connector_store.create(name, connector_type, subtype, cfg)
+        return record
+
+    @application.get("/api/v1/connectors/{connector_id}")
+    def get_connector(connector_id: str):
+        """Get a saved connection (config decrypted)."""
+        record = connector_store.get(connector_id)
+        if record is None:
+            raise HTTPException(404, "Connector not found")
+        return record
+
+    @application.put("/api/v1/connectors/{connector_id}")
+    async def update_connector(
+        connector_id: str,
+        name: str | None = Form(default=None),
+        connector_config: str | None = Form(default=None),
+    ):
+        """Update a saved connection."""
+        cfg = None
+        if connector_config is not None:
+            try:
+                cfg = json.loads(connector_config)
+            except json.JSONDecodeError:
+                raise HTTPException(400, "connector_config must be valid JSON")
+        record = connector_store.update(connector_id, name=name, config=cfg)
+        if record is None:
+            raise HTTPException(404, "Connector not found")
+        return record
+
+    @application.delete("/api/v1/connectors/{connector_id}")
+    def delete_connector(connector_id: str):
+        """Delete a saved connection."""
+        if not connector_store.delete(connector_id):
+            raise HTTPException(404, "Connector not found")
+        return {"status": "deleted"}
+
+    @application.post("/api/v1/connectors/{connector_id}/test")
+    def test_connector(connector_id: str):
+        """Test a saved connection."""
+        record = connector_store.get(connector_id)
+        if record is None:
+            raise HTTPException(404, "Connector not found")
+
+        cfg = dict(record["config"])
+        conn_type = record["type"]
+        subtype = record["subtype"]
+        success = False
+        message = ""
+
+        try:
+            if conn_type == "database":
+                from connectors.database import create_database_connector
+                cfg["db_type"] = subtype
+                db_type = cfg.pop("db_type")
+                connector = create_database_connector(db_type, **cfg)
+                success = connector.test_connection()
+                connector.close()
+            elif conn_type == "cloud":
+                from connectors.cloud import create_cloud_connector
+                cfg["cloud_type"] = subtype
+                cloud_type = cfg.pop("cloud_type")
+                connector = create_cloud_connector(cloud_type, **cfg)
+                success = connector.test_connection()
+            else:
+                message = f"Unknown connector type: {conn_type}"
+        except Exception as e:
+            message = str(e)
+
+        connector_store.set_test_result(connector_id, success)
+        return {
+            "status": "success" if success else "failed",
+            "connected": success,
+            "message": message or ("Connection successful" if success else "Connection failed"),
+        }
+
+    @application.post("/api/v1/connectors/{connector_id}/fetch")
+    async def fetch_from_connector(
+        connector_id: str,
+        query_or_path: str = Form(...),
+        data_type: str = Form(...),
+    ):
+        """Fetch data from a saved connection and store as a data source."""
+        _validate_data_type(data_type)
+        record = connector_store.get(connector_id)
+        if record is None:
+            raise HTTPException(404, "Connector not found")
+
+        cfg = dict(record["config"])
+        conn_type = record["type"]
+        subtype = record["subtype"]
+        config_obj = get_config()
+        processed = config_obj.storage.processed_path
+
+        try:
+            if conn_type == "database":
+                from connectors.database import create_database_connector
+                connector = create_database_connector(subtype, **cfg)
+                df = connector.load(query_or_path)
+                connector.close()
+            elif conn_type == "cloud":
+                from connectors.cloud import create_cloud_connector
+                connector = create_cloud_connector(subtype, **cfg)
+                df = connector.load(query_or_path)
+            else:
+                raise HTTPException(400, f"Unknown connector type: {conn_type}")
+
+            output_path = processed / f"{data_type}.parquet"
+            df.to_parquet(output_path, index=False)
+            reader.invalidate()
+
+            return {
+                "status": "success",
+                "rows": len(df),
+                "columns": list(df.columns),
+                "data_type": data_type,
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.exception("Connector fetch failed")
+            raise HTTPException(500, f"Fetch failed: {str(e)}")
+
     return application
 
 
