@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import pickle
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,10 @@ import pandas as pd
 from loguru import logger
 
 from core.base_model import BaseMMM
+
+# Suppress known FutureWarnings from optional deps (arviz refactor, pytensor move)
+warnings.filterwarnings("ignore", category=FutureWarning, module="arviz")
+warnings.filterwarnings("ignore", category=FutureWarning, module="pymc_marketing")
 
 # Guard import -- if pymc-marketing is missing, this module will
 # fail to import and the registry will skip it automatically.
