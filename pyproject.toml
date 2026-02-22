@@ -77,12 +77,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
-[tool.uv]
-# Reproducible installs: uv lock → uv sync (or uv sync --all-extras for optional deps)
-# Export for legacy/Docker: make export-requirements  (or: uv export --no-dev -o requirements.txt)
-# Python version managed by uv: uv python install 3.11
-managed = true
-dev-dependencies = [
+[dependency-groups]
+# Dev tools (excluded by uv sync --no-dev). Install with: uv sync
+dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.3.0",
@@ -90,8 +87,12 @@ dev-dependencies = [
     "pre-commit>=3.6.0",
 ]
 
+[tool.uv]
+# Reproducible installs: uv lock && uv sync (or uv sync --no-dev for production)
+# Python: uv python install 3.11
+managed = true
+
 [tool.uv.pip]
-# Strict resolution: fail on conflicting requirements
 strict = true
 
 [tool.ruff]

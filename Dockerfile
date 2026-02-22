@@ -22,8 +22,9 @@ COPY pyproject.toml uv.lock ./
 
 # Install from lockfile: fast, deterministic, hash-verified
 # --frozen: fail if lockfile is out of date (CI safety net)
-# --no-dev: skip dev dependencies in production image
+# --no-dev: skip [dependency-groups] dev (production image)
 # --no-editable: install as a regular package (not editable)
+ENV UV_COMPILE_BYTECODE=0
 RUN uv sync --frozen --no-dev --no-editable
 
 # Copy application source

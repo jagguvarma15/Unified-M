@@ -5,6 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://react.dev/)
 [![Bun](https://img.shields.io/badge/Bun-1.3-black.svg)](https://bun.sh/)
+[![uv](https://img.shields.io/badge/uv-managed-ffc021.svg)](https://docs.astral.sh/uv/)
 
 **Unified Marketing Measurement Platform**
 
@@ -43,21 +44,33 @@ An end-to-end framework that fuses Marketing Mix Modeling (MMM), incrementality 
 
 ### Installation
 
+**Backend (recommended: [uv](https://docs.astral.sh/uv/))**
+
 ```bash
 # Clone the repository
 git clone https://github.com/jagguvarma15/Unified-M.git
 cd Unified-M
 
-# Create virtual environment
+# Install uv (if needed): curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Python dependencies from lockfile (reproducible)
+uv sync
+
+# Optional: install a specific Python version
+uv python install 3.11
+```
+
+**Pip fallback**
+
+```bash
 python -m venv .venv
-source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-
-# Install Python dependencies
-pip install -r requirements.txt
-# Or install in development mode:
+source .venv/bin/activate   # or .venv\Scripts\activate on Windows
 pip install -e ".[dev]"
+```
 
-# Install UI dependencies (requires Bun: https://bun.sh)
+**UI (requires [Bun](https://bun.sh))**
+
+```bash
 cd ui && bun install
 ```
 
@@ -65,29 +78,30 @@ cd ui && bun install
 
 ```bash
 # Generate synthetic data and run the full pipeline
-PYTHONPATH=src python -m cli demo
+uv run python -m cli demo
 
 # Or run the pipeline with your own data
-PYTHONPATH=src python -m cli run \
-  --media-spend data/processed/media_spend.parquet \
-  --outcomes data/processed/outcomes.parquet \
+uv run python -m cli run \
+  --media-spend data/gold/media_spend.parquet \
+  --outcomes data/gold/outcomes.parquet \
   --model builtin \
   --target revenue
 ```
 
+Using the Makefile: `make dev` (demo) | `make run` (full pipeline) | `make serve` (API).
+
 ### Start the UI
 
 ```bash
-# Start API server (terminal 1)
-PYTHONPATH=src python -m cli serve --port 8000
+# Terminal 1: API server
+uv run python -m cli serve --port 8000
 
-# Start React UI (terminal 2)
-cd ui && bun install && bun dev
-# Or use the CLI:
-PYTHONPATH=src python -m cli ui
+# Terminal 2: React dev server
+cd ui && bun dev
+# Or: uv run python -m cli ui
 ```
 
-The UI will be available at `http://localhost:5173` and automatically proxies API requests to the backend.
+The UI will be available at `http://localhost:5173` and proxies API requests to the backend.
 
 ## Project Structure
 
@@ -189,18 +203,21 @@ The GitHub Actions pipeline runs:
 ## Development
 
 ```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+# Install dependencies (includes [dependency-groups] dev)
+uv sync
 
 # Run tests
-pytest
+uv run pytest tests/ -v --cov=src
 
-# Run linting
-ruff check src/
+# Lint & type-check
+uv run ruff check src/
+uv run mypy src/
 
-# Type checking
-mypy src/
+# Update lockfile after changing pyproject.toml
+uv lock
 ```
+
+Or use the Makefile: `make install-dev`, `make test`, `make check`, `make lock`.
 
 ## Configuration
 
