@@ -32,10 +32,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
 
@@ -58,7 +58,7 @@ jobs:
             --target ${{ inputs.target || 'revenue' }}
 
       - name: Upload ingested data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ingested-data
           path: ${{ env.DATA_DIR }}/
@@ -74,10 +74,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
 
@@ -88,7 +88,7 @@ jobs:
         run: uv sync --frozen --no-dev
 
       - name: Download ingested data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ingested-data
           path: ${{ env.DATA_DIR }}/
@@ -101,7 +101,7 @@ jobs:
             --target ${{ inputs.target || 'revenue' }}
 
       - name: Upload transformed data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: transformed-data
           path: ${{ env.DATA_DIR }}/
@@ -118,10 +118,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
 
@@ -132,7 +132,7 @@ jobs:
         run: uv sync --frozen --no-dev
 
       - name: Download transformed data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: transformed-data
           path: ${{ env.DATA_DIR }}/
@@ -145,7 +145,7 @@ jobs:
             --target ${{ inputs.target || 'revenue' }}
 
       - name: Upload run artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: run-artifacts
           path: runs/
@@ -161,10 +161,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
 
@@ -175,13 +175,13 @@ jobs:
         run: uv sync --frozen --no-dev
 
       - name: Download run artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: run-artifacts
           path: runs/
 
       - name: Download data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: transformed-data
           path: ${{ env.DATA_DIR }}/
