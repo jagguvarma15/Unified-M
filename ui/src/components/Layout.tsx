@@ -25,6 +25,7 @@ import {
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useHealthQuery } from "../lib/queries";
+import { useAnalyticsMode } from "../lib/analyticsMode";
 
 interface NavItem {
   to: string;
@@ -91,6 +92,7 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [pipelineOpen, setPipelineOpen] = useState(false);
   const { data: health } = useHealthQuery();
+  const { analyticsEnabled } = useAnalyticsMode();
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -121,7 +123,17 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 px-2.5 space-y-3 overflow-y-auto py-2">
-          {NAV_SECTIONS.map((section) => (
+          {NAV_SECTIONS.map((section) => {
+            let items = section.items;
+            if (!analyticsEnabled) {
+              if (section.title === "Overview") {
+                items = section.items.filter((it) => it.to !== "/");
+              } else if (section.title !== "Configuration") {
+                items = [];
+              }
+            }
+            if (items.length === 0) return null;
+            return (
             <div key={section.title}>
               <button
                 onClick={() => toggleSection(section.title)}
@@ -135,7 +147,7 @@ export default function Layout() {
               </button>
               {!collapsed[section.title] && (
                 <div className="mt-0.5 space-y-0.5">
-                  {section.items.map(({ to, label, icon: Icon }) => (
+                  {items.map(({ to, label, icon: Icon }) => (
                     <NavLink
                       key={to}
                       to={to}
@@ -155,7 +167,7 @@ export default function Layout() {
                 </div>
               )}
             </div>
-          ))}
+          )})}
         </nav>
 
         <div className="border-t border-slate-700/60 p-3">

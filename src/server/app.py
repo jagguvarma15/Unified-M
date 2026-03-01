@@ -579,8 +579,28 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         model: str,
         target: str,
         budget: float | None,
+        use_sample_data: bool = False,
         on_progress: Any = None,
     ) -> dict:
+        if use_sample_data:
+            if on_progress is not None:
+                try:
+                    on_progress("connect", "Generating sample data")
+                except Exception:
+                    pass
+            from cli import demo as demo_cmd
+            demo_cmd(output=None, n_days=365)
+            latest = store.get_latest_run_id()
+            metrics: dict[str, Any] = {}
+            if latest:
+                try:
+                    manifest = store.load_manifest(latest)
+                    if manifest.metrics is not None:
+                        metrics = manifest.metrics.model_dump()
+                except Exception:
+                    metrics = {}
+            return {"run_id": latest, "metrics": metrics}
+
         from pipeline.runner import Pipeline
         from config import load_config as _load_cfg
 
@@ -614,6 +634,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         model: str = Form(default="builtin"),
         target: str = Form(default="revenue"),
         budget: float | None = Form(default=None),
+        use_sample_data: bool = Form(default=False),
     ):
         """
         Trigger a pipeline run asynchronously. Returns a job_id that can
@@ -627,6 +648,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             model=model,
             target=target,
             budget=budget,
+            use_sample_data=use_sample_data,
         )
         return {"job_id": job.job_id, "status": "pending"}
 

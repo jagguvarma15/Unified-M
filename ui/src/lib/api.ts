@@ -273,10 +273,10 @@ export interface AdaptersData {
 // API
 // ---------------------------------------------------------------------------
 
-function postForm<T>(path: string, data: Record<string, string>): Promise<T> {
+function postForm<T>(path: string, data: Record<string, string | number | boolean | undefined>): Promise<T> {
   const formData = new FormData();
   for (const [k, v] of Object.entries(data)) {
-    if (v != null) formData.append(k, v);
+    if (v != null) formData.append(k, String(v));
   }
   return fetch(`${BASE}${path}`, { method: "POST", body: formData }).then((r) => {
     if (!r.ok) throw new Error(r.statusText);
@@ -313,8 +313,8 @@ export const api = {
   },
 
   // Pipeline jobs (async)
-  triggerPipeline: (model = "builtin", target = "revenue") =>
-    postForm<PostResponse<"/api/v1/pipeline/run">>("/api/v1/pipeline/run", { model, target }),
+  triggerPipeline: (model = "builtin", target = "revenue", useSampleData = false) =>
+    postForm<PostResponse<"/api/v1/pipeline/run">>("/api/v1/pipeline/run", { model, target, use_sample_data: useSampleData }),
   listJobs: (limit = 20) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`),
   getJob: (jobId: string) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`),
 

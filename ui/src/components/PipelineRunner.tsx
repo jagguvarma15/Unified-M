@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api, type PipelineJob } from "../lib/api";
 import { useToast } from "../lib/toast";
+import { useAnalyticsMode } from "../lib/analyticsMode";
 
 const STEPS = [
   { key: "connect", label: "Connect", icon: Database },
@@ -36,11 +37,13 @@ interface Props {
 export default function PipelineRunner({ open, onClose }: Props) {
   const [model, setModel] = useState("builtin");
   const [target, setTarget] = useState("revenue");
+  const [useSampleData, setUseSampleData] = useState(true);
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<PipelineJob | null>(null);
   const [starting, setStarting] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const { addToast } = useToast();
+  const { setAnalyticsEnabled } = useAnalyticsMode();
 
   const isRunning = job?.status === "pending" || job?.status === "running";
   const isDone = job?.status === "completed" || job?.status === "failed";
@@ -48,16 +51,17 @@ export default function PipelineRunner({ open, onClose }: Props) {
   const startPipeline = useCallback(async () => {
     setStarting(true);
     try {
-      const res = await api.triggerPipeline(model, target);
+      setAnalyticsEnabled(useSampleData);
+      const res = await api.triggerPipeline(model, target, useSampleData);
       setJobId(res.job_id);
       setJob(null);
-      addToast("info", "Pipeline started");
+      addToast("info", useSampleData ? "Sample data pipeline started" : "Pipeline started");
     } catch (e: any) {
       addToast("error", `Failed to start pipeline: ${e.message}`);
     } finally {
       setStarting(false);
     }
-  }, [model, target, addToast]);
+  }, [model, target, useSampleData, setAnalyticsEnabled, addToast]);
 
   useEffect(() => {
     if (!jobId) return;
@@ -138,6 +142,24 @@ export default function PipelineRunner({ open, onClose }: Props) {
                   <option value="conversions">Conversions</option>
                 </select>
               </div>
+              <label className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="text-xs font-medium text-slate-700">Use sample data (demo run)</span>
+                <input
+                  type="checkbox"
+                  checked={useSampleData}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setUseSampleData(enabled);
+                    setAnalyticsEnabled(enabled);
+                  }}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
+              {!useSampleData && (
+                <p className="text-[11px] text-amber-700">
+                  Analytics views will be hidden while this is off.
+                </p>
+              )}
               <button
                 onClick={startPipeline}
                 disabled={starting}

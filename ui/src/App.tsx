@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import Layout from "./components/Layout";
 import { ToastProvider } from "./lib/toast";
 import ToastContainer from "./components/Toast";
+import EmptyState from "./components/EmptyState";
+import { useAnalyticsMode } from "./lib/analyticsMode";
 
 import Dashboard from "./pages/Dashboard";
 import Calibration from "./pages/Calibration";
@@ -31,30 +33,43 @@ function PageLoader() {
   );
 }
 
+function AnalyticsGate({ children }: { children: ReactNode }) {
+  const { analyticsEnabled } = useAnalyticsMode();
+  if (analyticsEnabled) return children;
+  return (
+    <EmptyState
+      title="Analytics Hidden"
+      message="Enable the sample-data toggle in Run Pipeline to view analytics pages."
+      action={{ label: "Go to Data", href: "/data" }}
+    />
+  );
+}
+
 export default function App() {
+  const { analyticsEnabled } = useAnalyticsMode();
   return (
     <ToastProvider>
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route element={<Layout />}>
-              <Route index element={<Dashboard />} />
+              <Route index element={analyticsEnabled ? <Dashboard /> : <Data />} />
               <Route path="/data" element={<Data />} />
-              <Route path="/contributions" element={<Contributions />} />
-              <Route path="/optimization" element={<Optimization />} />
-              <Route path="/curves" element={<ResponseCurves />} />
+              <Route path="/contributions" element={<AnalyticsGate><Contributions /></AnalyticsGate>} />
+              <Route path="/optimization" element={<AnalyticsGate><Optimization /></AnalyticsGate>} />
+              <Route path="/curves" element={<AnalyticsGate><ResponseCurves /></AnalyticsGate>} />
               <Route path="/runs" element={<Runs />} />
-              <Route path="/diagnostics" element={<Diagnostics />} />
-              <Route path="/roas" element={<ROASAnalysis />} />
-              <Route path="/scenarios" element={<ScenarioPlanner />} />
+              <Route path="/diagnostics" element={<AnalyticsGate><Diagnostics /></AnalyticsGate>} />
+              <Route path="/roas" element={<AnalyticsGate><ROASAnalysis /></AnalyticsGate>} />
+              <Route path="/scenarios" element={<AnalyticsGate><ScenarioPlanner /></AnalyticsGate>} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/datapoint" element={<Datapoint />} />
-              <Route path="/calibration" element={<Calibration />} />
-              <Route path="/stability" element={<Stability />} />
-              <Route path="/data-quality" element={<DataQuality />} />
-              <Route path="/channel-insights" element={<ChannelInsights />} />
-              <Route path="/spend-pacing" element={<SpendPacing />} />
-              <Route path="/report" element={<Report />} />
+              <Route path="/calibration" element={<AnalyticsGate><Calibration /></AnalyticsGate>} />
+              <Route path="/stability" element={<AnalyticsGate><Stability /></AnalyticsGate>} />
+              <Route path="/data-quality" element={<AnalyticsGate><DataQuality /></AnalyticsGate>} />
+              <Route path="/channel-insights" element={<AnalyticsGate><ChannelInsights /></AnalyticsGate>} />
+              <Route path="/spend-pacing" element={<AnalyticsGate><SpendPacing /></AnalyticsGate>} />
+              <Route path="/report" element={<AnalyticsGate><Report /></AnalyticsGate>} />
             </Route>
           </Routes>
         </Suspense>
