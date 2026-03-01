@@ -66,6 +66,12 @@ export default function Dashboard() {
   const waterfall = (queryResults[4].data ?? null) as WaterfallData | null;
   const diagnostics = (queryResults[5].data ?? null) as DiagnosticsData | null;
   const roas = (queryResults[6].data ?? null) as ROASData | null;
+  const latestRun = runs?.runs?.[0] ?? null;
+
+  const contribShares = useMemo(() => getContribShares(contributions), [contributions]);
+  const timeline = useMemo(() => getTimeline(contributions), [contributions]);
+  const reconBars = useMemo(() => getReconBars(reconciliation), [reconciliation]);
+  const waterfallBars = useMemo(() => buildWaterfall(waterfall), [waterfall]);
 
   if (loading) {
     return (
@@ -83,7 +89,6 @@ export default function Dashboard() {
     );
   }
 
-  const latestRun = runs?.runs?.[0];
   if (!latestRun)
     return (
       <EmptyState
@@ -95,10 +100,6 @@ export default function Dashboard() {
     );
 
   const metrics = latestRun.metrics;
-  const contribShares = useMemo(() => getContribShares(contributions), [contributions]);
-  const timeline = useMemo(() => getTimeline(contributions), [contributions]);
-  const reconBars = useMemo(() => getReconBars(reconciliation), [reconciliation]);
-  const waterfallBars = useMemo(() => buildWaterfall(waterfall), [waterfall]);
 
   return (
     <div>

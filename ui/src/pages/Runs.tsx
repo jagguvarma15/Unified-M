@@ -29,6 +29,10 @@ export default function Runs() {
   const [compareError, setCompareError] = useState<string | null>(null);
   const { data, isLoading: loading } = useRunsQuery(200);
   const compareRuns = useCompareRunsMutation();
+  const runs = data?.runs ?? [];
+  const rows = useMemo(() => runs, [runs]);
+  const useVirtualized = runs.length > 60;
+  const gridCols = "64px minmax(120px,140px) minmax(260px,1fr) 140px 110px 110px 110px 110px 110px";
 
   const toggleSelect = (runId: string) => {
     setSelected((prev) => {
@@ -68,11 +72,6 @@ export default function Runs() {
       />
     );
   }
-
-  const runs = data.runs;
-  const useVirtualized = runs.length > 60;
-  const gridCols = "64px minmax(120px,140px) minmax(260px,1fr) 140px 110px 110px 110px 110px 110px";
-  const rows = useMemo(() => runs, [runs]);
 
   return (
     <div>
