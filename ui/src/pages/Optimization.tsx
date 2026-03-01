@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DollarSign, TrendingUp, ArrowUpDown, Zap } from "lucide-react";
 import {
   BarChart,
@@ -15,21 +15,12 @@ import {
 } from "recharts";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
-import { api, type OptimizationData } from "../lib/api";
 import { COLORS } from "../lib/colors";
+import { useOptimizationQuery } from "../lib/queries";
 
 export default function Optimization() {
-  const [data, setData] = useState<OptimizationData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data = null, isLoading: loading } = useOptimizationQuery();
   const [view, setView] = useState<"grouped" | "change" | "allocation">("grouped");
-
-  useEffect(() => {
-    api
-      .optimization()
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   if (loading) {
     return (

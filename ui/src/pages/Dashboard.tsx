@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Activity } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
 import {
   PieChart,
   Pie,
@@ -26,7 +27,6 @@ import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import { MetricCardSkeleton } from "../components/Skeleton";
 import {
-  api,
   type ContributionsData,
   type ReconciliationData,
   type OptimizationData,
@@ -38,30 +38,34 @@ import {
 import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
 import { formatCurrency, formatPercent, formatROAS } from "../lib/format";
 import ChartCard from "../components/ChartCard";
+import { api } from "../lib/api";
+import { qk } from "../lib/queryKeys";
+import { downsampleEvenly } from "../lib/downsample";
 
 // ---------------------------------------------------------------------------
 
 export default function Dashboard() {
-  const [contributions, setContributions] = useState<ContributionsData | null>(null);
-  const [reconciliation, setReconciliation] = useState<ReconciliationData | null>(null);
-  const [optimization, setOptimization] = useState<OptimizationData | null>(null);
-  const [runs, setRuns] = useState<RunsData | null>(null);
-  const [waterfall, setWaterfall] = useState<WaterfallData | null>(null);
-  const [diagnostics, setDiagnostics] = useState<DiagnosticsData | null>(null);
-  const [roas, setRoas] = useState<ROASData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryResults = useQueries({
+    queries: [
+      { queryKey: qk.contributions, queryFn: api.contributions },
+      { queryKey: qk.reconciliation, queryFn: api.reconciliation },
+      { queryKey: qk.optimization, queryFn: api.optimization },
+      { queryKey: qk.runs(1), queryFn: () => api.runs(1) },
+      { queryKey: qk.waterfall, queryFn: api.waterfall },
+      { queryKey: qk.diagnostics, queryFn: api.diagnostics },
+      { queryKey: qk.roas, queryFn: api.roas },
+    ],
+  });
 
-  useEffect(() => {
-    Promise.allSettled([
-      api.contributions().then(setContributions),
-      api.reconciliation().then(setReconciliation),
-      api.optimization().then(setOptimization),
-      api.runs(1).then(setRuns),
-      api.waterfall().then(setWaterfall),
-      api.diagnostics().then(setDiagnostics),
-      api.roas().then(setRoas),
-    ]).finally(() => setLoading(false));
-  }, []);
+  const loading = queryResults.every((q) => q.isLoading);
+
+  const contributions = (queryResults[0].data ?? null) as ContributionsData | null;
+  const reconciliation = (queryResults[1].data ?? null) as ReconciliationData | null;
+  const optimization = (queryResults[2].data ?? null) as OptimizationData | null;
+  const runs = (queryResults[3].data ?? null) as RunsData | null;
+  const waterfall = (queryResults[4].data ?? null) as WaterfallData | null;
+  const diagnostics = (queryResults[5].data ?? null) as DiagnosticsData | null;
+  const roas = (queryResults[6].data ?? null) as ROASData | null;
 
   if (loading) {
     return (
@@ -91,10 +95,10 @@ export default function Dashboard() {
     );
 
   const metrics = latestRun.metrics;
-  const contribShares = getContribShares(contributions);
-  const timeline = getTimeline(contributions);
-  const reconBars = getReconBars(reconciliation);
-  const waterfallBars = buildWaterfall(waterfall);
+  const contribShares = useMemo(() => getContribShares(contributions), [contributions]);
+  const timeline = useMemo(() => getTimeline(contributions), [contributions]);
+  const reconBars = useMemo(() => getReconBars(reconciliation), [reconciliation]);
+  const waterfallBars = useMemo(() => buildWaterfall(waterfall), [waterfall]);
 
   return (
     <div>
@@ -446,7 +450,7 @@ export default function Dashboard() {
         >
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart
-              data={diagnostics.chart.map((d) => ({
+              data={downsampleEvenly(diagnostics.chart, 240).map((d) => ({
                 date: String(d.date).slice(0, 10),
                 residual: (d.actual ?? 0) - (d.predicted ?? 0),
               }))}
@@ -576,9 +580,7 @@ function getContribShares(data: ContributionsData | null) {
 function getTimeline(data: ContributionsData | null) {
   if (!data?.data?.length) return { rows: [], channels: [] as string[] };
   const channels = channelKeys(data.data[0]);
-  const step = Math.max(1, Math.floor(data.data.length / 120));
-  const rows = data.data
-    .filter((_, i) => i % step === 0)
+  const rows = downsampleEvenly(data.data, 180)
     .map((r) => ({
       date: String(r.date).slice(0, 10),
       ...Object.fromEntries(channels.map((ch) => [ch, Number(r[ch]) || 0])),

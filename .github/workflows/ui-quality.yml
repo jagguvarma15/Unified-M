@@ -1,0 +1,55 @@
+name: UI Quality
+
+on:
+  pull_request:
+    paths:
+      - "ui/**"
+      - "src/server/**"
+      - "scripts/export_openapi.py"
+      - ".github/workflows/ui-quality.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "ui/**"
+      - "src/server/**"
+      - "scripts/export_openapi.py"
+      - ".github/workflows/ui-quality.yml"
+
+jobs:
+  ui-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.1.45"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        run: uv python install 3.11
+
+      - name: Install backend deps (OpenAPI export)
+        run: uv sync --frozen --no-dev
+
+      - name: Install UI deps
+        working-directory: ui
+        run: bun install --frozen-lockfile
+
+      - name: Regenerate API types and verify checked-in files
+        working-directory: ui
+        run: bun run check:api-types
+
+      - name: TypeScript compile
+        working-directory: ui
+        run: bunx tsc -b --pretty false
+
+      - name: Build + bundle budget checks
+        working-directory: ui
+        run: bun run check:bundle
+

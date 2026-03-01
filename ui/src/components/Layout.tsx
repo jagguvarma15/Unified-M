@@ -22,9 +22,9 @@ import {
   FileText,
   Play,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { api, type HealthData } from "../lib/api";
+import { useHealthQuery } from "../lib/queries";
 
 interface NavItem {
   to: string;
@@ -88,25 +88,9 @@ const NAV_SECTIONS: NavSection[] = [
 ];
 
 export default function Layout() {
-  const [health, setHealth] = useState<HealthData | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [pipelineOpen, setPipelineOpen] = useState(false);
-
-  useEffect(() => {
-    api
-      .health()
-      .then(setHealth)
-      .catch(() => setHealth(null));
-
-    const id = setInterval(() => {
-      api
-        .health()
-        .then(setHealth)
-        .catch(() => setHealth(null));
-    }, 10_000);
-
-    return () => clearInterval(id);
-  }, []);
+  const { data: health } = useHealthQuery();
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));

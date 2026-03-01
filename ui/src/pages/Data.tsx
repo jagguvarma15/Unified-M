@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Upload,
   CheckCircle2,
@@ -8,7 +9,9 @@ import {
   FileText,
   AlertCircle,
 } from "lucide-react";
-import { api, type DataStatus, type DataSourceStatus } from "../lib/api";
+import type { DataSourceStatus } from "../lib/api";
+import { qk } from "../lib/queryKeys";
+import { useDataStatusQuery, useTriggerPipelineMutation, useUploadFileMutation } from "../lib/queries";
 
 const KNOWN_DATA_TYPES: Record<
   string,
@@ -57,27 +60,14 @@ function getTypeInfo(key: string) {
 }
 
 export default function Data() {
-  const [status, setStatus] = useState<DataStatus | null>(null);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
-
-  useEffect(() => {
-    loadStatus();
-  }, []);
-
-  const loadStatus = async () => {
-    try {
-      const data = await api.dataStatus();
-      setStatus(data);
-    } catch (err) {
-      console.error("Failed to load data status:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const queryClient = useQueryClient();
+  const { data: status, isLoading: loading, refetch } = useDataStatusQuery();
+  const uploadFile = useUploadFileMutation();
+  const triggerPipeline = useTriggerPipelineMutation();
 
   const handleFileSelect = async (
     dataType: string,
@@ -90,8 +80,9 @@ export default function Data() {
     setRunResult(null);
 
     try {
-      await api.uploadFile(dataType, file);
-      await loadStatus(); // Refresh status
+      await uploadFile.mutateAsync({ dataType, file });
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: qk.dataStatus });
     } catch (err) {
       setRunResult(`Upload failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -125,9 +116,11 @@ export default function Data() {
     setRunResult(null);
 
     try {
-      const result = await api.triggerPipeline("builtin", "revenue");
+      const result = await triggerPipeline.mutateAsync({ model: "builtin", target: "revenue" });
       setRunResult(`Pipeline job started (job: ${result.job_id}). Track progress via the Run Pipeline panel.`);
-      setTimeout(loadStatus, 5000);
+      setTimeout(() => {
+        void refetch();
+      }, 5000);
     } catch (err) {
       setRunResult(`Pipeline failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

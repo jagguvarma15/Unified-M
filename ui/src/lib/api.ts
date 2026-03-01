@@ -2,8 +2,24 @@
  * API client for Unified-M backend.
  * All endpoints are read-only from the artifact store unless noted.
  */
+import type { paths } from "./api.generated";
 
 const BASE = "";
+
+type JsonResponse<T> = T extends {
+  responses: {
+    200: {
+      content: {
+        "application/json": infer R;
+      };
+    };
+  };
+}
+  ? R
+  : never;
+
+type GetResponse<P extends keyof paths> = paths[P] extends { get: infer T } ? JsonResponse<T> : never;
+type PostResponse<P extends keyof paths> = paths[P] extends { post: infer T } ? JsonResponse<T> : never;
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
@@ -18,13 +34,7 @@ async function get<T>(path: string): Promise<T> {
 // Types (aligned with backend responses)
 // ---------------------------------------------------------------------------
 
-export interface HealthData {
-  status: string;
-  timestamp: string;
-  latest_run: string | null;
-  version: string;
-  cache?: Record<string, unknown>;
-}
+export type HealthData = GetResponse<"/health">;
 
 export interface RunManifest {
   run_id: string;
@@ -36,35 +46,13 @@ export interface RunManifest {
   duration_seconds?: number;
 }
 
-export interface RunsData {
-  runs: RunManifest[];
-}
+export type RunsData = GetResponse<"/api/v1/runs">;
 
-export interface ContributionsData {
-  data: Record<string, unknown>[];
-  n_rows?: number;
-}
+export type ContributionsData = GetResponse<"/api/v1/contributions">;
 
-export interface ReconciliationData {
-  channel_estimates: Record<
-    string,
-    {
-      lift_estimate: number;
-      ci_lower: number;
-      ci_upper: number;
-      confidence_score: number;
-    }
-  >;
-}
+export type ReconciliationData = GetResponse<"/api/v1/reconciliation">;
 
-export interface OptimizationData {
-  current_allocation: Record<string, number>;
-  optimal_allocation: Record<string, number>;
-  total_budget: number;
-  current_response?: number;
-  expected_response: number;
-  improvement_pct?: number;
-}
+export type OptimizationData = GetResponse<"/api/v1/optimization">;
 
 export interface ResponseCurveChannel {
   spend?: number[];
@@ -76,40 +64,17 @@ export interface ResponseCurvesData {
   [channel: string]: ResponseCurveChannel;
 }
 
-export interface ParametersData {
-  coefficients?: Record<string, number>;
-  intercept?: number;
-  adstock?: Record<string, unknown>;
-  saturation?: Record<string, unknown>;
-}
+export type ParametersData = GetResponse<"/api/v1/parameters">;
 
-export interface DiagnosticsData {
-  metrics: Record<string, number>;
-  chart: { date: string; actual: number; predicted: number; residual?: number }[];
-  residual_stats?: Record<string, number>;
-}
+export type DiagnosticsData = GetResponse<"/api/v1/diagnostics">;
 
-export interface ROASData {
-  channels: {
-    channel: string;
-    roas: number;
-    total_spend: number;
-    total_contribution: number;
-    cpa?: number;
-    marginal_roi?: number;
-  }[];
-  summary: { total_spend: number; total_contribution: number; blended_roas: number };
-}
+export type ROASData = GetResponse<"/api/v1/roas">;
 
-export interface WaterfallData {
-  baseline: number;
-  channels: { name: string; value: number }[];
-  total: number;
-}
+export type WaterfallData = GetResponse<"/api/v1/waterfall">;
 
 export interface DataSourceStatus {
-  key: string;
-  connected: boolean;
+  key?: string;
+  connected?: boolean;
   path?: string;
   n_rows?: number;
   rows?: number;
@@ -120,14 +85,7 @@ export interface DataSourceStatus {
   error?: string;
 }
 
-export interface DataStatus {
-  media_spend?: DataSourceStatus;
-  outcomes?: DataSourceStatus;
-  controls?: DataSourceStatus;
-  incrementality_tests?: DataSourceStatus;
-  attribution?: DataSourceStatus;
-  [key: string]: DataSourceStatus | undefined;
-}
+export type DataStatus = GetResponse<"/api/v1/data/status">;
 
 export interface CalibrationPoint {
   test_id?: string;
@@ -139,14 +97,7 @@ export interface CalibrationPoint {
   [key: string]: unknown;
 }
 
-export interface CalibrationData {
-  n_tests: number;
-  points: CalibrationPoint[];
-  coverage?: number;
-  median_lift_error?: number;
-  mean_lift_error?: number;
-  calibration_quality?: string;
-}
+export type CalibrationData = GetResponse<"/api/v1/calibration"> & { points: CalibrationPoint[] };
 
 export interface StabilityData {
   allocation_change_pct?: number;
@@ -179,14 +130,7 @@ export interface GateResult {
   details?: unknown;
 }
 
-export interface DataQualityData {
-  timestamp: string;
-  overall_pass: boolean;
-  n_passed: number;
-  n_failed: number;
-  n_warnings: number;
-  gates: GateResult[];
-}
+export type DataQualityData = GetResponse<"/api/v1/data-quality"> & { gates: GateResult[] };
 
 // ---------------------------------------------------------------------------
 // Channel Insights
@@ -203,9 +147,7 @@ export interface ChannelInsight {
   coefficient: number;
 }
 
-export interface ChannelInsightsData {
-  channels: ChannelInsight[];
-}
+export type ChannelInsightsData = GetResponse<"/api/v1/channel-insights"> & { channels: ChannelInsight[] };
 
 // ---------------------------------------------------------------------------
 // Spend Pacing
@@ -220,27 +162,13 @@ export interface PacingChannel {
   status: "on-track" | "over" | "under";
 }
 
-export interface SpendPacingData {
-  total_planned: number;
-  total_actual: number;
-  pacing_pct: number;
-  channels: PacingChannel[];
-  cumulative: { date: string; actual: number }[];
-}
+export type SpendPacingData = GetResponse<"/api/v1/spend-pacing"> & { channels: PacingChannel[] };
 
 // ---------------------------------------------------------------------------
 // Executive Report
 // ---------------------------------------------------------------------------
 
-export interface ReportSummaryData {
-  run_id: string | null;
-  generated_at: string;
-  metrics: Record<string, number>;
-  roas_summary: Record<string, number>;
-  top_channels: { channel: string; contribution: number; share_pct: number }[];
-  recommendations: string[];
-  improvement_pct: number;
-}
+export type ReportSummaryData = GetResponse<"/api/v1/report/summary">;
 
 // ---------------------------------------------------------------------------
 // Run Comparison (advanced, verifiable)
@@ -380,13 +308,13 @@ export const api = {
     formData.append("file", file);
     return fetch(`${BASE}/api/v1/data/upload`, { method: "POST", body: formData }).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json();
+      return r.json() as Promise<PostResponse<"/api/v1/data/upload">>;
     });
   },
 
   // Pipeline jobs (async)
   triggerPipeline: (model = "builtin", target = "revenue") =>
-    postForm<{ job_id: string; status: string }>("/api/v1/pipeline/run", { model, target }),
+    postForm<PostResponse<"/api/v1/pipeline/run">>("/api/v1/pipeline/run", { model, target }),
   listJobs: (limit = 20) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`),
   getJob: (jobId: string) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`),
 
@@ -394,7 +322,7 @@ export const api = {
   listConnectors: () => get<{ connectors: SavedConnector[] }>("/api/v1/connectors"),
   getConnector: (id: string) => get<SavedConnector>(`/api/v1/connectors/${id}`),
   createConnector: (name: string, type: string, subtype: string, config: Record<string, unknown>) =>
-    postForm<SavedConnector>("/api/v1/connectors", {
+    postForm<PostResponse<"/api/v1/connectors">>("/api/v1/connectors", {
       name,
       connector_type: type,
       subtype,
@@ -415,12 +343,12 @@ export const api = {
       return r.json();
     }),
   testConnector: (id: string) =>
-    postForm<{ status: string; connected: boolean; message: string }>(
+    postForm<PostResponse<"/api/v1/connectors/{id}/test">>(
       `/api/v1/connectors/${id}/test`,
       {},
     ),
   fetchFromConnector: (id: string, queryOrPath: string, dataType: string) =>
-    postForm<{ status: string; rows: number; columns: string[]; data_type: string }>(
+    postForm<PostResponse<"/api/v1/connectors/{id}/fetch">>(
       `/api/v1/connectors/${id}/fetch`,
       { query_or_path: queryOrPath, data_type: dataType },
     ),

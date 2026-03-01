@@ -18,5 +18,15 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    chunkSizeWarningLimit: 350,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          charts: ["recharts"],
+          query: ["@tanstack/react-query"],
+        },
+      },
+    },
   },
 });

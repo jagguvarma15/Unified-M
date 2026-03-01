@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -13,22 +12,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import EmptyState from "../components/EmptyState";
-import { api, type ContributionsData } from "../lib/api";
 import { COLORS } from "../lib/colors";
+import { useContributionsQuery } from "../lib/queries";
+import { downsampleEvenly } from "../lib/downsample";
 
 const RESERVED = new Set(["date", "actual", "predicted", "baseline"]);
 
 export default function Contributions() {
-  const [data, setData] = useState<ContributionsData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api
-      .contributions()
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data = null, isLoading: loading } = useContributionsQuery();
 
   if (loading) {
     return (
@@ -53,9 +44,7 @@ export default function Contributions() {
   const allTotal = channelTotals.reduce((s, c) => s + Math.abs(c.total), 0);
 
   // Timeline (downsampled)
-  const step = Math.max(1, Math.floor(data.data.length / 120));
-  const timeline = data.data
-    .filter((_, i) => i % step === 0)
+  const timeline = downsampleEvenly(data.data, 180)
     .map((r) => ({
       date: String(r.date).slice(0, 10),
       ...Object.fromEntries(channels.map((ch) => [ch, Number(r[ch]) || 0])),

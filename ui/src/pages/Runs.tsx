@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -18,24 +18,17 @@ import {
   Cell,
 } from "recharts";
 import EmptyState from "../components/EmptyState";
-import { api, type RunsData, type RunManifest, type RunComparisonData } from "../lib/api";
+import { type RunManifest, type RunComparisonData } from "../lib/api";
 import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
+import { useCompareRunsMutation, useRunsQuery } from "../lib/queries";
+import { VirtualizedList } from "../components/VirtualizedList";
 
 export default function Runs() {
-  const [data, setData] = useState<RunsData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
   const [comparison, setComparison] = useState<RunComparisonData | null>(null);
-  const [comparing, setComparing] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .runs(20)
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useRunsQuery(200);
+  const compareRuns = useCompareRunsMutation();
 
   const toggleSelect = (runId: string) => {
     setSelected((prev) => {
@@ -49,16 +42,13 @@ export default function Runs() {
 
   const handleCompare = async () => {
     if (selected.length !== 2) return;
-    setComparing(true);
     setCompareError(null);
     try {
-      const result = await api.compareRuns(selected[0], selected[1]);
+      const result = await compareRuns.mutateAsync({ runA: selected[0], runB: selected[1] });
       setComparison(result);
     } catch (err) {
       setComparison(null);
       setCompareError(err instanceof Error ? err.message : "Compare failed. Check that both runs exist and the API is reachable.");
-    } finally {
-      setComparing(false);
     }
   };
 
@@ -79,6 +69,11 @@ export default function Runs() {
     );
   }
 
+  const runs = data.runs;
+  const useVirtualized = runs.length > 60;
+  const gridCols = "64px minmax(120px,140px) minmax(260px,1fr) 140px 110px 110px 110px 110px 110px";
+  const rows = useMemo(() => runs, [runs]);
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -96,10 +91,10 @@ export default function Runs() {
         {selected.length === 2 && (
           <button
             onClick={handleCompare}
-            disabled={comparing}
+            disabled={compareRuns.isPending}
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors text-sm"
           >
-            {comparing ? (
+            {compareRuns.isPending ? (
               <Loader2 size={15} className="animate-spin" />
             ) : (
               <GitCompareArrows size={15} />
@@ -111,31 +106,52 @@ export default function Runs() {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 mt-6 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="w-10 py-3 px-3" />
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Status</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Run ID</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Backend</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">Rows</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">Channels</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">MAPE</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">R&sup2;</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">Duration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.runs.map((run) => (
-                <RunRow
-                  key={run.run_id}
-                  run={run}
-                  isSelected={selected.includes(run.run_id)}
-                  onToggle={() => toggleSelect(run.run_id)}
-                />
-              ))}
-            </tbody>
-          </table>
+          <div className="min-w-[1020px]">
+            <div
+              className="grid bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600"
+              style={{ gridTemplateColumns: gridCols }}
+            >
+              <div className="py-3 px-3" />
+              <div className="py-3 px-4">Status</div>
+              <div className="py-3 px-4">Run ID</div>
+              <div className="py-3 px-4">Backend</div>
+              <div className="py-3 px-4 text-right">Rows</div>
+              <div className="py-3 px-4 text-right">Channels</div>
+              <div className="py-3 px-4 text-right">MAPE</div>
+              <div className="py-3 px-4 text-right">R&sup2;</div>
+              <div className="py-3 px-4 text-right">Duration</div>
+            </div>
+
+            {useVirtualized ? (
+              <VirtualizedList
+                rows={rows}
+                rowHeight={50}
+                height={Math.min(600, rows.length * 50)}
+                renderRow={(run, _, style) => (
+                  <RunGridRow
+                    key={run.run_id}
+                    run={run}
+                    style={style}
+                    columns={gridCols}
+                    isSelected={selected.includes(run.run_id)}
+                    onToggle={() => toggleSelect(run.run_id)}
+                  />
+                )}
+              />
+            ) : (
+              <div>
+                {rows.map((run) => (
+                  <RunGridRow
+                    key={run.run_id}
+                    run={run}
+                    columns={gridCols}
+                    isSelected={selected.includes(run.run_id)}
+                    onToggle={() => toggleSelect(run.run_id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -151,33 +167,48 @@ export default function Runs() {
   );
 }
 
-function RunRow({ run, isSelected, onToggle }: { run: RunManifest; isSelected: boolean; onToggle: () => void }) {
+function RunGridRow({
+  run,
+  isSelected,
+  onToggle,
+  columns,
+  style,
+}: {
+  run: RunManifest;
+  isSelected: boolean;
+  onToggle: () => void;
+  columns: string;
+  style?: CSSProperties;
+}) {
   const m = run.metrics;
   return (
-    <tr className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${isSelected ? "bg-indigo-50/50" : ""}`}>
-      <td className="py-3 px-3 text-center">
+    <div
+      style={{ ...style, gridTemplateColumns: columns }}
+      className={`grid border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm ${isSelected ? "bg-indigo-50/50" : ""}`}
+    >
+      <div className="py-3 px-3 text-center">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={onToggle}
           className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
         />
-      </td>
-      <td className="py-3 px-4"><StatusBadge status={run.status} /></td>
-      <td className="py-3 px-4 font-mono text-xs text-slate-600 max-w-[180px] truncate">{run.run_id}</td>
-      <td className="py-3 px-4">
+      </div>
+      <div className="py-3 px-4"><StatusBadge status={run.status} /></div>
+      <div className="py-3 px-4 font-mono text-xs text-slate-600 truncate">{run.run_id}</div>
+      <div className="py-3 px-4">
         <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
           {run.model_backend}
         </span>
-      </td>
-      <td className="text-right py-3 px-4 tabular-nums">{run.n_rows}</td>
-      <td className="text-right py-3 px-4 tabular-nums">{run.n_channels}</td>
-      <td className="text-right py-3 px-4 tabular-nums">{m?.mape != null ? `${m.mape.toFixed(1)}%` : "\u2014"}</td>
-      <td className="text-right py-3 px-4 tabular-nums">{m?.r_squared != null ? m.r_squared.toFixed(3) : "\u2014"}</td>
-      <td className="text-right py-3 px-4 tabular-nums text-slate-500">
+      </div>
+      <div className="text-right py-3 px-4 tabular-nums">{run.n_rows}</div>
+      <div className="text-right py-3 px-4 tabular-nums">{run.n_channels}</div>
+      <div className="text-right py-3 px-4 tabular-nums">{m?.mape != null ? `${m.mape.toFixed(1)}%` : "\u2014"}</div>
+      <div className="text-right py-3 px-4 tabular-nums">{m?.r_squared != null ? m.r_squared.toFixed(3) : "\u2014"}</div>
+      <div className="text-right py-3 px-4 tabular-nums text-slate-500">
         {run.duration_seconds != null ? `${run.duration_seconds.toFixed(1)}s` : "\u2014"}
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
