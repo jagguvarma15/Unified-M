@@ -6,6 +6,11 @@ UV       := uv
 PYTHON   := $(UV) run python
 SHELL    := /bin/bash
 .DEFAULT_GOAL := help
+RUN_DIR  := .run
+API_PID  := $(RUN_DIR)/api.pid
+UI_PID   := $(RUN_DIR)/ui.pid
+API_LOG  := $(RUN_DIR)/api.log
+UI_LOG   := $(RUN_DIR)/ui.log
 
 # ── Run Modes ────────────────────────────────────────────────
 
@@ -47,6 +52,46 @@ ui: ## Start React dev server
 serve-all: ## Start API + UI in background
 	PYTHONPATH=src $(PYTHON) -m cli serve --port 8000 &
 	cd ui && bun dev
+
+.PHONY: start
+start: ## Start backend + frontend in background (writes PID/logs to .run/)
+	@mkdir -p $(RUN_DIR)
+	@if [ -f "$(API_PID)" ] && kill -0 "$$(cat $(API_PID))" 2>/dev/null; then \
+		echo "API already running (pid $$(cat $(API_PID)))"; \
+	else \
+		echo "Starting API on :8000 ..."; \
+		PYTHONPATH=src $(PYTHON) -m cli serve --port 8000 > "$(API_LOG)" 2>&1 & echo $$! > "$(API_PID)"; \
+	fi
+	@if [ -f "$(UI_PID)" ] && kill -0 "$$(cat $(UI_PID))" 2>/dev/null; then \
+		echo "UI already running (pid $$(cat $(UI_PID)))"; \
+	else \
+		echo "Starting UI on :5173 ..."; \
+		cd ui && (bun dev > "../$(UI_LOG)" 2>&1 & echo $$! > "../$(UI_PID)"); \
+	fi
+	@echo "Started. API log: $(API_LOG) | UI log: $(UI_LOG)"
+
+.PHONY: stop
+stop: ## Stop backend + frontend started via `make start`
+	@stopped=0; \
+	if [ -f "$(API_PID)" ]; then \
+		pid="$$(cat $(API_PID))"; \
+		if kill -0 "$$pid" 2>/dev/null; then \
+			echo "Stopping API (pid $$pid)"; \
+			kill "$$pid" 2>/dev/null || true; \
+			stopped=1; \
+		fi; \
+		rm -f "$(API_PID)"; \
+	fi; \
+	if [ -f "$(UI_PID)" ]; then \
+		pid="$$(cat $(UI_PID))"; \
+		if kill -0 "$$pid" 2>/dev/null; then \
+			echo "Stopping UI (pid $$pid)"; \
+			kill "$$pid" 2>/dev/null || true; \
+			stopped=1; \
+		fi; \
+		rm -f "$(UI_PID)"; \
+	fi; \
+	if [ $$stopped -eq 0 ]; then echo "No managed API/UI processes found."; fi
 
 # ── Docker ───────────────────────────────────────────────────
 
@@ -113,8 +158,8 @@ check: lint typecheck test ## Run all checks
 
 # ── Utilities ────────────────────────────────────────────────
 
-.PHONY: install
-install: ## Install Python dependencies (via uv lockfile)
+.PHONY: install-backend
+install-backend: ## Install Python dependencies (via uv lockfile)
 	$(UV) sync
 
 .PHONY: install-dev
@@ -127,6 +172,9 @@ install-ui: ## Install UI dependencies
 
 .PHONY: install-all
 install-all: install-dev install-ui ## Install everything
+
+.PHONY: install
+install: install-backend install-ui ## Install backend + frontend dependencies
 
 .PHONY: lock
 lock: ## Update uv.lock from pyproject.toml
