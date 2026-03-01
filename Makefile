@@ -113,6 +113,7 @@ stop: ## Stop backend + frontend started via `make start`
 		fi; \
 		rm -f "$(UI_PID)"; \
 	fi; \
+	PYTHONPATH=src $(PYTHON) -m cli cleanup-sample >/dev/null 2>&1 || true; \
 	if [ $$stopped -eq 0 ]; then echo "No managed API/UI processes found."; fi
 
 # ── Docker ───────────────────────────────────────────────────

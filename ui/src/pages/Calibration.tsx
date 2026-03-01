@@ -86,6 +86,12 @@ export default function Calibration() {
     x: p.measured_lift ?? 0,
     y: p.predicted_lift ?? 0,
   }));
+  const toFinite = (value: unknown): number => {
+    const n = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const minX = scatterData.length ? Math.min(...scatterData.map((d) => toFinite(d.x))) : 0;
+  const maxX = scatterData.length ? Math.max(...scatterData.map((d) => toFinite(d.x))) : 0;
 
   // Error bar chart by channel
   const barData = points.map((p) => ({
@@ -164,9 +170,9 @@ export default function Calibration() {
                 return (
                   <div className="bg-white border border-gray-200 rounded shadow-lg p-3 text-sm">
                     <p className="font-semibold">{p.channel}</p>
-                    <p>Measured: {p.measured_lift.toFixed(4)}</p>
-                    <p>Predicted: {p.predicted_lift.toFixed(4)}</p>
-                    <p>Error: {p.error_pct.toFixed(1)}%</p>
+                    <p>Measured: {toFinite(p.measured_lift).toFixed(4)}</p>
+                    <p>Predicted: {toFinite(p.predicted_lift).toFixed(4)}</p>
+                    <p>Error: {toFinite(p.error_pct).toFixed(1)}%</p>
                     <p>
                       Within CI:{" "}
                       {p.within_ci ? (
@@ -181,8 +187,8 @@ export default function Calibration() {
             />
             <ReferenceLine
               segment={[
-                { x: Math.min(...scatterData.map((d) => d.x)) * 0.8, y: Math.min(...scatterData.map((d) => d.x)) * 0.8 },
-                { x: Math.max(...scatterData.map((d) => d.x)) * 1.2, y: Math.max(...scatterData.map((d) => d.x)) * 1.2 },
+                { x: minX * 0.8, y: minX * 0.8 },
+                { x: maxX * 1.2, y: maxX * 1.2 },
               ]}
               stroke="#9ca3af"
               strokeDasharray="6 4"

@@ -11,6 +11,7 @@ Design principles:
 from __future__ import annotations
 
 from datetime import datetime
+import tempfile
 
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -588,18 +589,106 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     on_progress("connect", "Generating sample data")
                 except Exception:
                     pass
-            from cli import demo as demo_cmd
-            demo_cmd(output=None, n_days=365)
-            latest = store.get_latest_run_id()
-            metrics: dict[str, Any] = {}
-            if latest:
-                try:
-                    manifest = store.load_manifest(latest)
-                    if manifest.metrics is not None:
-                        metrics = manifest.metrics.model_dump()
-                except Exception:
-                    metrics = {}
-            return {"run_id": latest, "metrics": metrics}
+            from pipeline.runner import Pipeline
+            from config import load_config as _load_cfg
+
+            cfg = _load_cfg()
+            cfg.ensure_directories()
+
+            with tempfile.TemporaryDirectory(prefix="unified_m_sample_") as tmp:
+                tmp_dir = Path(tmp)
+                dates = pd.date_range(end=pd.Timestamp.now().normalize(), periods=365, freq="D")
+                np.random.seed(42)
+
+                channels = ["google_search", "meta_facebook", "meta_instagram", "tiktok", "tv_linear"]
+                media_records: list[dict[str, Any]] = []
+                for date in dates:
+                    for channel in channels:
+                        base = {
+                            "google_search": 1200, "meta_facebook": 900,
+                            "meta_instagram": 600, "tiktok": 400, "tv_linear": 1500,
+                        }[channel]
+                        seasonal = 1 + 0.3 * np.sin(date.dayofyear / 365 * 2 * np.pi)
+                        noise = 1 + np.random.normal(0, 0.15)
+                        spend = max(0, base * seasonal * noise)
+                        media_records.append({
+                            "date": date,
+                            "geo": "national",
+                            "channel": channel,
+                            "spend": round(spend, 2),
+                            "impressions": round(spend * np.random.uniform(40, 60), 0),
+                            "clicks": round(spend * np.random.uniform(0.3, 0.5), 0),
+                        })
+                media_df = pd.DataFrame(media_records)
+                media_path = tmp_dir / "media_spend.parquet"
+                media_df.to_parquet(media_path, index=False)
+
+                outcomes_records: list[dict[str, Any]] = []
+                for date in dates:
+                    base_revenue = 50000
+                    seasonal = 1 + 0.2 * np.sin(date.dayofyear / 365 * 2 * np.pi)
+                    trend = 1 + (date - dates[0]).days / 365 * 0.1
+                    noise = np.random.normal(1, 0.08)
+                    revenue = base_revenue * seasonal * trend * noise
+                    conversions = round(revenue / 100 * np.random.uniform(0.8, 1.2), 0)
+                    outcomes_records.append({
+                        "date": date,
+                        "geo": "national",
+                        "revenue": round(revenue, 2),
+                        "conversions": conversions,
+                        "new_customers": round(conversions * 0.3, 0),
+                    })
+                outcomes_df = pd.DataFrame(outcomes_records)
+                outcomes_path = tmp_dir / "outcomes.parquet"
+                outcomes_df.to_parquet(outcomes_path, index=False)
+
+                controls_df = pd.DataFrame({
+                    "date": dates,
+                    "geo": "national",
+                    "is_holiday": [1 if d.dayofweek >= 5 else 0 for d in dates],
+                    "promo": np.random.binomial(1, 0.1, len(dates)),
+                    "price_index": np.random.normal(1.0, 0.03, len(dates)).clip(0.8, 1.2).round(3),
+                })
+                controls_path = tmp_dir / "controls.parquet"
+                controls_df.to_parquet(controls_path, index=False)
+
+                tests_records: list[dict[str, Any]] = []
+                for i, channel in enumerate(channels[:3]):
+                    start = dates[60 + i * 30]
+                    end = dates[90 + i * 30]
+                    lift = np.random.uniform(0.05, 0.25)
+                    tests_records.append({
+                        "test_id": f"test_{channel}_sample",
+                        "channel": channel,
+                        "start_date": start,
+                        "end_date": end,
+                        "test_type": "geo_lift",
+                        "lift_estimate": round(lift, 4),
+                        "lift_ci_lower": round(lift * 0.6, 4),
+                        "lift_ci_upper": round(lift * 1.4, 4),
+                        "confidence_level": 0.95,
+                        "spend_during_test": round(np.random.uniform(20000, 80000), 2),
+                    })
+                tests_df = pd.DataFrame(tests_records)
+                tests_path = tmp_dir / "incrementality_tests.parquet"
+                tests_df.to_parquet(tests_path, index=False)
+
+                cfg_dict = cfg.to_flat_dict()
+                cfg_dict["sample_data"] = True
+                pipe = Pipeline(config=cfg_dict, runs_dir=cfg.storage.runs_path)
+                pipe.connect(
+                    media_spend=media_path,
+                    outcomes=outcomes_path,
+                    controls=controls_path,
+                    incrementality_tests=tests_path,
+                )
+                results = pipe.run(model=model, target_col=target, total_budget=budget, on_progress=on_progress)
+
+            run_id = pipe.run_id
+            if run_id:
+                run_dir = cfg.storage.runs_path / run_id
+                (run_dir / ".sample_run").write_text("sample")
+            return {"run_id": run_id, "metrics": results.get("metrics", {})}
 
         from pipeline.runner import Pipeline
         from config import load_config as _load_cfg

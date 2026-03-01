@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
+import shutil
 
 import typer
 from loguru import logger
@@ -758,6 +759,91 @@ def demo(
     logger.info(f"Demo pipeline complete.  Run ID: {pipe.run_id}")
     m = results.get("metrics", {})
     logger.info(f"  MAPE={m.get('mape', '?')}%  R2={m.get('r_squared', '?')}")
+
+
+@app.command("cleanup-sample")
+def cleanup_sample(
+    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
+):
+    """
+    Remove sample/demo runs created by server sample mode.
+
+    Deletes runs marked with `.sample_run` and refreshes `runs/latest`.
+    """
+    from config import load_config
+
+    cfg = load_config(config_path)
+    runs_path = cfg.storage.runs_path
+    if not runs_path.exists():
+        logger.info("No runs directory found; nothing to clean.")
+        return
+
+    sample_dirs = [
+        d for d in runs_path.iterdir()
+        if d.is_dir() and (d / ".sample_run").exists()
+    ]
+    removed = 0
+    for d in sample_dirs:
+        shutil.rmtree(d, ignore_errors=True)
+        removed += 1
+
+    # Best-effort cleanup for demo data accidentally persisted in processed/
+    # from older sample flows. We only delete when files match demo signature.
+    processed = cfg.storage.processed_path
+    demo_channels = {"google_search", "meta_facebook", "meta_instagram", "tiktok", "tv_linear"}
+
+    def _safe_read(path: Path) -> pd.DataFrame | None:
+        try:
+            if path.exists():
+                return pd.read_parquet(path)
+        except Exception:
+            return None
+        return None
+
+    def _looks_like_demo_media(df: pd.DataFrame) -> bool:
+        required = {"date", "geo", "channel", "spend", "impressions", "clicks"}
+        if not required.issubset(df.columns):
+            return False
+        channels = set(df["channel"].dropna().astype(str).unique())
+        if channels != demo_channels:
+            return False
+        if "geo" in df.columns and set(df["geo"].dropna().astype(str).unique()) != {"national"}:
+            return False
+        return len(df) in {365 * 5, 180 * 5, 730 * 5}
+
+    def _looks_like_demo_outcomes(df: pd.DataFrame) -> bool:
+        required = {"date", "geo", "revenue", "conversions", "new_customers"}
+        if not required.issubset(df.columns):
+            return False
+        if "geo" in df.columns and set(df["geo"].dropna().astype(str).unique()) != {"national"}:
+            return False
+        return len(df) in {365, 180, 730}
+
+    media_p = processed / "media_spend.parquet"
+    outcomes_p = processed / "outcomes.parquet"
+    controls_p = processed / "controls.parquet"
+    tests_p = processed / "incrementality_tests.parquet"
+
+    media_df = _safe_read(media_p)
+    outcomes_df = _safe_read(outcomes_p)
+    if media_df is not None and outcomes_df is not None:
+        if _looks_like_demo_media(media_df) and _looks_like_demo_outcomes(outcomes_df):
+            for p in [media_p, outcomes_p, controls_p, tests_p]:
+                if p.exists():
+                    p.unlink(missing_ok=True)
+            logger.info("Removed demo sample datasets from processed path.")
+
+    latest = runs_path / "latest"
+    remaining = [
+        d for d in sorted(runs_path.iterdir(), reverse=True)
+        if d.is_dir() and (d / "manifest.json").exists()
+    ]
+    if remaining:
+        latest.write_text(remaining[0].name)
+    elif latest.exists() or latest.is_symlink():
+        latest.unlink()
+
+    logger.info(f"Removed {removed} sample run(s).")
 
 
 # ---------------------------------------------------------------------------

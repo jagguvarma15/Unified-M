@@ -26,6 +26,7 @@ import {
 import EmptyState from "../components/EmptyState";
 import { api, type ParametersData, type HealthData, type AdaptersData } from "../lib/api";
 import { COLORS } from "../lib/colors";
+import { useHealthQuery } from "../lib/queries";
 
 export default function Settings() {
   const [params, setParams] = useState<ParametersData | null>(null);
@@ -34,6 +35,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"parameters" | "adstock" | "saturation" | "adapters" | "system">("parameters");
+  const { isError: healthError } = useHealthQuery();
 
   useEffect(() => {
     Promise.allSettled([
@@ -42,6 +44,14 @@ export default function Settings() {
       api.adapters().then(setAdapters),
     ]).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (healthError) {
+      setParams(null);
+      setAdapters(null);
+      setHealth(null);
+    }
+  }, [healthError]);
 
   const handleRefreshCache = async () => {
     setRefreshing(true);
@@ -151,9 +161,16 @@ function CoefficientsTab({ params }: { params: ParametersData | null }) {
     return <EmptyState title="No coefficients" message="Run a model to see parameter estimates." />;
   }
 
+  const toFinite = (value: unknown): number => {
+    const n = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const coefs = Object.entries(params.coefficients)
-    .map(([channel, value]) => ({ channel, value }))
+    .map(([channel, value]) => ({ channel, value: toFinite(value) }))
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+  const maxAbs = Math.max(0, ...coefs.map((x) => Math.abs(x.value)));
 
   return (
     <div className="space-y-6">
@@ -164,7 +181,7 @@ function CoefficientsTab({ params }: { params: ParametersData | null }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 12 }} />
             <YAxis type="category" dataKey="channel" tick={{ fontSize: 13 }} width={75} />
-            <Tooltip formatter={(v: number) => v.toFixed(4)} />
+            <Tooltip formatter={(v: unknown) => toFinite(v).toFixed(4)} />
             <Bar dataKey="value" radius={[0, 6, 6, 0]} name="Coefficient">
               {coefs.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -174,7 +191,7 @@ function CoefficientsTab({ params }: { params: ParametersData | null }) {
         </ResponsiveContainer>
       </div>
 
-      {params.intercept !== undefined && (
+      {typeof params.intercept === "number" && Number.isFinite(params.intercept) && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
           <h2 className="text-sm font-semibold text-slate-700 mb-2">Intercept (Baseline)</h2>
           <p className="text-2xl font-bold text-slate-900 tabular-nums">
@@ -201,7 +218,6 @@ function CoefficientsTab({ params }: { params: ParametersData | null }) {
             </thead>
             <tbody>
               {coefs.map((c, i) => {
-                const maxAbs = Math.max(...coefs.map((x) => Math.abs(x.value)));
                 const pct = maxAbs > 0 ? (Math.abs(c.value) / maxAbs) * 100 : 0;
                 return (
                   <tr key={c.channel} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">

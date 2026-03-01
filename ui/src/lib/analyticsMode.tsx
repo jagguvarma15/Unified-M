@@ -1,6 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-
-const STORAGE_KEY = "unified_m_analytics_enabled";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 interface AnalyticsModeContextValue {
   analyticsEnabled: boolean;
@@ -10,16 +8,10 @@ interface AnalyticsModeContextValue {
 const AnalyticsModeContext = createContext<AnalyticsModeContextValue | null>(null);
 
 export function AnalyticsModeProvider({ children }: { children: ReactNode }) {
-  const [analyticsEnabled, setAnalyticsEnabledState] = useState<boolean>(true);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "false") setAnalyticsEnabledState(false);
-  }, []);
+  const [analyticsEnabled, setAnalyticsEnabledState] = useState<boolean>(false);
 
   const setAnalyticsEnabled = (enabled: boolean) => {
     setAnalyticsEnabledState(enabled);
-    localStorage.setItem(STORAGE_KEY, enabled ? "true" : "false");
   };
 
   const value = useMemo(
@@ -37,4 +29,3 @@ export function useAnalyticsMode() {
   }
   return ctx;
 }
-

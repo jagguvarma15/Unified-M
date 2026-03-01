@@ -22,10 +22,11 @@ import {
   FileText,
   Play,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NavItem {
   to: string;
@@ -91,8 +92,22 @@ const NAV_SECTIONS: NavSection[] = [
 export default function Layout() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [pipelineOpen, setPipelineOpen] = useState(false);
-  const { data: health } = useHealthQuery();
-  const { analyticsEnabled } = useAnalyticsMode();
+  const { data: health, isError: healthError } = useHealthQuery();
+  const { analyticsEnabled, setAnalyticsEnabled } = useAnalyticsMode();
+  const queryClient = useQueryClient();
+  const didClearRef = useRef(false);
+
+  useEffect(() => {
+    if (healthError) {
+      setAnalyticsEnabled(false);
+      if (!didClearRef.current) {
+        queryClient.clear();
+        didClearRef.current = true;
+      }
+    } else {
+      didClearRef.current = false;
+    }
+  }, [healthError, setAnalyticsEnabled, queryClient]);
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
