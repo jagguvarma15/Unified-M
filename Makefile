@@ -6,6 +6,7 @@ UV       := uv
 PYTHON   := $(UV) run python
 SHELL    := /bin/bash
 .DEFAULT_GOAL := help
+BUN_FALLBACK := $(HOME)/.bun/bin/bun
 RUN_DIR  := .run
 API_PID  := $(RUN_DIR)/api.pid
 UI_PID   := $(RUN_DIR)/ui.pid
@@ -46,12 +47,24 @@ serve: ## Start FastAPI server
 
 .PHONY: ui
 ui: ## Start React dev server
-	cd ui && bun dev
+	@BUN_BIN="$$(command -v bun 2>/dev/null || true)"; \
+	if [ -z "$$BUN_BIN" ] && [ -x "$(BUN_FALLBACK)" ]; then BUN_BIN="$(BUN_FALLBACK)"; fi; \
+	if [ -z "$$BUN_BIN" ]; then \
+		echo "bun is required for frontend. Install with: curl -fsSL https://bun.sh/install | bash"; \
+		exit 1; \
+	fi; \
+	cd ui && "$$BUN_BIN" dev
 
 .PHONY: serve-all
 serve-all: ## Start API + UI in background
 	PYTHONPATH=src $(PYTHON) -m cli serve --port 8000 &
-	cd ui && bun dev
+	@BUN_BIN="$$(command -v bun 2>/dev/null || true)"; \
+	if [ -z "$$BUN_BIN" ] && [ -x "$(BUN_FALLBACK)" ]; then BUN_BIN="$(BUN_FALLBACK)"; fi; \
+	if [ -z "$$BUN_BIN" ]; then \
+		echo "bun is required for frontend. Install with: curl -fsSL https://bun.sh/install | bash"; \
+		exit 1; \
+	fi; \
+	cd ui && "$$BUN_BIN" dev
 
 .PHONY: start
 start: ## Start backend + frontend in background (writes PID/logs to .run/)
@@ -66,9 +79,18 @@ start: ## Start backend + frontend in background (writes PID/logs to .run/)
 		echo "UI already running (pid $$(cat $(UI_PID)))"; \
 	else \
 		echo "Starting UI on :5173 ..."; \
-		cd ui && (bun dev > "../$(UI_LOG)" 2>&1 & echo $$! > "../$(UI_PID)"); \
+		BUN_BIN="$$(command -v bun 2>/dev/null || true)"; \
+		if [ -z "$$BUN_BIN" ] && [ -x "$(BUN_FALLBACK)" ]; then BUN_BIN="$(BUN_FALLBACK)"; fi; \
+		if [ -z "$$BUN_BIN" ]; then \
+			echo "bun is required for frontend. Install with: curl -fsSL https://bun.sh/install | bash"; \
+			exit 1; \
+		fi; \
+		cd ui && ("$$BUN_BIN" dev > "../$(UI_LOG)" 2>&1 & echo $$! > "../$(UI_PID)"); \
 	fi
-	@echo "Started. API log: $(API_LOG) | UI log: $(UI_LOG)"
+	@echo "Started."
+	@echo "Frontend: http://localhost:5173"
+	@echo "Backend:  http://localhost:8000"
+	@echo "Logs: API=$(API_LOG) UI=$(UI_LOG)"
 
 .PHONY: stop
 stop: ## Stop backend + frontend started via `make start`
@@ -162,19 +184,44 @@ check: lint typecheck test ## Run all checks
 install-backend: ## Install Python dependencies (via uv lockfile)
 	$(UV) sync
 
+.PHONY: ensure-bun
+ensure-bun: ## Ensure bun is installed (installs via curl if missing)
+	@BUN_BIN="$$(command -v bun 2>/dev/null || true)"; \
+	if [ -z "$$BUN_BIN" ] && [ -x "$(BUN_FALLBACK)" ]; then BUN_BIN="$(BUN_FALLBACK)"; fi; \
+	if [ -n "$$BUN_BIN" ]; then \
+		echo "bun detected: $$($$BUN_BIN --version)"; \
+	else \
+		echo "bun not found. Installing via official script..."; \
+		curl -fsSL https://bun.sh/install | bash; \
+		if [ -x "$$HOME/.bun/bin/bun" ]; then \
+			echo "bun installed at $$HOME/.bun/bin/bun"; \
+			echo "Current shell may not have bun on PATH yet."; \
+			echo "Run: export PATH=\"$$HOME/.bun/bin:$$PATH\""; \
+		else \
+			echo "bun installation failed."; \
+			exit 1; \
+		fi; \
+	fi
+
 .PHONY: install-dev
 install-dev: ## Install with dev dependencies
 	$(UV) sync --all-extras
 
 .PHONY: install-ui
 install-ui: ## Install UI dependencies
-	cd ui && bun install
+	@BUN_BIN="$$(command -v bun 2>/dev/null || true)"; \
+	if [ -z "$$BUN_BIN" ] && [ -x "$(BUN_FALLBACK)" ]; then BUN_BIN="$(BUN_FALLBACK)"; fi; \
+	if [ -z "$$BUN_BIN" ]; then \
+		echo "bun is required for frontend. Install with: curl -fsSL https://bun.sh/install | bash"; \
+		exit 1; \
+	fi; \
+	cd ui && "$$BUN_BIN" install
 
 .PHONY: install-all
 install-all: install-dev install-ui ## Install everything
 
 .PHONY: install
-install: install-backend install-ui ## Install backend + frontend dependencies
+install: ensure-bun install-backend install-ui ## Install backend + frontend dependencies (bun + uv)
 
 .PHONY: lock
 lock: ## Update uv.lock from pyproject.toml
