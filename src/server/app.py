@@ -26,6 +26,37 @@ import re
 
 from core.artifacts import ArtifactStore
 from config import get_config
+from core.contracts import RunManifest
+from server.schemas import (
+    AdaptersResponse,
+    CalibrationResponse,
+    ChannelInsightsResponse,
+    ConnectorFetchResponse,
+    ConnectorTestResponse,
+    ContributionsResponse,
+    DataQualityResponse,
+    DataSourceStatus,
+    DiagnosticsResponse,
+    HealthResponse,
+    MessageResponse,
+    OptimizationResponse,
+    ParametersResponse,
+    PipelineJobResponse,
+    PipelineJobsResponse,
+    PipelineRunTriggerResponse,
+    ReconciliationResponse,
+    ReportSummaryResponse,
+    RootResponse,
+    ROASResponse,
+    RunsResponse,
+    SavedConnector,
+    SavedConnectorListResponse,
+    SpendPacingResponse,
+    StatusResponse,
+    UploadDataResponse,
+    WaterfallResponse,
+    ResponseCurveChannel,
+)
 
 
 # Known pipeline data types; custom names allowed via _is_valid_custom_data_type
@@ -149,7 +180,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Health
     # ------------------------------------------------------------------
 
-    @application.get("/health")
+    @application.get("/health", response_model=HealthResponse)
     def health():
         run_id = store.get_latest_run_id()
         return {
@@ -164,13 +195,13 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     def cache_stats():
         return cache.stats()
 
-    @application.post("/api/cache/clear")
+    @application.post("/api/cache/clear", response_model=MessageResponse)
     def cache_clear():
         cache.clear()
         reader.invalidate()
         return {"message": "Cache cleared"}
 
-    @application.get("/")
+    @application.get("/", response_model=RootResponse)
     def root():
         return {
             "name": "Unified-M API",
@@ -182,7 +213,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Adapter Discovery
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/adapters")
+    @application.get("/api/v1/adapters", response_model=AdaptersResponse)
     def list_adapters():
         """Discover available model backends, connectors, and cache status."""
         from models.registry import list_backends, _REGISTRY, _auto_discover
@@ -217,13 +248,13 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Runs
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/runs")
+    @application.get("/api/v1/runs", response_model=RunsResponse)
     def list_runs(limit: int = Query(default=20, ge=1, le=100)):
         """List recent pipeline runs with their manifests."""
         runs = store.list_runs(limit=limit)
         return {"runs": [r.model_dump() for r in runs]}
 
-    @application.get("/api/v1/runs/{run_id}")
+    @application.get("/api/v1/runs/{run_id}", response_model=RunManifest)
     def get_run(run_id: str):
         """Get the manifest for a specific run."""
         try:
@@ -232,7 +263,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         except Exception:
             raise HTTPException(404, f"Run '{run_id}' not found")
 
-    @application.get("/api/v1/compare-runs")
+    @application.get("/api/v1/compare-runs", response_model=dict[str, Any])
     def compare_runs(
         run_a: str = Query(..., description="First run ID"),
         run_b: str = Query(..., description="Second run ID"),
@@ -257,7 +288,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Results (from latest run)
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/contributions")
+    @application.get("/api/v1/contributions", response_model=ContributionsResponse)
     def get_contributions():
         """Channel contribution decomposition from the latest run."""
         data = reader.get_dataframe_as_dict("contributions")
@@ -265,7 +296,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "No contributions available. Run the pipeline first.")
         return data
 
-    @application.get("/api/v1/reconciliation")
+    @application.get("/api/v1/reconciliation", response_model=ReconciliationResponse)
     def get_reconciliation():
         """Reconciled channel estimates with uncertainty."""
         data = reader.get("reconciliation")
@@ -273,7 +304,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "No reconciliation results. Run the pipeline first.")
         return data
 
-    @application.get("/api/v1/optimization")
+    @application.get("/api/v1/optimization", response_model=OptimizationResponse)
     def get_optimization():
         """Budget optimization recommendations."""
         data = reader.get("optimization")
@@ -281,7 +312,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "No optimization results. Run the pipeline first.")
         return data
 
-    @application.get("/api/v1/response-curves")
+    @application.get("/api/v1/response-curves", response_model=dict[str, ResponseCurveChannel])
     def get_response_curves(channel: str | None = Query(default=None)):
         """Response (saturation) curves per channel."""
         data = reader.get("response_curves")
@@ -291,15 +322,32 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, f"Channel '{channel}' not found")
         return {channel: data[channel]} if channel else data
 
-    @application.get("/api/v1/parameters")
+    @application.get("/api/v1/parameters", response_model=ParametersResponse)
     def get_parameters():
         """Model parameters (coefficients, adstock, saturation)."""
         data = reader.get("parameters")
         if data is None:
             raise HTTPException(404, "No parameters. Run the pipeline first.")
+        adstock_params = data.get("adstock_params", {})
+        saturation_params = data.get("saturation_params", {})
+
+        # Normalized keys used by UI/type contracts.
+        if "adstock" not in data:
+            data["adstock"] = {
+                ch: {
+                    "decay": p.get("alpha"),
+                    "max_lag": p.get("l_max"),
+                    "alpha": p.get("alpha"),
+                    "l_max": p.get("l_max"),
+                }
+                for ch, p in adstock_params.items()
+                if isinstance(p, dict)
+            }
+        if "saturation" not in data:
+            data["saturation"] = saturation_params
         return data
 
-    @application.get("/api/v1/diagnostics")
+    @application.get("/api/v1/diagnostics", response_model=DiagnosticsResponse)
     def get_diagnostics():
         """Model diagnostics: actual vs predicted, residuals, fit stats."""
         contrib_data = reader.get_dataframe_as_dict("contributions")
@@ -357,7 +405,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             },
         }
 
-    @application.get("/api/v1/roas")
+    @application.get("/api/v1/roas", response_model=ROASResponse)
     def get_roas():
         """Channel-level ROAS / ROI analysis."""
         contrib_data = reader.get_dataframe_as_dict("contributions")
@@ -406,7 +454,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             },
         }
 
-    @application.get("/api/v1/waterfall")
+    @application.get("/api/v1/waterfall", response_model=WaterfallResponse)
     def get_waterfall():
         """Waterfall decomposition of total response."""
         contrib_data = reader.get_dataframe_as_dict("contributions")
@@ -436,7 +484,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Data Management
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/data/status")
+    @application.get("/api/v1/data/status", response_model=dict[str, DataSourceStatus])
     def get_data_status():
         """Check which data sources are available."""
         config = get_config()
@@ -476,7 +524,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
         return result
 
-    @application.post("/api/v1/data/upload")
+    @application.post("/api/v1/data/upload", response_model=UploadDataResponse)
     async def upload_data(
         data_type: str = Form(...),
         file: UploadFile = File(...),
@@ -561,7 +609,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         )
         return {"run_id": pipe.run_id, "metrics": results.get("metrics", {})}
 
-    @application.post("/api/v1/pipeline/run")
+    @application.post("/api/v1/pipeline/run", response_model=PipelineRunTriggerResponse)
     async def trigger_pipeline(
         model: str = Form(default="builtin"),
         target: str = Form(default="revenue"),
@@ -582,12 +630,12 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         )
         return {"job_id": job.job_id, "status": "pending"}
 
-    @application.get("/api/v1/pipeline/jobs")
+    @application.get("/api/v1/pipeline/jobs", response_model=PipelineJobsResponse)
     def list_jobs(limit: int = Query(default=20, ge=1, le=100)):
         """List recent pipeline jobs."""
         return {"jobs": job_manager.list_jobs(limit=limit)}
 
-    @application.get("/api/v1/pipeline/jobs/{job_id}")
+    @application.get("/api/v1/pipeline/jobs/{job_id}", response_model=PipelineJobResponse)
     def get_job(job_id: str):
         """Get status of a pipeline job."""
         job = job_manager.get_job(job_id)
@@ -601,7 +649,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
     _empty_calibration = {"n_tests": 0, "points": [], "coverage": 0, "median_lift_error": 0, "mean_lift_error": 0, "calibration_quality": "no_tests"}
 
-    @application.get("/api/v1/calibration")
+    @application.get("/api/v1/calibration", response_model=CalibrationResponse)
     def calibration():
         """Calibration: MMM predicted vs. experiment-measured lift. Returns empty payload when no data."""
         try:
@@ -634,7 +682,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             logger.exception("Calibration endpoint error: %s", e)
             return _empty_calibration
 
-    @application.get("/api/v1/stability")
+    @application.get("/api/v1/stability", response_model=dict[str, Any])
     def stability():
         """Recommendation stability metrics across runs. Returns empty payload when fewer than 2 runs."""
         try:
@@ -685,7 +733,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         "gates": [],
     }
 
-    @application.get("/api/v1/data-quality")
+    @application.get("/api/v1/data-quality", response_model=DataQualityResponse)
     def data_quality():
         """Data quality gate results from the latest run. Returns empty payload when no data."""
         try:
@@ -719,7 +767,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Channel Insights (saturation alerts + marginal ROI)
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/channel-insights")
+    @application.get("/api/v1/channel-insights", response_model=ChannelInsightsResponse)
     def channel_insights():
         """Per-channel saturation status, marginal ROI, and headroom."""
         try:
@@ -734,7 +782,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             optimal_alloc = optim_data.get("optimal_allocation", {})
             channels = list(current_alloc.keys())
             coefficients = params.get("coefficients", {})
-            sat_params = params.get("saturation", {})
+            sat_params = params.get("saturation", {}) or params.get("saturation_params", {})
 
             insights = []
             for ch in channels:
@@ -797,7 +845,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Spend Pacing (plan vs actual tracker)
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/spend-pacing")
+    @application.get("/api/v1/spend-pacing", response_model=SpendPacingResponse)
     def spend_pacing():
         """Compare planned (optimal) allocation vs actual spend from media data."""
         try:
@@ -872,7 +920,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Executive Summary / Report
     # ------------------------------------------------------------------
 
-    @application.get("/api/v1/report/summary")
+    @application.get("/api/v1/report/summary", response_model=ReportSummaryResponse)
     def report_summary():
         """One-click executive summary payload."""
         try:
@@ -946,7 +994,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Cache control
     # ------------------------------------------------------------------
 
-    @application.post("/api/v1/refresh")
+    @application.post("/api/v1/refresh", response_model=StatusResponse)
     def refresh_cache():
         """Force the server to re-read artifacts from disk."""
         reader.invalidate()
@@ -957,7 +1005,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Datapoint Connectors
     # ------------------------------------------------------------------
 
-    @application.post("/api/v1/datapoint/test")
+    @application.post("/api/v1/datapoint/test", response_model=ConnectorTestResponse)
     async def test_datapoint_connection(
         connection_type: str = Form(...),
         connection_config: str = Form(...),
@@ -1009,7 +1057,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 "message": str(e),
             }
 
-    @application.post("/api/v1/datapoint/fetch")
+    @application.post("/api/v1/datapoint/fetch", response_model=ConnectorFetchResponse)
     async def fetch_datapoint_data(
         connection_type: str = Form(...),
         connection_config: str = Form(...),
@@ -1069,7 +1117,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             logger.exception("Datapoint data fetch failed")
             raise HTTPException(500, f"Failed to fetch data: {str(e)}")
 
-    @application.post("/api/v1/datapoint/upload")
+    @application.post("/api/v1/datapoint/upload", response_model=UploadDataResponse)
     async def upload_datapoint_file(
         file: UploadFile = File(...),
         data_type: str = Form(...),
@@ -1136,12 +1184,12 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     from connectors.registry import ConnectorStore
     connector_store = ConnectorStore(config.storage.raw_path.parent / "connectors")
 
-    @application.get("/api/v1/connectors")
+    @application.get("/api/v1/connectors", response_model=SavedConnectorListResponse)
     def list_connectors():
         """List all saved connections (configs omitted for security)."""
         return {"connectors": connector_store.list()}
 
-    @application.post("/api/v1/connectors")
+    @application.post("/api/v1/connectors", response_model=SavedConnector)
     async def create_connector(
         name: str = Form(...),
         connector_type: str = Form(...),
@@ -1156,7 +1204,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         record = connector_store.create(name, connector_type, subtype, cfg)
         return record
 
-    @application.get("/api/v1/connectors/{connector_id}")
+    @application.get("/api/v1/connectors/{connector_id}", response_model=SavedConnector)
     def get_connector(connector_id: str):
         """Get a saved connection (config decrypted)."""
         record = connector_store.get(connector_id)
@@ -1164,7 +1212,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "Connector not found")
         return record
 
-    @application.put("/api/v1/connectors/{connector_id}")
+    @application.put("/api/v1/connectors/{connector_id}", response_model=SavedConnector)
     async def update_connector(
         connector_id: str,
         name: str | None = Form(default=None),
@@ -1182,14 +1230,14 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "Connector not found")
         return record
 
-    @application.delete("/api/v1/connectors/{connector_id}")
+    @application.delete("/api/v1/connectors/{connector_id}", response_model=StatusResponse)
     def delete_connector(connector_id: str):
         """Delete a saved connection."""
         if not connector_store.delete(connector_id):
             raise HTTPException(404, "Connector not found")
         return {"status": "deleted"}
 
-    @application.post("/api/v1/connectors/{connector_id}/test")
+    @application.post("/api/v1/connectors/{connector_id}/test", response_model=ConnectorTestResponse)
     def test_connector(connector_id: str):
         """Test a saved connection."""
         record = connector_store.get(connector_id)
@@ -1228,7 +1276,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             "message": message or ("Connection successful" if success else "Connection failed"),
         }
 
-    @application.post("/api/v1/connectors/{connector_id}/fetch")
+    @application.post("/api/v1/connectors/{connector_id}/fetch", response_model=ConnectorFetchResponse)
     async def fetch_from_connector(
         connector_id: str,
         query_or_path: str = Form(...),
