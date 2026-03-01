@@ -320,7 +320,7 @@ export const api = {
 
   // Connectors CRUD
   listConnectors: () => get<{ connectors: SavedConnector[] }>("/api/v1/connectors"),
-  getConnector: (id: string) => get<SavedConnector>(`/api/v1/connectors/${id}`),
+  getConnector: (id: string) => get<GetResponse<"/api/v1/connectors/{connector_id}">>(`/api/v1/connectors/${id}`),
   createConnector: (name: string, type: string, subtype: string, config: Record<string, unknown>) =>
     postForm<PostResponse<"/api/v1/connectors">>("/api/v1/connectors", {
       name,
@@ -334,7 +334,7 @@ export const api = {
     if (config != null) formData.append("connector_config", JSON.stringify(config));
     return fetch(`${BASE}/api/v1/connectors/${id}`, { method: "PUT", body: formData }).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<SavedConnector>;
+      return r.json() as Promise<GetResponse<"/api/v1/connectors/{connector_id}">>;
     });
   },
   deleteConnector: (id: string) =>
@@ -343,12 +343,12 @@ export const api = {
       return r.json();
     }),
   testConnector: (id: string) =>
-    postForm<PostResponse<"/api/v1/connectors/{id}/test">>(
+    postForm<PostResponse<"/api/v1/connectors/{connector_id}/test">>(
       `/api/v1/connectors/${id}/test`,
       {},
     ),
   fetchFromConnector: (id: string, queryOrPath: string, dataType: string) =>
-    postForm<PostResponse<"/api/v1/connectors/{id}/fetch">>(
+    postForm<PostResponse<"/api/v1/connectors/{connector_id}/fetch">>(
       `/api/v1/connectors/${id}/fetch`,
       { query_or_path: queryOrPath, data_type: dataType },
     ),
