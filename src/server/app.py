@@ -18,7 +18,6 @@ from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Heade
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
-import io
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -66,6 +65,7 @@ from server.schemas import (
 KNOWN_DATA_TYPES = frozenset({
     "media_spend", "outcomes", "controls", "incrementality_tests", "attribution",
 })
+UPLOAD_CHUNK_SIZE_BYTES = 1024 * 1024  # 1 MB
 
 
 def _is_valid_data_type(data_type: str) -> bool:
@@ -82,6 +82,46 @@ def _validate_data_type(data_type: str) -> None:
             "data_type must be one of media_spend, outcomes, controls, incrementality_tests, attribution, "
             "or a custom name (letter followed by letters, numbers, underscores, max 64 chars)",
         )
+
+
+def _max_upload_size_bytes() -> int:
+    """
+    Maximum accepted upload size in bytes.
+
+    Controlled via MAX_UPLOAD_SIZE_MB (default: 200 MB).
+    """
+    raw = os.getenv("MAX_UPLOAD_SIZE_MB", "200")
+    try:
+        mb = int(raw)
+    except (TypeError, ValueError):
+        mb = 200
+    mb = max(1, mb)
+    return mb * 1024 * 1024
+
+
+async def _stream_upload_to_tempfile(
+    upload: UploadFile,
+    suffix: str,
+    max_bytes: int,
+) -> tuple[Path, int]:
+    """
+    Stream an UploadFile to a temporary file in chunks with size enforcement.
+    """
+    written = 0
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        while True:
+            chunk = await upload.read(UPLOAD_CHUNK_SIZE_BYTES)
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > max_bytes:
+                raise HTTPException(
+                    413,
+                    f"File too large. Max upload size is {max_bytes // (1024 * 1024)} MB.",
+                )
+            tmp.write(chunk)
+    return tmp_path, written
 
 
 def _normalize_parameters_payload(data: dict[str, Any]) -> dict[str, Any]:
@@ -625,17 +665,22 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             ext = ".parquet"  # default
 
         output_path = processed / f"{data_type}{ext}"
+        max_upload_bytes = _max_upload_size_bytes()
+        tmp_path: Path | None = None
 
         try:
-            # Read uploaded file
-            contents = await file.read()
+            tmp_path, _ = await _stream_upload_to_tempfile(
+                file,
+                suffix=ext,
+                max_bytes=max_upload_bytes,
+            )
 
             # Save to disk
             if ext == ".parquet":
-                df = pd.read_parquet(io.BytesIO(contents))
+                df = pd.read_parquet(tmp_path)
                 df.to_parquet(output_path, index=False)
             else:
-                df = pd.read_csv(io.BytesIO(contents))
+                df = pd.read_csv(tmp_path)
                 # Convert to parquet for consistency
                 output_path = processed / f"{data_type}.parquet"
                 df.to_parquet(output_path, index=False)
@@ -647,9 +692,18 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 "rows": len(df),
                 "columns": list(df.columns),
             }
+        except HTTPException:
+            raise
         except Exception as e:
             logger.exception(f"Failed to upload {data_type}")
             raise HTTPException(500, f"Upload failed: {str(e)}")
+        finally:
+            try:
+                if tmp_path is not None and tmp_path.exists():
+                    tmp_path.unlink()
+            except Exception:
+                pass
+            await file.close()
 
     from server.jobs import JobManager
     job_manager = JobManager()
@@ -1330,41 +1384,36 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         _validate_data_type(data_type)
 
         from connectors.local import auto_connect
-        import tempfile
-        import io
-        
+
         # Validate file extension
         ext = Path(file.filename).suffix.lower()
         if ext not in [".csv", ".parquet", ".xlsx", ".xls"]:
             raise HTTPException(400, f"Unsupported file type: {ext}. Allowed: .csv, .parquet, .xlsx, .xls")
-        
+
         config = get_config()
         processed = config.storage.processed_path
         processed.mkdir(parents=True, exist_ok=True)
-        
+        max_upload_bytes = _max_upload_size_bytes()
+        tmp_path: Path | None = None
+
         try:
-            # Read uploaded file
-            contents = await file.read()
-            
-            # Save to temp file for connector
-            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-                tmp.write(contents)
-                tmp_path = tmp.name
-            
+            tmp_path, _ = await _stream_upload_to_tempfile(
+                file,
+                suffix=ext,
+                max_bytes=max_upload_bytes,
+            )
+
             # Load using connector
             connector = auto_connect(tmp_path)
             df = connector.load(tmp_path)
-            
+
             # Save to processed directory as parquet
             output_path = processed / f"{data_type}.parquet"
             df.to_parquet(output_path, index=False)
-            
-            # Cleanup temp file
-            Path(tmp_path).unlink()
-            
+
             # Invalidate cache
             reader.invalidate()
-            
+
             return {
                 "status": "success",
                 "data_type": data_type,
@@ -1372,10 +1421,18 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 "rows": len(df),
                 "columns": list(df.columns),
             }
-        
+        except HTTPException:
+            raise
         except Exception as e:
             logger.exception(f"Failed to upload datapoint file: {data_type}")
             raise HTTPException(500, f"Upload failed: {str(e)}")
+        finally:
+            try:
+                if tmp_path is not None and tmp_path.exists():
+                    tmp_path.unlink()
+            except Exception:
+                pass
+            await file.close()
 
     # ------------------------------------------------------------------
     # Connector Registry (saved connections CRUD)
