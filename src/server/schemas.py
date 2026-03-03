@@ -319,3 +319,20 @@ class ConnectorFetchResponse(BaseModel):
 class ConnectorRevealResponse(BaseModel):
     id: str
     config: dict[str, Any]
+
+
+class TelemetryEvent(BaseModel):
+    event: str
+    timestamp: str
+    path: str | None = None
+    props: dict[str, Any] | None = None
+
+
+class TelemetryIngestRequest(BaseModel):
+    events: list[TelemetryEvent]
+
+
+class TelemetrySummaryResponse(BaseModel):
+    total_events: int
+    by_event: dict[str, int]
+    window_seconds: int
