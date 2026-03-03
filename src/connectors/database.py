@@ -214,8 +214,11 @@ class SQLiteConnector(DatabaseConnector):
     def test_connection(self) -> bool:
         try:
             conn = self.connect()
-            with conn.cursor() as cur:
+            cur = conn.cursor()
+            try:
                 cur.execute("SELECT 1")
+            finally:
+                cur.close()
             conn.close()
             return True
         except Exception as e:
