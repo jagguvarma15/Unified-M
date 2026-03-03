@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -52,6 +51,36 @@ _SENSITIVE_KEYS = frozenset({
     "password", "secret", "token", "key", "account_key",
     "aws_secret_access_key", "sas_token",
 })
+
+
+def _is_sensitive_key(key: str) -> bool:
+    key_lower = key.lower()
+    if key_lower in _SENSITIVE_KEYS:
+        return True
+    return any(part in key_lower for part in ("password", "secret", "token", "key"))
+
+
+def _mask_secret(value: str) -> str:
+    if not value:
+        return "***"
+    if len(value) <= 4:
+        return "*" * len(value)
+    return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
+
+
+def _mask_config(cfg: dict[str, Any]) -> dict[str, Any]:
+    masked: dict[str, Any] = {}
+    for k, v in cfg.items():
+        if _is_sensitive_key(k):
+            if isinstance(v, str):
+                masked[k] = _mask_secret(v)
+            elif v is None:
+                masked[k] = None
+            else:
+                masked[k] = "***"
+        else:
+            masked[k] = v
+    return masked
 
 
 def _encrypt_config(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -97,12 +126,13 @@ class ConnectorStore:
         results.sort(key=lambda c: c.get("created_at", ""), reverse=True)
         return results
 
-    def get(self, connector_id: str) -> dict[str, Any] | None:
+    def get(self, connector_id: str, include_secrets: bool = False) -> dict[str, Any] | None:
         path = self.base_dir / f"{connector_id}.json"
         if not path.exists():
             return None
         data = json.loads(path.read_text())
-        data["config"] = _decrypt_config(data.get("config", {}))
+        decrypted = _decrypt_config(data.get("config", {}))
+        data["config"] = decrypted if include_secrets else _mask_config(decrypted)
         return data
 
     def create(

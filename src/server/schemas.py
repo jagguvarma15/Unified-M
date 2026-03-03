@@ -314,3 +314,8 @@ class ConnectorFetchResponse(BaseModel):
     columns: list[str]
     data_type: str
     path: str | None = None
+
+
+class ConnectorRevealResponse(BaseModel):
+    id: str
+    config: dict[str, Any]

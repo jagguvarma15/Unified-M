@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from datetime import datetime
 import tempfile
+import os
 
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
@@ -33,6 +34,7 @@ from server.schemas import (
     CalibrationResponse,
     ChannelInsightsResponse,
     ConnectorFetchResponse,
+    ConnectorRevealResponse,
     ConnectorTestResponse,
     ContributionsResponse,
     DataQualityResponse,
@@ -1317,11 +1319,36 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
     @application.get("/api/v1/connectors/{connector_id}", response_model=SavedConnector)
     def get_connector(connector_id: str):
-        """Get a saved connection (config decrypted)."""
-        record = connector_store.get(connector_id)
+        """Get a saved connection (config masked)."""
+        record = connector_store.get(connector_id, include_secrets=False)
         if record is None:
             raise HTTPException(404, "Connector not found")
         return record
+
+    @application.post("/api/v1/connectors/{connector_id}/reveal-secrets", response_model=ConnectorRevealResponse)
+    def reveal_connector_secrets(
+        connector_id: str,
+        x_reveal_token: str | None = Header(default=None, alias="X-Reveal-Token"),
+    ):
+        """
+        Reveal decrypted connector config when explicitly authorized.
+
+        Requires a second factor token via X-Reveal-Token that matches
+        CONNECTOR_REVEAL_TOKEN.
+        """
+        required = os.getenv("CONNECTOR_REVEAL_TOKEN", "")
+        if not required:
+            raise HTTPException(
+                403,
+                "Secret reveal is disabled. Set CONNECTOR_REVEAL_TOKEN to enable.",
+            )
+        if not x_reveal_token or x_reveal_token != required:
+            raise HTTPException(403, "Invalid or missing X-Reveal-Token")
+
+        record = connector_store.get(connector_id, include_secrets=True)
+        if record is None:
+            raise HTTPException(404, "Connector not found")
+        return {"id": record["id"], "config": record.get("config", {})}
 
     @application.put("/api/v1/connectors/{connector_id}", response_model=SavedConnector)
     async def update_connector(
@@ -1351,7 +1378,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     @application.post("/api/v1/connectors/{connector_id}/test", response_model=ConnectorTestResponse)
     def test_connector(connector_id: str):
         """Test a saved connection."""
-        record = connector_store.get(connector_id)
+        record = connector_store.get(connector_id, include_secrets=True)
         if record is None:
             raise HTTPException(404, "Connector not found")
 
@@ -1395,7 +1422,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     ):
         """Fetch data from a saved connection and store as a data source."""
         _validate_data_type(data_type)
-        record = connector_store.get(connector_id)
+        record = connector_store.get(connector_id, include_secrets=True)
         if record is None:
             raise HTTPException(404, "Connector not found")
 
