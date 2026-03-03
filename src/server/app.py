@@ -13,6 +13,8 @@ from __future__ import annotations
 from datetime import datetime
 import tempfile
 import os
+import threading
+from collections import Counter
 
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,6 +57,8 @@ from server.schemas import (
     SavedConnectorListResponse,
     SpendPacingResponse,
     StatusResponse,
+    TelemetryIngestRequest,
+    TelemetrySummaryResponse,
     UploadDataResponse,
     WaterfallResponse,
     ResponseCurveChannel,
@@ -267,6 +271,30 @@ class ArtifactReader:
         self._cache_run = None
 
 
+class TelemetryBuffer:
+    """Small in-memory rolling buffer for product telemetry events."""
+
+    def __init__(self, max_events: int = 2000):
+        self._max_events = max_events
+        self._events: list[dict[str, Any]] = []
+        self._lock = threading.Lock()
+
+    def ingest(self, events: list[dict[str, Any]]) -> None:
+        with self._lock:
+            self._events.extend(events)
+            if len(self._events) > self._max_events:
+                self._events = self._events[-self._max_events:]
+
+    def summary(self) -> dict[str, Any]:
+        with self._lock:
+            counts = Counter(str(e.get("event", "unknown")) for e in self._events)
+            return {
+                "total_events": len(self._events),
+                "by_event": dict(counts),
+                "window_seconds": 3600,
+            }
+
+
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
@@ -278,6 +306,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     _runs_dir = (Path(runs_dir) if runs_dir else config.storage.runs_path).resolve()
     store = ArtifactStore(_runs_dir)
     reader = ArtifactReader(store)
+    telemetry = TelemetryBuffer()
 
     # Import cache layer (Redis with in-memory fallback)
     from server.cache import get_cache, cache_key as make_cache_key
@@ -338,6 +367,17 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             "version": "0.2.0",
             "docs": "/docs",
         }
+
+    @application.post("/api/v1/telemetry", response_model=StatusResponse)
+    def ingest_telemetry(payload: TelemetryIngestRequest):
+        events = [event.model_dump() for event in payload.events]
+        if events:
+            telemetry.ingest(events)
+        return {"status": "ok"}
+
+    @application.get("/api/v1/telemetry/summary", response_model=TelemetrySummaryResponse)
+    def telemetry_summary():
+        return telemetry.summary()
 
     # ------------------------------------------------------------------
     # Adapter Discovery

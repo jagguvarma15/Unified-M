@@ -41,6 +41,8 @@ import ChartCard from "../components/ChartCard";
 import { api } from "../lib/api";
 import { qk } from "../lib/queryKeys";
 import { downsampleEvenly } from "../lib/downsample";
+import { formatCompactNumber, formatSpendTick, getDateAxisProps } from "../lib/chartFormat";
+import { trackEvent } from "../lib/telemetry";
 
 // ---------------------------------------------------------------------------
 
@@ -144,10 +146,13 @@ export default function Dashboard() {
           minHeight={260}
         >
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={diagnostics.chart}>
+            <LineChart
+              data={diagnostics.chart}
+              onClick={() => trackEvent("chart_interaction", { chart_id: "dashboard_model_fit", interaction: "click" })}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => (v / 1000).toFixed(0) + "k"} />
+              <XAxis dataKey="date" {...getDateAxisProps(diagnostics.chart.length)} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
               <Tooltip
                 contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
                 formatter={(v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), ""]}
@@ -218,7 +223,7 @@ export default function Dashboard() {
               <BarChart data={waterfallBars} margin={{ left: 10, right: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => (v / 1000).toFixed(0) + "k"} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
                 <Tooltip
                   formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 />
@@ -347,7 +352,7 @@ export default function Dashboard() {
                 <XAxis
                   type="number"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => formatCurrency(v, true)}
+                  tickFormatter={(v: number) => formatSpendTick(v)}
                 />
                 <YAxis type="category" dataKey="channel" tick={{ fontSize: 11 }} width={60} />
                 <Tooltip
@@ -379,7 +384,7 @@ export default function Dashboard() {
                   dataKey="spend"
                   name="Total Spend"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => formatCurrency(v, true)}
+                  tickFormatter={(v: number) => formatSpendTick(v)}
                   label={{ value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "#94a3b8" }}
                 />
                 <YAxis
@@ -468,8 +473,8 @@ export default function Dashboard() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => (v / 1000).toFixed(0) + "k"} />
+              <XAxis dataKey="date" {...getDateAxisProps(diagnostics.chart.length)} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
               <Tooltip
                 formatter={(v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), "Residual"]}
                 contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
@@ -499,8 +504,8 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={timeline.rows}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <XAxis dataKey="date" {...getDateAxisProps(timeline.rows.length)} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
               <Tooltip />
               <Legend />
               {timeline.channels.map((ch, i) => (

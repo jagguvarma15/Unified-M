@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import PageErrorBoundary from "./PageErrorBoundary";
 import PipelineRunner from "./PipelineRunner";
 import {
@@ -27,6 +27,7 @@ import type { LucideIcon } from "lucide-react";
 import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
 import { useQueryClient } from "@tanstack/react-query";
+import { trackPageView } from "../lib/telemetry";
 
 interface NavItem {
   to: string;
@@ -96,6 +97,7 @@ export default function Layout() {
   const { analyticsEnabled, setAnalyticsEnabled } = useAnalyticsMode();
   const queryClient = useQueryClient();
   const didClearRef = useRef(false);
+  const location = useLocation();
 
   useEffect(() => {
     if (healthError) {
@@ -108,6 +110,10 @@ export default function Layout() {
       didClearRef.current = false;
     }
   }, [healthError, setAnalyticsEnabled, queryClient]);
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));

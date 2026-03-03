@@ -3,6 +3,7 @@
  * All endpoints are read-only from the artifact store unless noted.
  */
 import type { paths } from "./api.generated";
+import { trackApiLatency } from "./telemetry";
 
 const BASE = "";
 
@@ -22,12 +23,21 @@ type GetResponse<P extends keyof paths> = paths[P] extends { get: infer T } ? Js
 type PostResponse<P extends keyof paths> = paths[P] extends { post: infer T } ? JsonResponse<T> : never;
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+  const started = performance.now();
+  let status = 0;
+  try {
+    const res = await fetch(`${BASE}${path}`);
+    status = res.status;
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `HTTP ${res.status}`);
+    }
+    trackApiLatency(path, performance.now() - started, true, status);
+    return res.json();
+  } catch (err) {
+    trackApiLatency(path, performance.now() - started, false, status);
+    throw err;
   }
-  return res.json();
 }
 
 // ---------------------------------------------------------------------------

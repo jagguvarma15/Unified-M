@@ -15,6 +15,7 @@ import EmptyState from "../components/EmptyState";
 import { COLORS } from "../lib/colors";
 import { useContributionsQuery } from "../lib/queries";
 import { downsampleEvenly } from "../lib/downsample";
+import { formatCompactNumber, getDateAxisProps } from "../lib/chartFormat";
 
 const RESERVED = new Set(["date", "actual", "predicted", "baseline"]);
 
@@ -78,7 +79,7 @@ export default function Contributions() {
             <XAxis
               type="number"
               tick={{ fontSize: 12 }}
-              tickFormatter={(v) => v.toLocaleString()}
+              tickFormatter={(v: number) => formatCompactNumber(v)}
             />
             <YAxis
               type="category"
@@ -108,8 +109,8 @@ export default function Contributions() {
         <ResponsiveContainer width="100%" height={350}>
           <AreaChart data={timeline}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} />
+            <XAxis dataKey="date" {...getDateAxisProps(timeline.length)} />
+            <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
             <Tooltip />
             <Legend />
             {channels.map((ch, i) => (

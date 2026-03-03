@@ -12,6 +12,8 @@ import {
 import EmptyState from "../components/EmptyState";
 import { api, type ResponseCurvesData } from "../lib/api";
 import { COLORS } from "../lib/colors";
+import { formatCompactNumber, formatSpendTick } from "../lib/chartFormat";
+import { trackEvent } from "../lib/telemetry";
 
 export default function ResponseCurves() {
   const [data, setData] = useState<ResponseCurvesData | null>(null);
@@ -98,14 +100,15 @@ export default function ResponseCurves() {
           Response vs Spend (all channels)
         </h2>
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={responseRows}>
+          <LineChart
+            data={responseRows}
+            onClick={() => trackEvent("chart_interaction", { chart_id: "response_curves", interaction: "click" })}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis
               dataKey="spend"
               tick={{ fontSize: 12 }}
-              tickFormatter={(v) =>
-                typeof v === "number" ? `$${(v / 1000).toFixed(0)}k` : v
-              }
+              tickFormatter={(v) => (typeof v === "number" ? formatSpendTick(v) : String(v))}
               label={{
                 value: "Spend",
                 position: "insideBottomRight",
@@ -115,6 +118,7 @@ export default function ResponseCurves() {
             />
             <YAxis
               tick={{ fontSize: 12 }}
+              tickFormatter={(v: number) => formatCompactNumber(v)}
               label={{
                 value: "Response",
                 angle: -90,
@@ -158,11 +162,9 @@ export default function ResponseCurves() {
               <XAxis
                 dataKey="spend"
                 tick={{ fontSize: 12 }}
-                tickFormatter={(v) =>
-                  typeof v === "number" ? `$${(v / 1000).toFixed(0)}k` : v
-                }
+                tickFormatter={(v) => (typeof v === "number" ? formatSpendTick(v) : String(v))}
               />
-              <YAxis tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
               <Tooltip />
               <Legend />
               {channels.map((ch, i) => (

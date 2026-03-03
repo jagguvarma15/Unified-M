@@ -19,6 +19,8 @@ import { Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type DiagnosticsData } from "../lib/api";
+import { formatCompactNumber, getDateAxisProps } from "../lib/chartFormat";
+import { trackEvent } from "../lib/telemetry";
 
 export default function Diagnostics() {
   const [data, setData] = useState<DiagnosticsData | null>(null);
@@ -101,10 +103,13 @@ export default function Diagnostics() {
           Actual vs Predicted Over Time
         </h2>
         <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={data.chart}>
+          <LineChart
+            data={data.chart}
+            onClick={() => trackEvent("chart_interaction", { chart_id: "diagnostics_timeseries", interaction: "click" })}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v.toLocaleString()} />
+            <XAxis dataKey="date" {...getDateAxisProps(data.chart.length)} />
+            <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
             <Tooltip
               formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             />
@@ -183,8 +188,8 @@ export default function Diagnostics() {
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={data.chart}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v.toLocaleString()} />
+              <XAxis dataKey="date" {...getDateAxisProps(data.chart.length)} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
               <Tooltip
                 formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               />
