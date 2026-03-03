@@ -308,6 +308,21 @@ class BuiltinMMM(BaseMMM):
         return {
             "coefficients": dict(self._coefficients),
             "intercept": self._intercept,
+            # Canonical keys expected by API/UI contracts.
+            "adstock": {
+                ch: {
+                    "decay": p.get("alpha"),
+                    "max_lag": p.get("l_max"),
+                    "alpha": p.get("alpha"),
+                    "l_max": p.get("l_max"),
+                }
+                for ch, p in adstock_params.items()
+            },
+            "saturation": {
+                ch: {"K": p.get("K"), "S": p.get("S")}
+                for ch, p in saturation_params.items()
+            },
+            # Legacy keys preserved for backward compatibility.
             "adstock_params": adstock_params,
             "saturation_params": saturation_params,
             "ridge_alpha": float(self._model.alpha_),

@@ -84,6 +84,93 @@ def _validate_data_type(data_type: str) -> None:
         )
 
 
+def _normalize_parameters_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Ensure parameter payload always exposes canonical keys used by the UI/API:
+      - adstock[channel] = {decay, max_lag, alpha, l_max}
+      - saturation[channel] = {K, S}
+
+    Legacy keys (adstock_params/saturation_params) are preserved for backward
+    compatibility.
+    """
+    normalized = dict(data)
+    adstock_params = normalized.get("adstock_params", {}) or {}
+    saturation_params = normalized.get("saturation_params", {}) or {}
+
+    if "adstock" not in normalized:
+        normalized["adstock"] = {
+            ch: {
+                "decay": p.get("alpha"),
+                "max_lag": p.get("l_max"),
+                "alpha": p.get("alpha"),
+                "l_max": p.get("l_max"),
+            }
+            for ch, p in adstock_params.items()
+            if isinstance(p, dict)
+        }
+    if "saturation" not in normalized:
+        normalized["saturation"] = {
+            ch: {
+                "K": p.get("K"),
+                "S": p.get("S"),
+            }
+            for ch, p in saturation_params.items()
+            if isinstance(p, dict)
+        }
+    return normalized
+
+
+def _normalize_optimization_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """Ensure optimization payload exposes canonical keys used by the UI."""
+    normalized = dict(data)
+
+    optimal = normalized.get("optimal_allocation") or normalized.get("channel_allocations") or {}
+    current = normalized.get("current_allocation") or normalized.get("current_allocations") or {}
+    normalized["optimal_allocation"] = {str(k): float(v) for k, v in optimal.items()}
+    normalized["current_allocation"] = {str(k): float(v) for k, v in current.items()}
+
+    if "expected_response" not in normalized:
+        normalized["expected_response"] = float(normalized.get("optimized_response", 0.0))
+    if "current_response" not in normalized:
+        normalized["current_response"] = float(normalized.get("baseline_response", 0.0))
+    if "total_budget" not in normalized:
+        normalized["total_budget"] = float(sum(normalized["optimal_allocation"].values()))
+    normalized.setdefault("expected_roi", 0.0)
+    normalized.setdefault("improvement_pct", 0.0)
+    normalized.setdefault("success", True)
+    normalized.setdefault("message", "")
+    normalized.setdefault("iterations", 0)
+
+    return normalized
+
+
+def _normalize_reconciliation_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """Ensure reconciliation channel estimates include ci_lower/ci_upper aliases."""
+    normalized = dict(data)
+    estimates = normalized.get("channel_estimates", {}) or {}
+    out: dict[str, Any] = {}
+
+    for ch, raw in estimates.items():
+        est = dict(raw) if isinstance(raw, dict) else {}
+        if "ci_lower" not in est:
+            est["ci_lower"] = est.get("lift_ci_lower")
+        if "ci_upper" not in est:
+            est["ci_upper"] = est.get("lift_ci_upper")
+        if "lift_ci_lower" not in est:
+            est["lift_ci_lower"] = est.get("ci_lower")
+        if "lift_ci_upper" not in est:
+            est["lift_ci_upper"] = est.get("ci_upper")
+        out[ch] = est
+
+    normalized["channel_estimates"] = out
+    normalized.setdefault("total_incremental_value", 0.0)
+    return normalized
+
+
+def _normalize_channel_spend_key(channel: str) -> str:
+    return channel if channel.endswith("_spend") else f"{channel}_spend"
+
+
 # ---------------------------------------------------------------------------
 # Artifact reader (thin cache over the store)
 # ---------------------------------------------------------------------------
@@ -305,7 +392,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         data = reader.get("reconciliation")
         if data is None:
             raise HTTPException(404, "No reconciliation results. Run the pipeline first.")
-        return data
+        return _normalize_reconciliation_payload(data)
 
     @application.get("/api/v1/optimization", response_model=OptimizationResponse)
     def get_optimization():
@@ -313,7 +400,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         data = reader.get("optimization")
         if data is None:
             raise HTTPException(404, "No optimization results. Run the pipeline first.")
-        return data
+        return _normalize_optimization_payload(data)
 
     @application.get("/api/v1/response-curves", response_model=dict[str, ResponseCurveChannel])
     def get_response_curves(channel: str | None = Query(default=None)):
@@ -331,24 +418,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         data = reader.get("parameters")
         if data is None:
             raise HTTPException(404, "No parameters. Run the pipeline first.")
-        adstock_params = data.get("adstock_params", {})
-        saturation_params = data.get("saturation_params", {})
-
-        # Normalized keys used by UI/type contracts.
-        if "adstock" not in data:
-            data["adstock"] = {
-                ch: {
-                    "decay": p.get("alpha"),
-                    "max_lag": p.get("l_max"),
-                    "alpha": p.get("alpha"),
-                    "l_max": p.get("l_max"),
-                }
-                for ch, p in adstock_params.items()
-                if isinstance(p, dict)
-            }
-        if "saturation" not in data:
-            data["saturation"] = saturation_params
-        return data
+        return _normalize_parameters_payload(data)
 
     @application.get("/api/v1/diagnostics", response_model=DiagnosticsResponse)
     def get_diagnostics():
@@ -412,8 +482,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     def get_roas():
         """Channel-level ROAS / ROI analysis."""
         contrib_data = reader.get_dataframe_as_dict("contributions")
-        optim_data = reader.get("optimization")
+        optim_raw = reader.get("optimization")
         params = reader.get("parameters")
+        optim_data = _normalize_optimization_payload(optim_raw) if optim_raw else None
 
         if contrib_data is None or not contrib_data.get("data"):
             raise HTTPException(404, "No data for ROAS analysis.")
@@ -421,13 +492,18 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         rows = contrib_data["data"]
         reserved = {"date", "actual", "predicted", "baseline"}
         channels = [k for k in rows[0].keys() if k not in reserved]
+        current_alloc: dict[str, float] = {}
+        if optim_data:
+            current_alloc = {
+                _normalize_channel_spend_key(str(ch)): float(v)
+                for ch, v in optim_data.get("current_allocation", {}).items()
+            }
 
         channel_roas = []
         for ch in channels:
             total_contribution = sum(float(r.get(ch, 0) or 0) for r in rows)
             spend = 0.0
-            if optim_data:
-                spend = optim_data.get("current_allocation", {}).get(ch, 0)
+            spend = current_alloc.get(_normalize_channel_spend_key(ch), 0.0)
             roas = total_contribution / spend if spend > 0 else 0
             mroi = 0.0
             if params and "coefficients" in params:
@@ -885,11 +961,12 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         """Per-channel saturation status, marginal ROI, and headroom."""
         try:
             optim_data = reader.get("optimization")
-            params = reader.get("parameters")
+            params_raw = reader.get("parameters")
             curves_raw = reader.get("response_curves")
 
-            if not optim_data or not params:
+            if not optim_data or not params_raw:
                 raise HTTPException(404, "No optimization or parameter data.")
+            params = _normalize_parameters_payload(params_raw)
 
             current_alloc = optim_data.get("current_allocation", {})
             optimal_alloc = optim_data.get("optimal_allocation", {})
