@@ -35,6 +35,9 @@ jobs:
       - name: Unit tests
         run: uv run pytest tests/test_transforms.py tests/test_optimization.py -q
 
+      - name: Docs sync check
+        run: uv run python scripts/check_docs_sync.py
+
   frontend-checks:
     name: Frontend Format
     runs-on: ubuntu-latest

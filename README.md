@@ -34,8 +34,8 @@ An end-to-end framework that fuses Marketing Mix Modeling (MMM), incrementality 
 │                         LOW-LATENCY SERVING                             │
 │                                                                         │
 │  ┌──────────────────┐              ┌──────────────────────────────────┐ │
-│  │    FastAPI       │    ←────→    │        Streamlit UI              │ │
-│  │  (REST API)      │              │   (Interactive Dashboard)        │ │
+│  │    FastAPI       │    ←────→    │       React + Vite UI           │ │
+│  │  (REST API)      │              │   (TypeScript Dashboard)        │ │
 │  └──────────────────┘              └──────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
