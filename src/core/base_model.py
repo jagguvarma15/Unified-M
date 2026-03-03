@@ -167,9 +167,17 @@ class BaseMMM(ABC):
         y_true: np.ndarray,
         y_pred: np.ndarray,
     ) -> dict[str, float]:
-        """Compute standard regression metrics."""
+        """
+        Compute standard regression metrics.
+
+        MAPE excludes zero targets. If all targets are zero, MAPE is set to 0.0
+        to avoid NaN/inf outputs.
+        """
         mask = y_true != 0
-        mape = float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100)
+        if np.any(mask):
+            mape = float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100)
+        else:
+            mape = 0.0
         rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
         mae = float(np.mean(np.abs(y_true - y_pred)))
         ss_res = np.sum((y_true - y_pred) ** 2)

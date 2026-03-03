@@ -206,9 +206,16 @@ class RedisCache(CacheBackend):
         self._client.delete(self._key(key))
 
     def clear(self) -> None:
-        keys = self._client.keys(f"{self._prefix}*")
-        if keys:
-            self._client.delete(*keys)
+        pattern = f"{self._prefix}*"
+        batch: list[str] = []
+        batch_size = 500
+        for key in self._client.scan_iter(match=pattern, count=1000):
+            batch.append(key)
+            if len(batch) >= batch_size:
+                self._client.delete(*batch)
+                batch.clear()
+        if batch:
+            self._client.delete(*batch)
         self._hits = 0
         self._misses = 0
 
