@@ -963,7 +963,6 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         """Compare planned (optimal) allocation vs actual spend from media data."""
         try:
             optim_data = reader.get("optimization")
-            contrib_data = reader.get_dataframe_as_dict("contributions")
             config = get_config()
             processed = config.storage.processed_path
             ms_path = processed / "media_spend.parquet"
@@ -971,7 +970,14 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             if not optim_data:
                 raise HTTPException(404, "No optimization data for pacing.")
 
-            optimal = optim_data.get("optimal_allocation", {})
+            def _normalize_channel_key(channel: str) -> str:
+                return channel if channel.endswith("_spend") else f"{channel}_spend"
+
+            optimal_raw = optim_data.get("optimal_allocation", {})
+            optimal = {
+                _normalize_channel_key(str(ch)): float(v)
+                for ch, v in optimal_raw.items()
+            }
             channels = list(optimal.keys())
 
             # Load actual spend from media_spend
@@ -980,7 +986,11 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             if ms_path.exists():
                 ms_df = pd.read_parquet(ms_path)
                 if "channel" in ms_df.columns and "spend" in ms_df.columns:
-                    actual_by_channel = ms_df.groupby("channel")["spend"].sum().to_dict()
+                    grouped = ms_df.groupby("channel")["spend"].sum().to_dict()
+                    actual_by_channel = {
+                        _normalize_channel_key(str(ch)): float(v)
+                        for ch, v in grouped.items()
+                    }
                     if "date" in ms_df.columns:
                         ms_df["date"] = pd.to_datetime(ms_df["date"])
                         cum = ms_df.groupby("date")["spend"].sum().sort_index().cumsum().reset_index()
