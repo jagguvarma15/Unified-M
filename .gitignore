@@ -110,3 +110,6 @@ tmp/
 temp/
 *.tmp
 
+# Runtime/session artifacts
+.run/*.pid
+ui/tsconfig.tsbuildinfo
