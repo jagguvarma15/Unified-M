@@ -323,8 +323,18 @@ export const api = {
   },
 
   // Pipeline jobs (async)
-  triggerPipeline: (model = "builtin", target = "revenue", useSampleData = false) =>
-    postForm<PostResponse<"/api/v1/pipeline/run">>("/api/v1/pipeline/run", { model, target, use_sample_data: useSampleData }),
+  triggerPipeline: (
+    model = "builtin",
+    target = "revenue",
+    useSampleData = false,
+    budget?: number,
+  ) =>
+    postForm<PostResponse<"/api/v1/pipeline/run">>("/api/v1/pipeline/run", {
+      model,
+      target,
+      use_sample_data: useSampleData,
+      budget,
+    }),
   listJobs: (limit = 20) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`),
   getJob: (jobId: string) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`),
 
