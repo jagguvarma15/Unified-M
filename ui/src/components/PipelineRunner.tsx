@@ -29,14 +29,61 @@ const STEPS = [
   { key: "finalise", label: "Finalise", icon: FileCheck },
 ] as const;
 
+type RunTemplate = {
+  id: string;
+  label: string;
+  description: string;
+  model: string;
+  target: string;
+  useSampleData: boolean;
+  budget?: number;
+};
+
+const RUN_TEMPLATES: RunTemplate[] = [
+  {
+    id: "quick_demo",
+    label: "Quick Demo",
+    description: "Fast baseline run on generated sample data.",
+    model: "builtin",
+    target: "revenue",
+    useSampleData: true,
+  },
+  {
+    id: "revenue_planning",
+    label: "Revenue Planning",
+    description: "Production-style run on uploaded data with revenue target.",
+    model: "builtin",
+    target: "revenue",
+    useSampleData: false,
+  },
+  {
+    id: "conversion_planning",
+    label: "Conversion Planning",
+    description: "Optimize for conversion efficiency on uploaded data.",
+    model: "builtin",
+    target: "conversions",
+    useSampleData: false,
+  },
+  {
+    id: "bayesian_deep_dive",
+    label: "Bayesian Deep Dive",
+    description: "Higher-fidelity Bayesian run (slower) for deeper diagnostics.",
+    model: "pymc",
+    target: "revenue",
+    useSampleData: false,
+  },
+];
+
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
 export default function PipelineRunner({ open, onClose }: Props) {
+  const [templateId, setTemplateId] = useState(RUN_TEMPLATES[0].id);
   const [model, setModel] = useState("builtin");
   const [target, setTarget] = useState("revenue");
+  const [budgetInput, setBudgetInput] = useState("");
   const [useSampleData, setUseSampleData] = useState(true);
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<PipelineJob | null>(null);
@@ -48,12 +95,26 @@ export default function PipelineRunner({ open, onClose }: Props) {
   const isRunning = job?.status === "pending" || job?.status === "running";
   const isDone = job?.status === "completed" || job?.status === "failed";
   const showConfig = !isRunning;
+  const selectedTemplate = RUN_TEMPLATES.find((t) => t.id === templateId) ?? RUN_TEMPLATES[0];
+
+  const applyTemplate = useCallback((template: RunTemplate) => {
+    setTemplateId(template.id);
+    setModel(template.model);
+    setTarget(template.target);
+    setUseSampleData(template.useSampleData);
+    setBudgetInput(template.budget != null ? String(template.budget) : "");
+    setAnalyticsEnabled(template.useSampleData);
+  }, [setAnalyticsEnabled]);
 
   const startPipeline = useCallback(async () => {
     setStarting(true);
     try {
+      const parsedBudget = budgetInput.trim() === "" ? undefined : Number(budgetInput);
+      if (parsedBudget != null && (!Number.isFinite(parsedBudget) || parsedBudget <= 0)) {
+        throw new Error("Budget must be a positive number");
+      }
       setAnalyticsEnabled(useSampleData);
-      const res = await api.triggerPipeline(model, target, useSampleData);
+      const res = await api.triggerPipeline(model, target, useSampleData, parsedBudget);
       setJobId(res.job_id);
       setJob(null);
       addToast("info", useSampleData ? "Sample data pipeline started" : "Pipeline started");
@@ -62,7 +123,7 @@ export default function PipelineRunner({ open, onClose }: Props) {
     } finally {
       setStarting(false);
     }
-  }, [model, target, useSampleData, setAnalyticsEnabled, addToast]);
+  }, [model, target, budgetInput, useSampleData, setAnalyticsEnabled, addToast]);
 
   useEffect(() => {
     if (!jobId) return;
@@ -120,6 +181,22 @@ export default function PipelineRunner({ open, onClose }: Props) {
           {showConfig && (
             <div className="space-y-3">
               <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Execution template</label>
+                <select
+                  value={templateId}
+                  onChange={(e) => {
+                    const tmpl = RUN_TEMPLATES.find((t) => t.id === e.target.value);
+                    if (tmpl) applyTemplate(tmpl);
+                  }}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                >
+                  {RUN_TEMPLATES.map((template) => (
+                    <option key={template.id} value={template.id}>{template.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-500">{selectedTemplate.description}</p>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Model backend</label>
                 <select
                   value={model}
@@ -142,6 +219,18 @@ export default function PipelineRunner({ open, onClose }: Props) {
                   <option value="revenue">Revenue</option>
                   <option value="conversions">Conversions</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Total budget (optional)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={budgetInput}
+                  onChange={(e) => setBudgetInput(e.target.value)}
+                  placeholder="Auto from spend history"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                />
               </div>
               <label className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 <span className="text-xs font-medium text-slate-700">Use sample data (demo run)</span>
