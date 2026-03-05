@@ -194,11 +194,6 @@ date | revenue | conversions
 test_id | channel | start_date | end_date | lift_estimate | lift_ci_lower | lift_ci_upper | test_type
 ```
 
-## Pipeline Schedule
-
-The GitHub Actions pipeline runs:
-- **Weekly** (Sunday 2 AM UTC) - Full model retrain
-- **On-demand** - Manual trigger via workflow_dispatch
 
 ## Development
 
