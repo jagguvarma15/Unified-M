@@ -13,6 +13,7 @@ set ``ALLOW_INSECURE_CONNECTOR_ROUTES=true``.
 
 from __future__ import annotations
 
+import hmac
 import os
 from collections.abc import Callable
 
@@ -93,7 +94,7 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             provided_token = auth_header[7:]
-            if provided_token == self._token:
+            if hmac.compare_digest(provided_token, self._token):
                 return await call_next(request)
 
         return JSONResponse(
