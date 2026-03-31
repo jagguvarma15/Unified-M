@@ -1,32 +1,30 @@
-import type { ReactNode } from "react";
+import { Show, type JSX } from "solid-js";
 
 interface PageHeaderProps {
   title: string;
   description?: string;
-  /** Optional detail line (e.g. "Run: abc123 · Updated 2m ago") */
-  detail?: ReactNode;
-  /** Optional short hint/tooltip for the page */
+  detail?: JSX.Element;
   hint?: string;
 }
 
-export default function PageHeader({ title, description, detail, hint }: PageHeaderProps) {
+export default function PageHeader(props: PageHeaderProps) {
   return (
-    <header className="mb-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <header class="mb-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
-          {description && (
-            <p className="mt-1 text-sm text-slate-500">{description}</p>
-          )}
-          {detail && (
-            <p className="mt-1.5 text-xs text-slate-400">{detail}</p>
-          )}
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">{props.title}</h1>
+          <Show when={props.description}>
+            <p class="mt-1 text-sm text-slate-500">{props.description}</p>
+          </Show>
+          <Show when={props.detail}>
+            <p class="mt-1.5 text-xs text-slate-400">{props.detail}</p>
+          </Show>
         </div>
-        {hint && (
-          <p className="text-xs text-slate-400 max-w-[200px] hidden sm:block" title={hint}>
-            {hint}
+        <Show when={props.hint}>
+          <p class="text-xs text-slate-400 max-w-[200px] hidden sm:block" title={props.hint}>
+            {props.hint}
           </p>
-        )}
+        </Show>
       </div>
     </header>
   );

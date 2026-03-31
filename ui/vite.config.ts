@@ -1,9 +1,9 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import solid from "vite-plugin-solid";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [solid()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -18,13 +18,13 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    chunkSizeWarningLimit: 350,
+    chunkSizeWarningLimit: 400,
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ["react", "react-dom", "react-router-dom"],
-          charts: ["recharts"],
-          query: ["@tanstack/react-query"],
+          solid: ["solid-js", "@solidjs/router"],
+          query: ["@tanstack/solid-query"],
+          echarts: ["echarts"],
         },
       },
     },

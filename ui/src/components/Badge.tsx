@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { JSX } from "solid-js";
 
 type Variant = "default" | "success" | "warning" | "error" | "info";
 
@@ -11,25 +11,20 @@ const variantStyles: Record<Variant, string> = {
 };
 
 interface Props {
-  children: ReactNode;
+  children: JSX.Element;
   variant?: Variant;
-  className?: string;
-  /** Optional small icon before label (e.g. Lucide 12px) */
-  icon?: ReactNode;
+  class?: string;
+  icon?: JSX.Element;
 }
 
-/**
- * Status badge used across dashboards (Tremor / shadcn style).
- * Use for: on-track, over-saturated, completed, failed, etc.
- */
-export default function Badge({ children, variant = "default", className = "", icon }: Props) {
+export default function Badge(props: Props) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${variantStyles[variant]} ${className}`}
+      class={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${variantStyles[props.variant ?? "default"]} ${props.class ?? ""}`}
       role="status"
     >
-      {icon}
-      {children}
+      {props.icon}
+      {props.children}
     </span>
   );
 }

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, createSignal, useContext, type JSX } from "solid-js";
 
 export type ToastType = "success" | "error" | "info" | "warning";
 
@@ -9,7 +9,7 @@ export interface Toast {
 }
 
 interface ToastContextValue {
-  toasts: Toast[];
+  toasts: () => Toast[];
   addToast: (type: ToastType, message: string) => void;
   removeToast: (id: string) => void;
 }
@@ -18,25 +18,22 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 let _nextId = 0;
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+export function ToastProvider(props: { children: JSX.Element }) {
+  const [toasts, setToasts] = createSignal<Toast[]>([]);
 
-  const removeToast = useCallback((id: string) => {
+  const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  };
 
-  const addToast = useCallback(
-    (type: ToastType, message: string) => {
-      const id = String(++_nextId);
-      setToasts((prev) => [...prev, { id, type, message }]);
-      setTimeout(() => removeToast(id), 5000);
-    },
-    [removeToast],
-  );
+  const addToast = (type: ToastType, message: string) => {
+    const id = String(++_nextId);
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => removeToast(id), 5000);
+  };
 
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
-      {children}
+      {props.children}
     </ToastContext.Provider>
   );
 }

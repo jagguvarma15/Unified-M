@@ -204,6 +204,24 @@ ensure-bun: ## Ensure bun is installed (installs via curl if missing)
 		fi; \
 	fi
 
+.PHONY: ensure-uv
+ensure-uv: ## Ensure uv is installed (installs via official script if missing)
+	@UV_BIN="$$(command -v uv 2>/dev/null || true)"; \
+	if [ -n "$$UV_BIN" ]; then \
+		echo "uv detected: $$($$UV_BIN --version)"; \
+	else \
+		echo "uv not found. Installing via official script..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+		if [ -x "$$HOME/.local/bin/uv" ]; then \
+			echo "uv installed at $$HOME/.local/bin/uv"; \
+			echo "Current shell may not have uv on PATH yet."; \
+			echo "Run: export PATH=\"$$HOME/.local/bin:$$PATH\""; \
+		else \
+			echo "uv installation failed."; \
+			exit 1; \
+		fi; \
+	fi
+
 .PHONY: install-dev
 install-dev: ## Install with dev dependencies
 	$(UV) sync --all-extras
@@ -222,7 +240,7 @@ install-ui: ## Install UI dependencies
 install-all: install-dev install-ui ## Install everything
 
 .PHONY: install
-install: ensure-bun install-backend install-ui ## Install backend + frontend dependencies (bun + uv)
+install: ensure-bun ensure-uv install-backend install-ui ## Install backend + frontend dependencies (bun + uv)
 
 .PHONY: lock
 lock: ## Update uv.lock from pyproject.toml
