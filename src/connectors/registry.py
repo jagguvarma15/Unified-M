@@ -19,15 +19,18 @@ from loguru import logger
 
 
 def _get_fernet():
-    """Return a Fernet instance if the secret key env var is set."""
+    """Return a Fernet instance if the secret key env var is set, or None if unset."""
     key = os.getenv("CONNECTOR_SECRET_KEY", "")
     if not key:
         return None
+    from cryptography.fernet import Fernet, InvalidToken  # noqa: F401
     try:
-        from cryptography.fernet import Fernet
         return Fernet(key.encode() if isinstance(key, str) else key)
-    except Exception:
-        return None
+    except Exception as exc:
+        raise ValueError(
+            "CONNECTOR_SECRET_KEY is set but is not a valid Fernet key. "
+            "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        ) from exc
 
 
 def _encrypt(value: str) -> str:
@@ -41,10 +44,14 @@ def _decrypt(value: str) -> str:
     f = _get_fernet()
     if f is None:
         return value
+    from cryptography.fernet import InvalidToken
     try:
         return f.decrypt(value.encode()).decode()
-    except Exception:
-        return value
+    except InvalidToken as exc:
+        raise ValueError(
+            "Failed to decrypt a connector secret. The CONNECTOR_SECRET_KEY may have changed "
+            "or the stored value is corrupted. Do not re-save without verifying the key."
+        ) from exc
 
 
 _SENSITIVE_KEYS = frozenset({
