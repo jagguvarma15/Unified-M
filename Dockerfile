@@ -6,6 +6,9 @@
 # ---- Python API stage ----
 FROM python:3.11-slim AS base
 
+# Create a non-root user before anything else
+RUN groupadd --system appgroup && useradd --system --gid appgroup --no-create-home appuser
+
 WORKDIR /app
 
 # System deps for scientific Python
@@ -30,6 +33,10 @@ RUN uv sync --frozen --no-dev --no-editable
 # Copy application source
 COPY src/ src/
 COPY config.yaml ./
+
+# Hand ownership to the non-root user and switch
+RUN chown -R appuser:appgroup /app
+USER appuser
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1

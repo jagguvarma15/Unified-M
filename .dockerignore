@@ -1,0 +1,56 @@
+# Version control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+.eggs
+.venv
+venv
+.uv
+
+# Node / UI build artifacts
+ui/node_modules
+ui/dist
+ui/.next
+
+# Test & dev artifacts
+tests/
+.pytest_cache
+.mypy_cache
+.ruff_cache
+coverage.xml
+htmlcov/
+.coverage
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime state
+.run/
+*.pid
+*.log
+
+# Data (mounted at runtime, not baked in)
+data/
+models/
+
+# Docs
+docs/
+*.md
