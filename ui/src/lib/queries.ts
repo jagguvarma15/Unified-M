@@ -13,7 +13,7 @@ export function useHealthQuery() {
 export function useRunsQuery(limit = 20) {
   return useQuery({
     queryKey: qk.runs(limit),
-    queryFn: () => api.runs(limit),
+    queryFn: ({ signal }) => api.runs(limit, signal),
   });
 }
 
@@ -84,4 +84,3 @@ export function useTriggerPipelineMutation() {
       api.triggerPipeline(model ?? "builtin", target ?? "revenue"),
   });
 }
-

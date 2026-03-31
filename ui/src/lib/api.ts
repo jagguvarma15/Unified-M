@@ -22,11 +22,11 @@ type JsonResponse<T> = T extends {
 type GetResponse<P extends keyof paths> = paths[P] extends { get: infer T } ? JsonResponse<T> : never;
 type PostResponse<P extends keyof paths> = paths[P] extends { post: infer T } ? JsonResponse<T> : never;
 
-async function get<T>(path: string): Promise<T> {
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const started = performance.now();
   let status = 0;
   try {
-    const res = await fetch(`${BASE}${path}`);
+    const res = await fetch(`${BASE}${path}`, { signal });
     status = res.status;
     if (!res.ok) {
       const text = await res.text();
@@ -295,23 +295,24 @@ function postForm<T>(path: string, data: Record<string, string | number | boolea
 }
 
 export const api = {
-  health: () => get<HealthData>("/health"),
+  health: ({ signal }: { signal?: AbortSignal } = {}) => get<HealthData>("/health", signal),
 
-  runs: (limit = 20) => get<RunsData>(`/api/v1/runs?limit=${limit}`),
+  runs: (limit = 20, signal?: AbortSignal) => get<RunsData>(`/api/v1/runs?limit=${limit}`, signal),
 
-  contributions: () => get<ContributionsData>("/api/v1/contributions"),
-  reconciliation: () => get<ReconciliationData>("/api/v1/reconciliation"),
-  optimization: () => get<OptimizationData>("/api/v1/optimization"),
-  responseCurves: (channel?: string) =>
+  contributions: ({ signal }: { signal?: AbortSignal } = {}) => get<ContributionsData>("/api/v1/contributions", signal),
+  reconciliation: ({ signal }: { signal?: AbortSignal } = {}) => get<ReconciliationData>("/api/v1/reconciliation", signal),
+  optimization: ({ signal }: { signal?: AbortSignal } = {}) => get<OptimizationData>("/api/v1/optimization", signal),
+  responseCurves: (channel?: string, signal?: AbortSignal) =>
     get<ResponseCurvesData>(
-      channel ? `/api/v1/response-curves?channel=${encodeURIComponent(channel)}` : "/api/v1/response-curves"
+      channel ? `/api/v1/response-curves?channel=${encodeURIComponent(channel)}` : "/api/v1/response-curves",
+      signal,
     ),
-  parameters: () => get<ParametersData>("/api/v1/parameters"),
-  diagnostics: () => get<DiagnosticsData>("/api/v1/diagnostics"),
-  roas: () => get<ROASData>("/api/v1/roas"),
-  waterfall: () => get<WaterfallData>("/api/v1/waterfall"),
+  parameters: ({ signal }: { signal?: AbortSignal } = {}) => get<ParametersData>("/api/v1/parameters", signal),
+  diagnostics: ({ signal }: { signal?: AbortSignal } = {}) => get<DiagnosticsData>("/api/v1/diagnostics", signal),
+  roas: ({ signal }: { signal?: AbortSignal } = {}) => get<ROASData>("/api/v1/roas", signal),
+  waterfall: ({ signal }: { signal?: AbortSignal } = {}) => get<WaterfallData>("/api/v1/waterfall", signal),
 
-  dataStatus: () => get<DataStatus>("/api/v1/data/status"),
+  dataStatus: ({ signal }: { signal?: AbortSignal } = {}) => get<DataStatus>("/api/v1/data/status", signal),
   uploadFile: (dataType: string, file: File) => {
     const formData = new FormData();
     formData.append("data_type", dataType);
@@ -335,12 +336,12 @@ export const api = {
       use_sample_data: useSampleData,
       budget,
     }),
-  listJobs: (limit = 20) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`),
-  getJob: (jobId: string) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`),
+  listJobs: (limit = 20, signal?: AbortSignal) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`, signal),
+  getJob: (jobId: string, signal?: AbortSignal) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`, signal),
 
   // Connectors CRUD
-  listConnectors: () => get<{ connectors: SavedConnector[] }>("/api/v1/connectors"),
-  getConnector: (id: string) => get<GetResponse<"/api/v1/connectors/{connector_id}">>(`/api/v1/connectors/${id}`),
+  listConnectors: ({ signal }: { signal?: AbortSignal } = {}) => get<{ connectors: SavedConnector[] }>("/api/v1/connectors", signal),
+  getConnector: (id: string, signal?: AbortSignal) => get<GetResponse<"/api/v1/connectors/{connector_id}">>(`/api/v1/connectors/${id}`, signal),
   createConnector: (name: string, type: string, subtype: string, config: Record<string, unknown>) =>
     postForm<PostResponse<"/api/v1/connectors">>("/api/v1/connectors", {
       name,
@@ -374,14 +375,14 @@ export const api = {
     ),
 
   // Adapters
-  adapters: () => get<AdaptersData>("/api/v1/adapters"),
+  adapters: ({ signal }: { signal?: AbortSignal } = {}) => get<AdaptersData>("/api/v1/adapters", signal),
 
-  calibration: () => get<CalibrationData>("/api/v1/calibration"),
-  stability: () => get<StabilityData>("/api/v1/stability"),
-  dataQuality: () => get<DataQualityData>("/api/v1/data-quality"),
-  channelInsights: () => get<ChannelInsightsData>("/api/v1/channel-insights"),
-  spendPacing: () => get<SpendPacingData>("/api/v1/spend-pacing"),
-  reportSummary: () => get<ReportSummaryData>("/api/v1/report/summary"),
-  compareRuns: (runA: string, runB: string) =>
-    get<RunComparisonData>(`/api/v1/compare-runs?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`),
+  calibration: ({ signal }: { signal?: AbortSignal } = {}) => get<CalibrationData>("/api/v1/calibration", signal),
+  stability: ({ signal }: { signal?: AbortSignal } = {}) => get<StabilityData>("/api/v1/stability", signal),
+  dataQuality: ({ signal }: { signal?: AbortSignal } = {}) => get<DataQualityData>("/api/v1/data-quality", signal),
+  channelInsights: ({ signal }: { signal?: AbortSignal } = {}) => get<ChannelInsightsData>("/api/v1/channel-insights", signal),
+  spendPacing: ({ signal }: { signal?: AbortSignal } = {}) => get<SpendPacingData>("/api/v1/spend-pacing", signal),
+  reportSummary: ({ signal }: { signal?: AbortSignal } = {}) => get<ReportSummaryData>("/api/v1/report/summary", signal),
+  compareRuns: (runA: string, runB: string, signal?: AbortSignal) =>
+    get<RunComparisonData>(`/api/v1/compare-runs?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`, signal),
 };

@@ -155,18 +155,23 @@ class DuckDBConnector(BaseConnector):
     def load(self, source: str | Path, **kwargs: Any) -> pd.DataFrame:
         src = str(source)
 
-        # If it looks like SQL, execute directly
+        # Reject raw SQL in load(); callers must use .query() explicitly
         if src.strip().upper().startswith("SELECT"):
-            logger.info("Executing DuckDB SQL query")
-            return self.conn.execute(src).df()
+            raise ConnectorError(
+                "Raw SQL is not accepted by load(). Use DuckDBConnector.query() instead.",
+                source=src,
+            )
 
         path = self._ensure_path(source)
         logger.info(f"Loading via DuckDB from {path}")
 
+        # Escape single-quotes in the path to prevent SQL injection
+        safe_path = str(path).replace("'", "''")
+
         if path.suffix == ".parquet":
-            return self.conn.execute(f"SELECT * FROM '{path}'").df()
+            return self.conn.execute(f"SELECT * FROM '{safe_path}'").df()
         elif path.suffix == ".csv":
-            return self.conn.execute(f"SELECT * FROM read_csv_auto('{path}')").df()
+            return self.conn.execute(f"SELECT * FROM read_csv_auto('{safe_path}')").df()
         else:
             raise ConnectorError(f"Unsupported file type for DuckDB: {path.suffix}", source=src)
 
