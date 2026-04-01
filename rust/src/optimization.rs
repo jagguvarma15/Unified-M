@@ -114,7 +114,7 @@ fn marginal_hill_response(x: f64, k: f64, s: f64, coef: f64) -> f64 {
     let x_pow_s = x_val.powf(s);
     let denom = k_pow_s + x_pow_s;
     
-    if denom == 0.0 {
+    if denom.abs() < f64::EPSILON {
         return 0.0;
     }
     

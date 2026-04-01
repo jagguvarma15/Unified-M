@@ -158,11 +158,14 @@ export default function Layout() {
             <div key={section.title}>
               <button
                 onClick={() => toggleSection(section.title)}
+                aria-expanded={!collapsed[section.title]}
+                aria-label={`${collapsed[section.title] ? "Expand" : "Collapse"} ${section.title}`}
                 className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-400 transition-colors"
               >
                 {section.title}
                 <ChevronDown
                   size={12}
+                  aria-hidden
                   className={`shrink-0 transition-transform ${collapsed[section.title] ? "-rotate-90" : ""}`}
                 />
               </button>

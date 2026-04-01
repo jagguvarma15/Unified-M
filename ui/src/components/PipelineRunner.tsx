@@ -90,6 +90,8 @@ export default function PipelineRunner({ open, onClose }: Props) {
   const [starting, setStarting] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const { addToast } = useToast();
+  const addToastRef = useRef(addToast);
+  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
   const { setAnalyticsEnabled } = useAnalyticsMode();
 
   const isRunning = job?.status === "pending" || job?.status === "running";
@@ -134,9 +136,9 @@ export default function PipelineRunner({ open, onClose }: Props) {
         const j = await api.getJob(jobId);
         if (!cancelled) setJob(j);
         if (j.status === "completed") {
-          addToast("success", `Pipeline completed (run: ${j.run_id?.slice(0, 12)})`);
+          addToastRef.current("success", `Pipeline completed (run: ${j.run_id?.slice(0, 12)})`);
         } else if (j.status === "failed") {
-          addToast("error", `Pipeline failed: ${j.error || "Unknown error"}`);
+          addToastRef.current("error", `Pipeline failed: ${j.error || "Unknown error"}`);
         }
         if (j.status === "completed" || j.status === "failed") {
           clearInterval(pollRef.current);
@@ -152,7 +154,7 @@ export default function PipelineRunner({ open, onClose }: Props) {
       cancelled = true;
       clearInterval(pollRef.current);
     };
-  }, [jobId, addToast]);
+  }, [jobId]);
 
   useEffect(() => {
     if (!open) {

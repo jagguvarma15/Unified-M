@@ -28,7 +28,9 @@ export function ToastProvider(props: { children: JSX.Element }) {
   const addToast = (type: ToastType, message: string) => {
     const id = String(++_nextId);
     setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => removeToast(id), 5000);
+    if (type !== "error") {
+      setTimeout(() => removeToast(id), 5000);
+    }
   };
 
   return (

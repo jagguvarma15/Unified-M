@@ -9,6 +9,7 @@ API settings, and artifact versioning.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -124,20 +125,23 @@ class UnifiedMConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 _config: UnifiedMConfig | None = None
+_config_lock = threading.Lock()
 
 
 def get_config() -> UnifiedMConfig:
     """Return the global config instance (creates default if needed)."""
     global _config
-    if _config is None:
-        _config = UnifiedMConfig()
-    return _config
+    with _config_lock:
+        if _config is None:
+            _config = UnifiedMConfig()
+        return _config
 
 
 def set_config(config: UnifiedMConfig) -> None:
     """Override the global config instance."""
     global _config
-    _config = config
+    with _config_lock:
+        _config = config
 
 
 def load_config(path: Path | str | None = None) -> UnifiedMConfig:
@@ -147,13 +151,15 @@ def load_config(path: Path | str | None = None) -> UnifiedMConfig:
     global _config
 
     if path is not None:
-        _config = UnifiedMConfig.from_yaml(path)
+        new_config = UnifiedMConfig.from_yaml(path)
     else:
         for candidate in [Path("config.yaml"), Path("config/config.yaml")]:
             if candidate.exists():
-                _config = UnifiedMConfig.from_yaml(candidate)
+                new_config = UnifiedMConfig.from_yaml(candidate)
                 break
         else:
-            _config = UnifiedMConfig()
+            new_config = UnifiedMConfig()
 
-    return _config
+    with _config_lock:
+        _config = new_config
+    return new_config

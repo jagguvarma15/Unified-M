@@ -19,10 +19,10 @@ Limitations:
 from __future__ import annotations
 
 import json
-import pickle
 from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -191,6 +191,14 @@ class BuiltinMMM(BaseMMM):
     # ------------------------------------------------------------------
 
     def predict(self, df: pd.DataFrame) -> np.ndarray:
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(f"predict() expects a pandas DataFrame, got {type(df).__name__}")
+        if df.empty:
+            raise ValueError("predict() received an empty DataFrame")
+        missing = [c for c in self._media_cols + self._exposure_cols if c not in df.columns]
+        if missing:
+            raise ValueError(f"predict() missing required columns: {missing}")
+
         self._check_fitted()
 
         exposure_suffixes = ("_impressions", "_reach", "_grp", "_clicks")
@@ -334,9 +342,11 @@ class BuiltinMMM(BaseMMM):
 
     def save_state(self, directory: Path) -> None:
         self._check_fitted()
-        state = {
-            "model": self._model,
-            "scaler": self._scaler,
+        # Sklearn objects use joblib (sklearn's recommended serializer).
+        joblib.dump({"model": self._model, "scaler": self._scaler}, directory / "builtin_sklearn.joblib")
+        # All JSON-serializable metadata is stored separately to avoid
+        # untrusted-pickle deserialization on this data.
+        meta = {
             "feature_cols": self._feature_cols,
             "media_cols": self._media_cols,
             "exposure_cols": self._exposure_cols,
@@ -350,8 +360,8 @@ class BuiltinMMM(BaseMMM):
             "saturation_K": self._saturation_K,
             "saturation_S": self._saturation_S,
         }
-        with open(directory / "builtin_model.pkl", "wb") as f:
-            pickle.dump(state, f)
+        with open(directory / "builtin_meta.json", "w") as f:
+            json.dump(meta, f, indent=2)
         # Also write a human-readable summary
         params = self.get_parameters()
         with open(directory / "parameters.json", "w") as f:
@@ -359,26 +369,31 @@ class BuiltinMMM(BaseMMM):
         logger.info(f"Saved BuiltinMMM state to {directory}")
 
     def load_state(self, directory: Path) -> None:
-        pkl_path = directory / "builtin_model.pkl"
-        if not pkl_path.exists():
-            raise FileNotFoundError(f"Model state not found: {pkl_path}")
-        with open(pkl_path, "rb") as f:
-            state = pickle.load(f)
+        sklearn_path = directory / "builtin_sklearn.joblib"
+        meta_path = directory / "builtin_meta.json"
+        if not sklearn_path.exists() or not meta_path.exists():
+            raise FileNotFoundError(
+                f"Model state not found in {directory}. "
+                "Expected builtin_sklearn.joblib and builtin_meta.json."
+            )
+        sklearn_state = joblib.load(sklearn_path)
+        with open(meta_path) as f:
+            meta = json.load(f)
 
-        self._model = state["model"]
-        self._scaler = state["scaler"]
-        self._feature_cols = state["feature_cols"]
-        self._media_cols = state["media_cols"]
-        self._exposure_cols = state.get("exposure_cols", [])
-        self._control_cols = state["control_cols"]
-        self._target_col = state["target_col"]
-        self._date_col = state["date_col"]
-        self._coefficients = state["coefficients"]
-        self._intercept = state["intercept"]
-        self._adstock_alphas = state.get("adstock_alphas", {})
-        self._adstock_l_max = state.get("adstock_l_max", 8)
-        self._saturation_K = state.get("saturation_K", {})
-        self._saturation_S = state.get("saturation_S", {})
+        self._model = sklearn_state["model"]
+        self._scaler = sklearn_state["scaler"]
+        self._feature_cols = meta["feature_cols"]
+        self._media_cols = meta["media_cols"]
+        self._exposure_cols = meta.get("exposure_cols", [])
+        self._control_cols = meta["control_cols"]
+        self._target_col = meta["target_col"]
+        self._date_col = meta["date_col"]
+        self._coefficients = meta["coefficients"]
+        self._intercept = meta["intercept"]
+        self._adstock_alphas = meta.get("adstock_alphas", {})
+        self._adstock_l_max = meta.get("adstock_l_max", 8)
+        self._saturation_K = meta.get("saturation_K", {})
+        self._saturation_S = meta.get("saturation_S", {})
         logger.info(f"Loaded BuiltinMMM state from {directory}")
 
     # ------------------------------------------------------------------

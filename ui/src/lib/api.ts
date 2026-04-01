@@ -6,6 +6,7 @@ import type { paths } from "./api.generated";
 import { trackApiLatency } from "./telemetry";
 
 const BASE = "";
+const REQUEST_TIMEOUT_MS = 15_000;
 
 type JsonResponse<T> = T extends {
   responses: {
@@ -23,10 +24,15 @@ type GetResponse<P extends keyof paths> = paths[P] extends { get: infer T } ? Js
 type PostResponse<P extends keyof paths> = paths[P] extends { post: infer T } ? JsonResponse<T> : never;
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  if (signal) {
+    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+  }
   const started = performance.now();
   let status = 0;
   try {
-    const res = await fetch(`${BASE}${path}`, { signal });
+    const res = await fetch(`${BASE}${path}`, { signal: controller.signal });
     status = res.status;
     if (!res.ok) {
       const text = await res.text();
@@ -37,6 +43,8 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   } catch (err) {
     trackApiLatency(path, performance.now() - started, false, status);
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -288,10 +296,14 @@ function postForm<T>(path: string, data: Record<string, string | number | boolea
   for (const [k, v] of Object.entries(data)) {
     if (v != null) formData.append(k, String(v));
   }
-  return fetch(`${BASE}${path}`, { method: "POST", body: formData }).then((r) => {
-    if (!r.ok) throw new Error(r.statusText);
-    return r.json();
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  return fetch(`${BASE}${path}`, { method: "POST", body: formData, signal: controller.signal })
+    .then((r) => {
+      if (!r.ok) throw new Error(r.statusText);
+      return r.json() as Promise<T>;
+    })
+    .finally(() => clearTimeout(timeoutId));
 }
 
 export const api = {
