@@ -111,5 +111,5 @@ temp/
 *.tmp
 
 # Runtime/session artifacts
-.run/*.pid
+.run/
 ui/tsconfig.tsbuildinfo
