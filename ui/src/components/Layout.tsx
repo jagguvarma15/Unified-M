@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { A, Outlet, useLocation } from "@solidjs/router";
 import PageErrorBoundary from "./PageErrorBoundary";
 import PipelineRunner from "./PipelineRunner";
 import {
@@ -22,11 +22,11 @@ import {
   FileText,
   Play,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { createSignal, createEffect, For, Show, type JSX } from "solid-js";
 import type { LucideIcon } from "lucide-react";
 import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/solid-query";
 import { trackPageView } from "../lib/telemetry";
 
 interface NavItem {
@@ -91,133 +91,133 @@ const NAV_SECTIONS: NavSection[] = [
 ];
 
 export default function Layout() {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [pipelineOpen, setPipelineOpen] = useState(false);
-  const { data: health, isError: healthError } = useHealthQuery();
+  const [collapsed, setCollapsed] = createSignal<Record<string, boolean>>({});
+  const [pipelineOpen, setPipelineOpen] = createSignal(false);
+  const health = useHealthQuery();
   const { analyticsEnabled, setAnalyticsEnabled } = useAnalyticsMode();
   const queryClient = useQueryClient();
-  const didClearRef = useRef(false);
+  let didClear = false;
   const location = useLocation();
 
-  useEffect(() => {
-    if (healthError) {
+  createEffect(() => {
+    if (health.isError) {
       setAnalyticsEnabled(false);
-      if (!didClearRef.current) {
+      if (!didClear) {
         queryClient.clear();
-        didClearRef.current = true;
+        didClear = true;
       }
     } else {
-      didClearRef.current = false;
+      didClear = false;
     }
-  }, [healthError, setAnalyticsEnabled, queryClient]);
+  });
 
-  useEffect(() => {
+  createEffect(() => {
     trackPageView(location.pathname);
-  }, [location.pathname]);
+  });
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div class="flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 flex flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50">
-        <div className="px-5 pt-6 pb-4">
-          <h1 className="text-lg font-bold tracking-tight text-white">
+      <aside class="w-64 flex-shrink-0 flex flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50">
+        <div class="px-5 pt-6 pb-4">
+          <h1 class="text-lg font-bold tracking-tight text-white">
             Unified-M
           </h1>
-          <p className="mt-0.5 text-[11px] text-slate-400">
+          <p class="mt-0.5 text-[11px] text-slate-400">
             Marketing Measurement
           </p>
         </div>
 
         {/* Run Pipeline button */}
-        <div className="px-3 pb-3">
+        <div class="px-3 pb-3">
           <button
             onClick={() => setPipelineOpen(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+            class="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
           >
             <Play size={14} />
             Run Pipeline
           </button>
         </div>
 
-        <nav className="flex-1 px-2.5 space-y-3 overflow-y-auto py-2">
-          {NAV_SECTIONS.map((section) => {
-            let items = section.items;
-            if (!analyticsEnabled) {
-              if (section.title === "Overview") {
-                items = section.items.filter((it) => it.to !== "/");
-              } else if (section.title !== "Configuration") {
-                items = [];
+        <nav class="flex-1 px-2.5 space-y-3 overflow-y-auto py-2">
+          <For each={NAV_SECTIONS}>
+            {(section) => {
+              let items = section.items;
+              if (!analyticsEnabled()) {
+                if (section.title === "Overview") {
+                  items = section.items.filter((it) => it.to !== "/");
+                } else if (section.title !== "Configuration") {
+                  items = [];
+                }
               }
-            }
-            if (items.length === 0) return null;
-            return (
-            <div key={section.title}>
-              <button
-                onClick={() => toggleSection(section.title)}
-                aria-expanded={!collapsed[section.title]}
-                aria-label={`${collapsed[section.title] ? "Expand" : "Collapse"} ${section.title}`}
-                className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-400 transition-colors"
-              >
-                {section.title}
-                <ChevronDown
-                  size={12}
-                  aria-hidden
-                  className={`shrink-0 transition-transform ${collapsed[section.title] ? "-rotate-90" : ""}`}
-                />
-              </button>
-              {!collapsed[section.title] && (
-                <div className="mt-0.5 space-y-0.5">
-                  {items.map(({ to, label, icon: Icon }) => (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={to === "/"}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-                          isActive
-                            ? "bg-indigo-600 text-white"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`
-                      }
-                    >
-                      <Icon size={16} className="shrink-0" />
-                      {label}
-                    </NavLink>
-                  ))}
+              if (items.length === 0) return null;
+              return (
+                <div>
+                  <button
+                    onClick={() => toggleSection(section.title)}
+                    aria-expanded={!collapsed()[section.title]}
+                    aria-label={`${collapsed()[section.title] ? "Expand" : "Collapse"} ${section.title}`}
+                    class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-400 transition-colors"
+                  >
+                    {section.title}
+                    <ChevronDown
+                      size={12}
+                      aria-hidden
+                      class={`shrink-0 transition-transform ${collapsed()[section.title] ? "-rotate-90" : ""}`}
+                    />
+                  </button>
+                  <Show when={!collapsed()[section.title]}>
+                    <div class="mt-0.5 space-y-0.5">
+                      <For each={items}>
+                        {({ to, label, icon: Icon }) => (
+                          <A
+                            href={to}
+                            end={to === "/"}
+                            activeClass="bg-indigo-600 text-white"
+                            inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                            class="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+                          >
+                            <Icon size={16} class="shrink-0" />
+                            {label}
+                          </A>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
                 </div>
-              )}
-            </div>
-          )})}
+              );
+            }}
+          </For>
         </nav>
 
-        <div className="border-t border-slate-700/60 p-3">
-          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+        <div class="border-t border-slate-700/60 p-3">
+          <div class="flex items-center gap-2 text-[11px] text-slate-400">
             <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                health ? "bg-emerald-400" : "bg-red-400"
+              class={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                health.data ? "bg-emerald-400" : "bg-red-400"
               }`}
               aria-hidden
             />
-            {health ? "API connected" : "API offline"}
+            {health.data ? "API connected" : "API offline"}
           </div>
-          {health?.latest_run && (
-            <p className="mt-1 truncate text-[11px] text-slate-500" title={health.latest_run}>
-              {health.latest_run.slice(0, 14)}…
+          <Show when={health.data?.latest_run}>
+            <p class="mt-1 truncate text-[11px] text-slate-500" title={health.data!.latest_run!}>
+              {health.data!.latest_run!.slice(0, 14)}…
             </p>
-          )}
-          {health && (
-            <p className="mt-0.5 text-[10px] text-slate-600">v{health.version}</p>
-          )}
+          </Show>
+          <Show when={health.data}>
+            <p class="mt-0.5 text-[10px] text-slate-600">v{health.data!.version}</p>
+          </Show>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-7xl px-6 py-8 min-h-[400px]">
+      <main class="flex-1 overflow-auto">
+        <div class="mx-auto max-w-7xl px-6 py-8 min-h-[400px]">
           <PageErrorBoundary>
             <Outlet />
           </PageErrorBoundary>
@@ -225,7 +225,7 @@ export default function Layout() {
       </main>
 
       {/* Pipeline Runner slide-out */}
-      <PipelineRunner open={pipelineOpen} onClose={() => setPipelineOpen(false)} />
+      <PipelineRunner open={pipelineOpen()} onClose={() => setPipelineOpen(false)} />
     </div>
   );
 }

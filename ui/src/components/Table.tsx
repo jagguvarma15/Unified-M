@@ -1,36 +1,36 @@
-import type { ReactNode } from "react";
+import type { JSX } from "solid-js";
 
 interface TableProps {
-  children: ReactNode;
-  className?: string;
+  children: JSX.Element;
+  class?: string;
 }
 
 interface TableHeadProps {
-  children: ReactNode;
-  className?: string;
+  children: JSX.Element;
+  class?: string;
 }
 
 interface TableBodyProps {
-  children: ReactNode;
-  className?: string;
+  children: JSX.Element;
+  class?: string;
 }
 
 interface TableRowProps {
-  children: ReactNode;
-  className?: string;
+  children: JSX.Element;
+  class?: string;
   onClick?: () => void;
 }
 
 interface TableHeaderCellProps {
-  children: ReactNode;
+  children: JSX.Element;
   align?: "left" | "right" | "center";
-  className?: string;
+  class?: string;
 }
 
 interface TableCellProps {
-  children: ReactNode;
+  children: JSX.Element;
   align?: "left" | "right" | "center";
-  className?: string;
+  class?: string;
 }
 
 const alignClass = { left: "text-left", right: "text-right", center: "text-center" };
@@ -39,58 +39,46 @@ const alignClass = { left: "text-left", right: "text-right", center: "text-cente
  * Semantic table wrapper with consistent styling (shadcn / Tremor style).
  * Use for data tables with header, striped or hover rows.
  */
-export function Table({ children, className = "" }: TableProps) {
+export function Table(props: TableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
-      <table className={`w-full text-sm ${className}`}>{children}</table>
+    <div class="overflow-x-auto rounded-lg border border-slate-200">
+      <table class={`w-full text-sm ${props.class ?? ""}`}>{props.children}</table>
     </div>
   );
 }
 
-export function TableHead({ children, className = "" }: TableHeadProps) {
-  return <thead className={`bg-slate-50 border-b border-slate-200 ${className}`}>{children}</thead>;
+export function TableHead(props: TableHeadProps) {
+  return <thead class={`bg-slate-50 border-b border-slate-200 ${props.class ?? ""}`}>{props.children}</thead>;
 }
 
-export function TableBody({ children, className = "" }: TableBodyProps) {
-  return <tbody className={className}>{children}</tbody>;
+export function TableBody(props: TableBodyProps) {
+  return <tbody class={props.class ?? ""}>{props.children}</tbody>;
 }
 
-export function TableRow({
-  children,
-  className = "",
-  onClick,
-}: TableRowProps) {
+export function TableRow(props: TableRowProps) {
   return (
     <tr
-      className={`border-b border-slate-100 transition-colors ${onClick ? "cursor-pointer hover:bg-slate-50" : ""} ${className}`}
-      onClick={onClick}
-      role={onClick ? "button" : undefined}
+      class={`border-b border-slate-100 transition-colors ${props.onClick ? "cursor-pointer hover:bg-slate-50" : ""} ${props.class ?? ""}`}
+      onClick={props.onClick}
+      role={props.onClick ? "button" : undefined}
     >
-      {children}
+      {props.children}
     </tr>
   );
 }
 
-export function TableHeaderCell({
-  children,
-  align = "left",
-  className = "",
-}: TableHeaderCellProps) {
+export function TableHeaderCell(props: TableHeaderCellProps) {
   return (
     <th
-      className={`py-3 px-4 font-semibold text-slate-600 ${alignClass[align]} ${className}`}
+      class={`py-3 px-4 font-semibold text-slate-600 ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}
     >
-      {children}
+      {props.children}
     </th>
   );
 }
 
-export function TableCell({
-  children,
-  align = "left",
-  className = "",
-}: TableCellProps) {
+export function TableCell(props: TableCellProps) {
   return (
-    <td className={`py-3 px-4 ${alignClass[align]} ${className}`}>{children}</td>
+    <td class={`py-3 px-4 ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}>{props.children}</td>
   );
 }

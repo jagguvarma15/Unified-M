@@ -1,39 +1,60 @@
-import { memo, type CSSProperties, type ReactNode } from "react";
-import { FixedSizeList, type ListChildComponentProps } from "react-window";
+import { createSignal, onMount, onCleanup, For, type JSX } from "solid-js";
 
 interface VirtualizedListProps<T> {
   rows: T[];
   height: number;
   rowHeight: number;
-  renderRow: (row: T, index: number, style: CSSProperties) => ReactNode;
+  renderRow: (row: T, index: number, style: JSX.CSSProperties) => JSX.Element;
 }
 
-function RowRenderer<T>({
-  data,
-  index,
-  style,
-}: ListChildComponentProps<{ rows: T[]; renderRow: VirtualizedListProps<T>["renderRow"] }>) {
-  return data.renderRow(data.rows[index], index, style);
-}
+export function VirtualizedList<T>(props: VirtualizedListProps<T>) {
+  let containerEl!: HTMLDivElement;
+  const [scrollTop, setScrollTop] = createSignal(0);
 
-const MemoRowRenderer = memo(RowRenderer) as typeof RowRenderer;
+  const overscan = 8;
 
-export function VirtualizedList<T>({
-  rows,
-  height,
-  rowHeight,
-  renderRow,
-}: VirtualizedListProps<T>) {
+  const visibleStart = () => Math.max(0, Math.floor(scrollTop() / props.rowHeight) - overscan);
+  const visibleEnd = () =>
+    Math.min(
+      props.rows.length,
+      Math.ceil((scrollTop() + props.height) / props.rowHeight) + overscan
+    );
+
+  const totalHeight = () => props.rows.length * props.rowHeight;
+
+  const onScroll = () => {
+    setScrollTop(containerEl.scrollTop);
+  };
+
+  onMount(() => {
+    containerEl.addEventListener("scroll", onScroll, { passive: true });
+    onCleanup(() => containerEl.removeEventListener("scroll", onScroll));
+  });
+
+  const visibleRows = () => {
+    const start = visibleStart();
+    const end = visibleEnd();
+    return props.rows.slice(start, end).map((row, i) => ({ row, index: start + i }));
+  };
+
   return (
-    <FixedSizeList
-      height={height}
-      itemCount={rows.length}
-      itemSize={rowHeight}
-      width="100%"
-      itemData={{ rows, renderRow }}
-      overscanCount={8}
+    <div
+      ref={containerEl}
+      style={{ height: `${props.height}px`, overflow: "auto", position: "relative" }}
     >
-      {MemoRowRenderer}
-    </FixedSizeList>
+      <div style={{ height: `${totalHeight()}px`, position: "relative" }}>
+        <For each={visibleRows()}>
+          {({ row, index }) =>
+            props.renderRow(row, index, {
+              position: "absolute",
+              top: `${index * props.rowHeight}px`,
+              left: 0,
+              right: 0,
+              height: `${props.rowHeight}px`,
+            })
+          }
+        </For>
+      </div>
+    </div>
   );
 }
