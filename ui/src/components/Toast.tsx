@@ -1,3 +1,4 @@
+import { Show, For } from "solid-js";
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import { useToast, type ToastType } from "../lib/toast";
 
@@ -25,36 +26,37 @@ const ICON_COLORS: Record<ToastType, string> = {
 export default function ToastContainer() {
   const { toasts, removeToast } = useToast();
 
-  if (toasts.length === 0) return null;
-
   return (
-    <div
-      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"
-      role="region"
-      aria-label="Notifications"
-      aria-live="polite"
-      aria-atomic="false"
-    >
-      {toasts.map((toast) => {
-        const Icon = ICONS[toast.type];
-        return (
-          <div
-            key={toast.id}
-            role="alert"
-            className={`flex items-start gap-2.5 rounded-lg border px-4 py-3 shadow-lg animate-in slide-in-from-right ${COLORS[toast.type]}`}
-          >
-            <Icon size={16} aria-hidden className={`mt-0.5 shrink-0 ${ICON_COLORS[toast.type]}`} />
-            <p className="flex-1 text-sm font-medium">{toast.message}</p>
-            <button
-              onClick={() => removeToast(toast.id)}
-              aria-label="Dismiss notification"
-              className="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <X size={14} aria-hidden />
-            </button>
-          </div>
-        );
-      })}
-    </div>
+    <Show when={toasts().length > 0}>
+      <div
+        class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"
+        role="region"
+        aria-label="Notifications"
+        aria-live="polite"
+        aria-atomic="false"
+      >
+        <For each={toasts()}>
+          {(toast) => {
+            const Icon = ICONS[toast.type];
+            return (
+              <div
+                role="alert"
+                class={`flex items-start gap-2.5 rounded-lg border px-4 py-3 shadow-lg animate-in slide-in-from-right ${COLORS[toast.type]}`}
+              >
+                <Icon size={16} aria-hidden class={`mt-0.5 shrink-0 ${ICON_COLORS[toast.type]}`} />
+                <p class="flex-1 text-sm font-medium">{toast.message}</p>
+                <button
+                  onClick={() => removeToast(toast.id)}
+                  aria-label="Dismiss notification"
+                  class="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  <X size={14} aria-hidden />
+                </button>
+              </div>
+            );
+          }}
+        </For>
+      </div>
+    </Show>
   );
 }

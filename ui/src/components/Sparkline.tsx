@@ -5,7 +5,7 @@ interface Props {
   strokeColor?: string;
   fillColor?: string;
   strokeWidth?: number;
-  className?: string;
+  class?: string;
   /** Show trend up/down tint (green/red) */
   trend?: "up" | "down" | "neutral";
 }
@@ -21,7 +21,7 @@ export default function Sparkline({
   strokeColor = "#6366f1",
   fillColor = "rgba(99, 102, 241, 0.15)",
   strokeWidth = 1.5,
-  className = "",
+  class: className = "",
   trend,
 }: Props) {
   if (!data.length) return null;
@@ -49,7 +49,7 @@ export default function Sparkline({
     <svg
       width={width}
       height={height}
-      className={className}
+      class={className}
       aria-hidden
     >
       <path d={areaD} fill={fillColor} />
