@@ -1,4 +1,4 @@
-import { A, Outlet, useLocation } from "@solidjs/router";
+import { A, useLocation } from "@solidjs/router";
 import PageErrorBoundary from "./PageErrorBoundary";
 import PipelineRunner from "./PipelineRunner";
 import {
@@ -22,7 +22,7 @@ import {
   FileText,
   Play,
 } from "lucide-react";
-import { createSignal, createEffect, For, Show, type JSX } from "solid-js";
+import { createSignal, createEffect, For, Show, Suspense, type JSX } from "solid-js";
 import type { LucideIcon } from "lucide-react";
 import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
@@ -90,7 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export default function Layout() {
+export default function Layout(props: { children?: JSX.Element }) {
   const [collapsed, setCollapsed] = createSignal<Record<string, boolean>>({});
   const [pipelineOpen, setPipelineOpen] = createSignal(false);
   const health = useHealthQuery();
@@ -218,9 +218,21 @@ export default function Layout() {
       {/* Main */}
       <main class="flex-1 overflow-auto">
         <div class="mx-auto max-w-7xl px-6 py-8 min-h-[400px]">
-          <PageErrorBoundary>
-            <Outlet />
-          </PageErrorBoundary>
+          <Suspense
+            fallback={
+              <div class="flex items-center justify-center h-64">
+                <div
+                  class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"
+                  role="status"
+                  aria-label="Loading"
+                />
+              </div>
+            }
+          >
+            <PageErrorBoundary>
+              {props.children}
+            </PageErrorBoundary>
+          </Suspense>
         </div>
       </main>
 

@@ -1,5 +1,5 @@
 import { Router, Route } from "@solidjs/router";
-import { lazy, Suspense, Show, type JSX } from "solid-js";
+import { lazy, Show, type JSX } from "solid-js";
 import Layout from "./components/Layout";
 import { ToastProvider } from "./lib/toast";
 import ToastContainer from "./components/Toast";
@@ -25,18 +25,6 @@ const ChannelInsights = lazy(() => import("./pages/ChannelInsights"));
 const SpendPacing = lazy(() => import("./pages/SpendPacing"));
 const Report = lazy(() => import("./pages/Report"));
 
-function PageLoader() {
-  return (
-    <div class="flex items-center justify-center h-64">
-      <div
-        class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"
-        role="status"
-        aria-label="Loading"
-      />
-    </div>
-  );
-}
-
 function AnalyticsGate(props: { children: JSX.Element }) {
   const { analyticsEnabled } = useAnalyticsMode();
   return (
@@ -55,19 +43,20 @@ function AnalyticsGate(props: { children: JSX.Element }) {
   );
 }
 
-function AppRoutes() {
+function HomeRoute() {
   const { analyticsEnabled } = useAnalyticsMode();
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Route path="/" component={Layout}>
-        <Route
-          path="/"
-          component={() => (
-            <Show when={analyticsEnabled()} fallback={<Data />}>
-              <Dashboard />
-            </Show>
-          )}
-        />
+    <Show when={analyticsEnabled()} fallback={<Data />}>
+      <Dashboard />
+    </Show>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <Router root={Layout}>
+        <Route path="/" component={HomeRoute} />
         <Route path="/data" component={Data} />
         <Route path="/contributions" component={() => <AnalyticsGate><Contributions /></AnalyticsGate>} />
         <Route path="/optimization" component={() => <AnalyticsGate><Optimization /></AnalyticsGate>} />
@@ -84,16 +73,6 @@ function AppRoutes() {
         <Route path="/channel-insights" component={() => <AnalyticsGate><ChannelInsights /></AnalyticsGate>} />
         <Route path="/spend-pacing" component={() => <AnalyticsGate><SpendPacing /></AnalyticsGate>} />
         <Route path="/report" component={() => <AnalyticsGate><Report /></AnalyticsGate>} />
-      </Route>
-    </Suspense>
-  );
-}
-
-export default function App() {
-  return (
-    <ToastProvider>
-      <Router>
-        <AppRoutes />
       </Router>
       <ToastContainer />
     </ToastProvider>

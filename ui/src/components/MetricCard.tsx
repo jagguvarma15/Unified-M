@@ -46,11 +46,14 @@ export default function MetricCard(props: Props) {
     <div class="min-w-0 rounded-lg border border-slate-200/80 bg-white px-4 py-3 overflow-hidden">
       <p class="flex items-center gap-2 text-xs font-medium text-slate-500 truncate">
         <Show when={props.icon}>
-          {(Icon) => (
-            <span class={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color()]}`} aria-hidden>
-              <Icon() size={12} />
-            </span>
-          )}
+          {(Icon) => {
+            const Ic = Icon();
+            return (
+              <span class={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color()]}`} aria-hidden>
+                <Ic size={12} />
+              </span>
+            );
+          }}
         </Show>
         {labelEl()}
       </p>
