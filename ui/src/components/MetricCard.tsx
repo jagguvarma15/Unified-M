@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "../lib/icons";
 import { Show } from "solid-js";
 import Tooltip from "./Tooltip";
 import Sparkline from "./Sparkline";

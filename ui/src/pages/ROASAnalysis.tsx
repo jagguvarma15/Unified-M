@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show, For } from "solid-js";
-import { DollarSign, TrendingUp, BarChart2 } from "lucide-react";
+import { DollarSign, TrendingUp, BarChart2 } from "../lib/icons";
 import {
   BarChart,
   Bar,

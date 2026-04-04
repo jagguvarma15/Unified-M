@@ -1,5 +1,5 @@
 import { Show, For } from "solid-js";
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "../lib/icons";
 import { useToast, type ToastType } from "../lib/toast";
 
 const ICONS: Record<ToastType, typeof CheckCircle2> = {

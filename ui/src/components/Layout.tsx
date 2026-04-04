@@ -21,9 +21,9 @@ import {
   Gauge,
   FileText,
   Play,
-} from "lucide-react";
+  type LucideIcon,
+} from "../lib/icons";
 import { createSignal, createEffect, For, Show, Suspense, type JSX } from "solid-js";
-import type { LucideIcon } from "lucide-react";
 import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
 import { useQueryClient } from "@tanstack/solid-query";

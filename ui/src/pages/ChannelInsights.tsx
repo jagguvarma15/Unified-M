@@ -1,6 +1,6 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, Loader2 } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus, Loader2 } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";

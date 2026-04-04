@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show, For } from "solid-js";
-import { Loader2, Printer, Copy, Check, TrendingUp } from "lucide-react";
+import { Loader2, Printer, Copy, Check, TrendingUp } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import { api, type ReportSummaryData } from "../lib/api";
 

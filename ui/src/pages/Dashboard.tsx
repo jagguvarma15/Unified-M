@@ -1,5 +1,5 @@
 import { createMemo } from "solid-js";
-import { Activity } from "lucide-react";
+import { Activity } from "../lib/icons";
 import {
   PieChart,
   Pie,
