@@ -2,73 +2,18 @@
  * SolidJS-compatible wrappers for lucide-react icons.
  *
  * lucide-react icons are React.forwardRef objects (not callable functions).
- * SolidJS's JSX transform calls components as functions, which crashes.
+ * SolidJS's JSX transform calls components as functions, which crashes with
+ * "X is not a function". Additionally, even if callable, they return React
+ * element trees (nested forwardRefs), not real DOM nodes.
+ *
  * This module wraps each icon so it:
  *   1. Is callable (a plain function)
- *   2. Returns a real SVG DOM node (not a React element)
+ *   2. Returns a real SVG DOM node via react-dom/server's renderToStaticMarkup
  */
 
 import type { JSX } from "solid-js";
-
-// ---------------------------------------------------------------------------
-// React element → real SVG DOM converter
-// ---------------------------------------------------------------------------
-
-const SVG_NS = "http://www.w3.org/2000/svg";
-
-/** Map React camelCase SVG attributes to their kebab-case DOM equivalents */
-const ATTR_MAP: Record<string, string> = {
-  className: "class",
-  strokeWidth: "stroke-width",
-  strokeLinecap: "stroke-linecap",
-  strokeLinejoin: "stroke-linejoin",
-  strokeDasharray: "stroke-dasharray",
-  strokeDashoffset: "stroke-dashoffset",
-  strokeMiterlimit: "stroke-miterlimit",
-  fillRule: "fill-rule",
-  clipRule: "clip-rule",
-  xlinkHref: "xlink:href",
-};
-
-function reactElToDOM(el: unknown): Node | null {
-  if (el == null || typeof el === "boolean") return null;
-  if (typeof el === "string" || typeof el === "number")
-    return document.createTextNode(String(el));
-  if (Array.isArray(el)) {
-    const frag = document.createDocumentFragment();
-    for (const child of el) {
-      const n = reactElToDOM(child);
-      if (n) frag.appendChild(n);
-    }
-    return frag;
-  }
-
-  const { type, props } = el as { type: string; props: Record<string, unknown> };
-  if (typeof type !== "string") return null;
-
-  const node = document.createElementNS(SVG_NS, type);
-
-  if (props) {
-    for (const [key, val] of Object.entries(props)) {
-      if (key === "children" || key === "ref" || key === "key" || val == null)
-        continue;
-      if (key.startsWith("on")) continue;
-      const attr = ATTR_MAP[key] || key;
-      node.setAttribute(attr, String(val));
-    }
-
-    const children = props.children;
-    if (children != null) {
-      const items = Array.isArray(children) ? children : [children];
-      for (const c of items) {
-        const n = reactElToDOM(c);
-        if (n) node.appendChild(n);
-      }
-    }
-  }
-
-  return node;
-}
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 // ---------------------------------------------------------------------------
 // Icon wrapper
@@ -86,20 +31,21 @@ export interface IconProps {
 export type SolidIcon = (props: IconProps) => JSX.Element;
 
 /** Wrap a lucide-react forwardRef icon into a SolidJS-callable component. */
-function wrap(reactIcon: { render: Function } | Function): SolidIcon {
+function wrap(reactIcon: any): SolidIcon {
   return ((props: IconProps): any => {
     const reactProps: Record<string, unknown> = { ...props };
+    // SolidJS uses `class`, React uses `className`
     if (reactProps.class) {
       reactProps.className = reactProps.class;
       delete reactProps.class;
     }
-    const renderFn =
-      typeof reactIcon === "function"
-        ? reactIcon
-        : (reactIcon as any)?.render;
-    if (!renderFn) return null;
-    const reactEl = renderFn(reactProps, null);
-    return reactElToDOM(reactEl);
+    // Render the React component tree to an HTML string
+    const el = React.createElement(reactIcon, reactProps);
+    const html = renderToStaticMarkup(el);
+    // Parse the HTML string into a real DOM node
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    return template.content.firstChild;
   }) as SolidIcon;
 }
 
@@ -151,6 +97,7 @@ import {
   Plus as _Plus,
   Printer as _Printer,
   RefreshCw as _RefreshCw,
+  Server as _Server,
   Settings as _Settings,
   Shield as _Shield,
   ShieldCheck as _ShieldCheck,
@@ -210,6 +157,7 @@ export const Play = wrap(_Play);
 export const Plus = wrap(_Plus);
 export const Printer = wrap(_Printer);
 export const RefreshCw = wrap(_RefreshCw);
+export const Server = wrap(_Server);
 export const Settings = wrap(_Settings);
 export const Shield = wrap(_Shield);
 export const ShieldCheck = wrap(_ShieldCheck);

@@ -128,19 +128,21 @@ export default function ChannelInsights() {
 
 function ChannelCard(props: { insight: ChannelInsight; color: string }) {
   const variant = () => STATUS_VARIANT[props.insight.status] ?? "default";
-  const StatusIcon = () =>
-    props.insight.status === "over-saturated"
+  const StatusIcon = () => {
+    const Ic = props.insight.status === "over-saturated"
       ? TrendingDown
       : props.insight.status === "under-invested"
         ? TrendingUp
         : Minus;
+    return <Ic size={12} />;
+  };
   const name = () => props.insight.channel.replace(/_spend$/, "");
 
   return (
     <div class="rounded-xl border border-slate-200/60 bg-white p-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2">
       <div class="flex items-center justify-between mb-3">
         <h3 class="font-semibold text-slate-800 text-sm">{name()}</h3>
-        <Badge variant={variant() as any} icon={<StatusIcon size={12} />}>
+        <Badge variant={variant() as any} icon={StatusIcon()}>
           {props.insight.status}
         </Badge>
       </div>
