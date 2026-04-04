@@ -12,6 +12,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import EmptyState from "../components/EmptyState";
 import { COLORS } from "../lib/colors";
 import { useContributionsQuery } from "../lib/queries";
@@ -67,19 +68,21 @@ export default function Contributions() {
           {/* ---- Horizontal bar chart ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
             <h2 class="text-sm font-semibold text-slate-700 mb-4">Total Contribution by Channel</h2>
-            <ResponsiveContainer width="100%" height={Math.max(200, channels().length * 52)}>
-              <BarChart data={channelTotals()} layout="vertical" margin={{ left: 80, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                <YAxis type="category" dataKey="channel" tick={{ fontSize: 13 }} width={75} />
-                <Tooltip formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })} />
-                <Bar dataKey="total" radius={[0, 6, 6, 0]}>
-                  {channelTotals().map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ReactChart>
+              {() => h(ResponsiveContainer, { width: "100%", height: Math.max(200, channels().length * 52) },
+                h(BarChart, { data: channelTotals(), layout: "vertical", margin: { left: 80, right: 20 } },
+                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0", horizontal: false }),
+                  h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                  h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 13 }, width: 75 }),
+                  h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
+                  h(Bar, { dataKey: "total", radius: [0, 6, 6, 0] },
+                    ...channelTotals().map((_, i) =>
+                      h(Cell, { key: i, fill: COLORS[i % COLORS.length] })
+                    )
+                  )
+                )
+              )}
+            </ReactChart>
           </div>
 
           {/* ---- Stacked area timeline ---- */}

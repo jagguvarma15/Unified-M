@@ -11,6 +11,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import { Calculator } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import { api, type OptimizationData, type ResponseCurvesData } from "../lib/api";
@@ -300,26 +301,28 @@ export default function ScenarioPlanner() {
               <h2 class="text-sm font-semibold text-slate-700 mb-4">
                 Scenario Comparison by Channel
               </h2>
-              <ResponsiveContainer width="100%" height={360}>
-                <BarChart data={comparisonData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="channel" tick={{ fontSize: 13 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip
-                    formatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                  />
-                  <Legend />
-                  {scenarios().map((s, i) => (
-                    <Bar
-                      key={s.id}
-                      dataKey={s.name}
-                      fill={COLORS[i % COLORS.length]}
-                      radius={[4, 4, 0, 0]}
-                      fillOpacity={activeScenarioId() === s.id ? 1 : 0.5}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
+              <ReactChart>
+                {() => h(ResponsiveContainer, { width: "100%", height: 360 },
+                  h(BarChart, { data: comparisonData() },
+                    h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                    h(XAxis, { dataKey: "channel", tick: { fontSize: 13 } }),
+                    h(YAxis, { tick: { fontSize: 12 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
+                    h(Tooltip, {
+                      formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                    }),
+                    h(Legend),
+                    ...scenarios().map((s, i) =>
+                      h(Bar, {
+                        key: s.id,
+                        dataKey: s.name,
+                        fill: COLORS[i % COLORS.length],
+                        radius: [4, 4, 0, 0],
+                        fillOpacity: activeScenarioId() === s.id ? 1 : 0.5,
+                      })
+                    )
+                  )
+                )}
+              </ReactChart>
             </div>
 
             {/* Scenario summary table */}
@@ -391,33 +394,35 @@ export default function ScenarioPlanner() {
                 <p class="text-xs text-slate-500 mb-4">
                   Expected optimal response at different budget levels (diminishing returns)
                 </p>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={efficiencyData()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis
-                      dataKey="budget"
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                      label={{ value: "Total Budget", position: "insideBottomRight", offset: -5, fontSize: 12 }}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12 }}
-                      label={{ value: "Expected Response", angle: -90, position: "insideLeft", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      labelFormatter={(v) => `Budget: $${Number(v).toLocaleString()}`}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="response"
-                      stroke="#6366f1"
-                      strokeWidth={2.5}
-                      dot={false}
-                      name="Optimal Response"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: 300 },
+                    h(LineChart, { data: efficiencyData() },
+                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                      h(XAxis, {
+                        dataKey: "budget",
+                        tick: { fontSize: 12 },
+                        tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k`,
+                        label: { value: "Total Budget", position: "insideBottomRight", offset: -5, fontSize: 12 },
+                      }),
+                      h(YAxis, {
+                        tick: { fontSize: 12 },
+                        label: { value: "Expected Response", angle: -90, position: "insideLeft", fontSize: 12 },
+                      }),
+                      h(Tooltip, {
+                        formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+                        labelFormatter: (v: string) => `Budget: $${Number(v).toLocaleString()}`,
+                      }),
+                      h(Line, {
+                        type: "monotone",
+                        dataKey: "response",
+                        stroke: "#6366f1",
+                        strokeWidth: 2.5,
+                        dot: false,
+                        name: "Optimal Response",
+                      })
+                    )
+                  )}
+                </ReactChart>
               </div>
             </Show>
           </div>

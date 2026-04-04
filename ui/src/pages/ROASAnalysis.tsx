@@ -16,6 +16,7 @@ import {
   Radar,
   Legend,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type ROASData } from "../lib/api";
@@ -127,19 +128,21 @@ export default function ROASAnalysis() {
                 <h2 class="text-sm font-semibold text-slate-700 mb-4">
                   ROAS by Channel
                 </h2>
-                <ResponsiveContainer width="100%" height={Math.max(200, data()!.channels.length * 48)}>
-                  <BarChart data={sorted()} layout="vertical" margin={{ left: 80, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `${v.toFixed(1)}x`} />
-                    <YAxis type="category" dataKey="channel" tick={{ fontSize: 13 }} width={75} />
-                    <Tooltip formatter={(v: number) => `${v.toFixed(2)}x`} />
-                    <Bar dataKey="roas" radius={[0, 6, 6, 0]} name="ROAS">
-                      {sorted().map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: Math.max(200, data()!.channels.length * 48) },
+                    h(BarChart, { data: sorted(), layout: "vertical", margin: { left: 80, right: 20 } },
+                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0", horizontal: false }),
+                      h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => `${v.toFixed(1)}x` }),
+                      h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 13 }, width: 75 }),
+                      h(Tooltip, { formatter: (v: number) => `${v.toFixed(2)}x` }),
+                      h(Bar, { dataKey: "roas", radius: [0, 6, 6, 0], name: "ROAS" },
+                        ...sorted().map((_, i) =>
+                          h(Cell, { key: i, fill: COLORS[i % COLORS.length] })
+                        )
+                      )
+                    )
+                  )}
+                </ReactChart>
               </div>
 
               {/* Channel efficiency radar */}
@@ -147,25 +150,27 @@ export default function ROASAnalysis() {
                 <h2 class="text-sm font-semibold text-slate-700 mb-4">
                   Channel Efficiency Radar
                 </h2>
-                <ResponsiveContainer width="100%" height={Math.max(300, data()!.channels.length * 48)}>
-                  <RadarChart data={radarChartData()}>
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
-                    <PolarRadiusAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-                    {data()!.channels.map((ch, i) => (
-                      <Radar
-                        key={ch.channel}
-                        name={ch.channel}
-                        dataKey={ch.channel}
-                        stroke={COLORS[i % COLORS.length]}
-                        fill={COLORS[i % COLORS.length]}
-                        fillOpacity={0.15}
-                        strokeWidth={2}
-                      />
-                    ))}
-                    <Legend />
-                  </RadarChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: Math.max(300, data()!.channels.length * 48) },
+                    h(RadarChart, { data: radarChartData() },
+                      h(PolarGrid, { stroke: "#e2e8f0" }),
+                      h(PolarAngleAxis, { dataKey: "metric", tick: { fontSize: 11 } }),
+                      h(PolarRadiusAxis, { tick: { fontSize: 10 }, domain: [0, 100] }),
+                      ...data()!.channels.map((ch, i) =>
+                        h(Radar, {
+                          key: ch.channel,
+                          name: ch.channel,
+                          dataKey: ch.channel,
+                          stroke: COLORS[i % COLORS.length],
+                          fill: COLORS[i % COLORS.length],
+                          fillOpacity: 0.15,
+                          strokeWidth: 2,
+                        })
+                      ),
+                      h(Legend)
+                    )
+                  )}
+                </ReactChart>
               </div>
             </div>
 
@@ -174,24 +179,21 @@ export default function ROASAnalysis() {
               <h2 class="text-sm font-semibold text-slate-700 mb-4">
                 Spend vs Contribution by Channel
               </h2>
-              <ResponsiveContainer width="100%" height={360}>
-                <BarChart data={sorted()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="channel" tick={{ fontSize: 13 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    formatter={(v: number) =>
-                      `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                    }
-                  />
-                  <Legend />
-                  <Bar dataKey="total_spend" name="Total Spend" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="total_contribution" name="Total Contribution" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <ReactChart>
+                {() => h(ResponsiveContainer, { width: "100%", height: 360 },
+                  h(BarChart, { data: sorted() },
+                    h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                    h(XAxis, { dataKey: "channel", tick: { fontSize: 13 } }),
+                    h(YAxis, { tick: { fontSize: 12 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
+                    h(Tooltip, {
+                      formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                    }),
+                    h(Legend),
+                    h(Bar, { dataKey: "total_spend", name: "Total Spend", fill: "#94a3b8", radius: [4, 4, 0, 0] }),
+                    h(Bar, { dataKey: "total_contribution", name: "Total Contribution", fill: "#6366f1", radius: [4, 4, 0, 0] })
+                  )
+                )}
+              </ReactChart>
             </div>
 
             {/* Detailed table */}

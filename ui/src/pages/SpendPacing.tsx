@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import { Loader2, ArrowUp, ArrowDown, Minus, DollarSign, TrendingUp, Target } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -104,24 +105,26 @@ export default function SpendPacing() {
                 description="Actual cumulative media spend trajectory"
                 minHeight={320}
               >
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={data()!.cumulative} margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                      formatter={(v: number) => [`$${v.toLocaleString()}`, "Cumulative Spend"]}
-                    />
-                    <Area type="monotone" dataKey="actual" stroke="#6366f1" fill="url(#spendGrad)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: 260 },
+                    h(AreaChart, { data: data()!.cumulative, margin: { left: 10, right: 10, top: 5, bottom: 5 } },
+                      h("defs", null,
+                        h("linearGradient", { id: "spendGrad", x1: "0", y1: "0", x2: "0", y2: "1" },
+                          h("stop", { offset: "5%", stopColor: "#6366f1", stopOpacity: 0.15 }),
+                          h("stop", { offset: "95%", stopColor: "#6366f1", stopOpacity: 0 })
+                        )
+                      ),
+                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID }),
+                      h(XAxis, { dataKey: "date", tick: { fontSize: 11 } }),
+                      h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
+                      h(Tooltip, {
+                        contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
+                        formatter: (v: number) => [`$${v.toLocaleString()}`, "Cumulative Spend"],
+                      }),
+                      h(Area, { type: "monotone", dataKey: "actual", stroke: "#6366f1", fill: "url(#spendGrad)", strokeWidth: 2 })
+                    )
+                  )}
+                </ReactChart>
               </ChartCard>
             </Show>
 

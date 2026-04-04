@@ -21,6 +21,7 @@ import {
   Scatter,
   ZAxis,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -159,22 +160,18 @@ export default function Dashboard() {
                   actionLabel="View diagnostics →"
                   minHeight={260}
                 >
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart
-                      data={diagnostics()!.chart}
-                      onClick={() => trackEvent("chart_interaction", { chart_id: "dashboard_model_fit", interaction: "click" })}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                      <XAxis dataKey="date" {...getDateAxisProps(diagnostics()!.chart.length)} />
-                      <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                      <Tooltip
-                        contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                        formatter={(v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), ""]}
-                      />
-                      <Line type="monotone" dataKey="actual" stroke="#334155" strokeWidth={1.5} dot={false} name="Actual" />
-                      <Line type="monotone" dataKey="predicted" stroke="#6366f1" strokeWidth={1.5} dot={false} strokeDasharray="5 3" name="Predicted" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() => h(ResponsiveContainer, { width: "100%", height: 220 },
+                      h(LineChart, { data: diagnostics()!.chart, onClick: () => trackEvent("chart_interaction", { chart_id: "dashboard_model_fit", interaction: "click" }) },
+                        h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID }),
+                        h(XAxis, { dataKey: "date", ...getDateAxisProps(diagnostics()!.chart.length) }),
+                        h(YAxis, { tick: { fontSize: 10 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                        h(Tooltip, { contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }, formatter: (v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), ""] }),
+                        h(Line, { type: "monotone", dataKey: "actual", stroke: "#334155", strokeWidth: 1.5, dot: false, name: "Actual" }),
+                        h(Line, { type: "monotone", dataKey: "predicted", stroke: "#6366f1", strokeWidth: 1.5, dot: false, strokeDasharray: "5 3", name: "Predicted" })
+                      )
+                    )}
+                  </ReactChart>
                 </ChartCard>
               </Show>
 
@@ -190,38 +187,38 @@ export default function Dashboard() {
                     when={contribShares().length > 0}
                     fallback={<p class="text-sm text-slate-400 py-20 text-center">No contribution data</p>}
                   >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <PieChart>
-                        <Pie
-                          data={contribShares()}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius="50%"
-                          outerRadius="78%"
-                          paddingAngle={2}
-                          label={({ name, percent }) => {
-                            if (percent < CONTRIB_LABEL_MIN_PERCENT) return null;
-                            const pctStr = `${(percent * 100).toFixed(0)}%`;
-                            const shortName = name.startsWith("Others (") ? "Others" : name;
-                            return `${shortName} ${pctStr}`;
-                          }}
-                          labelLine={true}
-                        >
-                          {contribShares().map((_, i) => (
-                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(v: number, name: string) => {
-                            const total = contribShares().reduce((s, d) => s + d.value, 0);
-                            const pct = total > 0 ? (Number(v) / total) * 100 : 0;
-                            return [v.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ` (${pct.toFixed(1)}%)`, name];
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(PieChart, null,
+                          h(Pie, {
+                            data: contribShares(),
+                            dataKey: "value",
+                            nameKey: "name",
+                            cx: "50%",
+                            cy: "50%",
+                            innerRadius: "50%",
+                            outerRadius: "78%",
+                            paddingAngle: 2,
+                            label: ({ name, percent }: any) => {
+                              if (percent < CONTRIB_LABEL_MIN_PERCENT) return null;
+                              const pctStr = `${(percent * 100).toFixed(0)}%`;
+                              const shortName = name.startsWith("Others (") ? "Others" : name;
+                              return `${shortName} ${pctStr}`;
+                            },
+                            labelLine: true,
+                          },
+                            ...contribShares().map((_, i) => h(Cell, { key: i, fill: COLORS[i % COLORS.length] }))
+                          ),
+                          h(Tooltip, {
+                            formatter: (v: number, name: string) => {
+                              const total = contribShares().reduce((s, d) => s + d.value, 0);
+                              const pct = total > 0 ? (Number(v) / total) * 100 : 0;
+                              return [v.toLocaleString(undefined, { maximumFractionDigits: 0 }) + ` (${pct.toFixed(1)}%)`, name];
+                            },
+                          })
+                        )
+                      )}
+                    </ReactChart>
                   </Show>
                 </ChartCard>
 
@@ -235,22 +232,20 @@ export default function Dashboard() {
                     when={waterfallBars().length > 0}
                     fallback={<p class="text-sm text-slate-400 py-20 text-center">No waterfall data</p>}
                   >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={waterfallBars()} margin={{ left: 10, right: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                        <Tooltip
-                          formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        />
-                        <Bar dataKey="invisible" stackId="stack" fill="transparent" />
-                        <Bar dataKey="value" stackId="stack" radius={[4, 4, 0, 0]}>
-                          {waterfallBars().map((d, i) => (
-                            <Cell key={i} fill={d.color} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(BarChart, { data: waterfallBars(), margin: { left: 10, right: 10 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID }),
+                          h(XAxis, { dataKey: "name", tick: { fontSize: 11 } }),
+                          h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                          h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
+                          h(Bar, { dataKey: "invisible", stackId: "stack", fill: "transparent" }),
+                          h(Bar, { dataKey: "value", stackId: "stack", radius: [4, 4, 0, 0] },
+                            ...waterfallBars().map((d, i) => h(Cell, { key: i, fill: d.color }))
+                          )
+                        )
+                      )}
+                    </ReactChart>
                   </Show>
                 </ChartCard>
               </div>
@@ -267,48 +262,30 @@ export default function Dashboard() {
                     when={reconBars().length > 0}
                     fallback={<p class="text-sm text-slate-400 py-20 text-center">No reconciliation data</p>}
                   >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart
-                        data={reconBars()}
-                        layout="vertical"
-                        margin={{ left: 60 }}
-                      >
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          stroke={CHART_GRID}
-                          horizontal={false}
-                        />
-                        <XAxis type="number" tick={{ fontSize: 12 }} />
-                        <YAxis
-                          type="category"
-                          dataKey="channel"
-                          tick={{ fontSize: 12 }}
-                        />
-                        <Tooltip
-                          formatter={(_: number, __: string, entry: any) => {
-                            const d = entry.payload;
-                            return [
-                              `${d.lift.toFixed(4)}  [${d.ciLo.toFixed(4)}, ${d.ciHi.toFixed(4)}]`,
-                              "Lift (95% CI)",
-                            ];
-                          }}
-                        />
-                        <Bar dataKey="lift" radius={[0, 4, 4, 0]}>
-                          {reconBars().map((d, i) => (
-                            <Cell
-                              key={i}
-                              fill={
-                                d.confidence > 0.7
-                                  ? "#6366f1"
-                                  : d.confidence > 0.4
-                                    ? "#f59e0b"
-                                    : "#ef4444"
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(BarChart, { data: reconBars(), layout: "vertical", margin: { left: 60 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
+                          h(XAxis, { type: "number", tick: { fontSize: 12 } }),
+                          h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 12 } }),
+                          h(Tooltip, {
+                            formatter: (_: number, __: string, entry: any) => {
+                              const d = entry.payload;
+                              return [
+                                `${d.lift.toFixed(4)}  [${d.ciLo.toFixed(4)}, ${d.ciHi.toFixed(4)}]`,
+                                "Lift (95% CI)",
+                              ];
+                            },
+                          }),
+                          h(Bar, { dataKey: "lift", radius: [0, 4, 4, 0] },
+                            ...reconBars().map((d, i) => h(Cell, {
+                              key: i,
+                              fill: d.confidence > 0.7 ? "#6366f1" : d.confidence > 0.4 ? "#f59e0b" : "#ef4444",
+                            }))
+                          )
+                        )
+                      )}
+                    </ReactChart>
                   </Show>
                 </ChartCard>
 
@@ -321,23 +298,20 @@ export default function Dashboard() {
                     actionLabel="Full analysis →"
                     minHeight={320}
                   >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={roas()!.channels} layout="vertical" margin={{ left: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
-                        <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v: number) => formatROAS(v, 1)} />
-                        <YAxis type="category" dataKey="channel" tick={{ fontSize: 12 }} />
-                        <Tooltip contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }} formatter={(v: number) => [formatROAS(v), "ROAS"]} />
-                        <ReferenceLine x={roas()!.summary.blended_roas} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: "Avg", fontSize: 10 }} />
-                        <Bar dataKey="roas" radius={[0, 4, 4, 0]} name="ROAS">
-                          {roas()!.channels.map((c, i) => (
-                            <Cell
-                              key={i}
-                              fill={c.roas >= roas()!.summary.blended_roas ? "#10b981" : "#f59e0b"}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(BarChart, { data: roas()!.channels, layout: "vertical", margin: { left: 60 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
+                          h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => formatROAS(v, 1) }),
+                          h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 12 } }),
+                          h(Tooltip, { contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }, formatter: (v: number) => [formatROAS(v), "ROAS"] }),
+                          h(ReferenceLine, { x: roas()!.summary.blended_roas, stroke: "#94a3b8", strokeDasharray: "4 4", label: { value: "Avg", fontSize: 10 } }),
+                          h(Bar, { dataKey: "roas", radius: [0, 4, 4, 0], name: "ROAS" },
+                            ...roas()!.channels.map((c, i) => h(Cell, { key: i, fill: c.roas >= roas()!.summary.blended_roas ? "#10b981" : "#f59e0b" }))
+                          )
+                        )
+                      )}
+                    </ReactChart>
                   </ChartCard>
                 </Show>
               </div>
@@ -353,28 +327,22 @@ export default function Dashboard() {
                     actionLabel="Optimizer →"
                     minHeight={320}
                   >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart
-                        data={getAllocComparison(optimization()!)}
-                        layout="vertical"
-                        margin={{ left: 70, right: 10 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
-                        <XAxis
-                          type="number"
-                          tick={{ fontSize: 11 }}
-                          tickFormatter={(v: number) => formatSpendTick(v)}
-                        />
-                        <YAxis type="category" dataKey="channel" tick={{ fontSize: 11 }} width={60} />
-                        <Tooltip
-                          formatter={(v: number, name: string) => [`$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, name]}
-                          contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: 11 }} />
-                        <Bar dataKey="current" name="Current" fill="#94a3b8" radius={[0, 3, 3, 0]} barSize={10} />
-                        <Bar dataKey="optimal" name="Optimal" fill="#6366f1" radius={[0, 3, 3, 0]} barSize={10} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(BarChart, { data: getAllocComparison(optimization()!), layout: "vertical", margin: { left: 70, right: 10 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
+                          h(XAxis, { type: "number", tick: { fontSize: 11 }, tickFormatter: (v: number) => formatSpendTick(v) }),
+                          h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 11 }, width: 60 }),
+                          h(Tooltip, {
+                            formatter: (v: number, name: string) => [`$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, name],
+                            contentStyle: { background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
+                          }),
+                          h(Legend, { wrapperStyle: { fontSize: 11 } }),
+                          h(Bar, { dataKey: "current", name: "Current", fill: "#94a3b8", radius: [0, 3, 3, 0], barSize: 10 }),
+                          h(Bar, { dataKey: "optimal", name: "Optimal", fill: "#6366f1", radius: [0, 3, 3, 0], barSize: 10 })
+                        )
+                      )}
+                    </ReactChart>
                   </ChartCard>
                 </Show>
 
@@ -387,58 +355,41 @@ export default function Dashboard() {
                     actionLabel="Insights →"
                     minHeight={320}
                   >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <ScatterChart margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                        <XAxis
-                          type="number"
-                          dataKey="spend"
-                          name="Total Spend"
-                          tick={{ fontSize: 11 }}
-                          tickFormatter={(v: number) => formatSpendTick(v)}
-                          label={{ value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "#94a3b8" }}
-                        />
-                        <YAxis
-                          type="number"
-                          dataKey="roas"
-                          name="ROAS"
-                          tick={{ fontSize: 11 }}
-                          tickFormatter={(v: number) => formatROAS(v, 1)}
-                          label={{ value: "ROAS", angle: -90, position: "insideLeft", fontSize: 10, fill: "#94a3b8" }}
-                        />
-                        <ZAxis type="number" dataKey="contribution" range={[60, 400]} name="Contribution" />
-                        <Tooltip
-                          cursor={{ strokeDasharray: "3 3" }}
-                          contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                          formatter={(v: number, name: string) => {
-                            if (name === "Total Spend" || name === "Contribution")
-                              return [`$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, name];
-                            return [`${v.toFixed(2)}x`, name];
-                          }}
-                          labelFormatter={(_: any, payload: any) => {
-                            const p = payload?.[0]?.payload;
-                            return p?.channel ?? "";
-                          }}
-                        />
-                        <ReferenceLine y={roas()!.summary.blended_roas} stroke="#94a3b8" strokeDasharray="4 4" />
-                        <Scatter
-                          data={roas()!.channels.map((c) => ({
-                            channel: c.channel.replace(/_spend$/, ""),
-                            spend: c.total_spend,
-                            roas: c.roas,
-                            contribution: c.total_contribution,
-                          }))}
-                          fill="#6366f1"
-                        >
-                          {roas()!.channels.map((c, i) => (
-                            <Cell
-                              key={i}
-                              fill={c.roas >= roas()!.summary.blended_roas ? "#10b981" : "#f59e0b"}
-                            />
-                          ))}
-                        </Scatter>
-                      </ScatterChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(ScatterChart, { margin: { left: 10, right: 20, top: 10, bottom: 10 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID }),
+                          h(XAxis, { type: "number", dataKey: "spend", name: "Total Spend", tick: { fontSize: 11 }, tickFormatter: (v: number) => formatSpendTick(v), label: { value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "#94a3b8" } }),
+                          h(YAxis, { type: "number", dataKey: "roas", name: "ROAS", tick: { fontSize: 11 }, tickFormatter: (v: number) => formatROAS(v, 1), label: { value: "ROAS", angle: -90, position: "insideLeft", fontSize: 10, fill: "#94a3b8" } }),
+                          h(ZAxis, { type: "number", dataKey: "contribution", range: [60, 400], name: "Contribution" }),
+                          h(Tooltip, {
+                            cursor: { strokeDasharray: "3 3" },
+                            contentStyle: { background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
+                            formatter: (v: number, name: string) => {
+                              if (name === "Total Spend" || name === "Contribution")
+                                return [`$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, name];
+                              return [`${v.toFixed(2)}x`, name];
+                            },
+                            labelFormatter: (_: any, payload: any) => {
+                              const p = payload?.[0]?.payload;
+                              return p?.channel ?? "";
+                            },
+                          }),
+                          h(ReferenceLine, { y: roas()!.summary.blended_roas, stroke: "#94a3b8", strokeDasharray: "4 4" }),
+                          h(Scatter, {
+                            data: roas()!.channels.map((c) => ({
+                              channel: c.channel.replace(/_spend$/, ""),
+                              spend: c.total_spend,
+                              roas: c.roas,
+                              contribution: c.total_contribution,
+                            })),
+                            fill: "#6366f1",
+                          },
+                            ...roas()!.channels.map((c, i) => h(Cell, { key: i, fill: c.roas >= roas()!.summary.blended_roas ? "#10b981" : "#f59e0b" }))
+                          )
+                        )
+                      )}
+                    </ReactChart>
                   </ChartCard>
                 </Show>
               </div>

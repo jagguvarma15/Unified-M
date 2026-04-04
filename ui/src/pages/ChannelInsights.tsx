@@ -1,5 +1,6 @@
 import { createSignal, onMount, Show, For } from "solid-js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus, Loader2 } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -85,31 +86,31 @@ export default function ChannelInsights() {
             description="Additional return from the next dollar of spend (sorted highest first)"
             minHeight={320}
           >
-            <ResponsiveContainer width="100%" height={Math.max(280, marginalData().length * 44)}>
-              <BarChart data={marginalData()} layout="vertical" margin={{ left: 100, right: 20, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v: number) => v.toFixed(3)} />
-                <YAxis type="category" dataKey="channel" tick={{ fontSize: 12 }} width={90} />
-                <Tooltip
-                  contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                  formatter={(v: number) => [v.toFixed(6), "Marginal ROI"]}
-                />
-                <Bar dataKey="marginal_roi" radius={[0, 4, 4, 0]}>
-                  {marginalData().map((entry, i) => (
-                    <Cell
-                      key={i}
-                      fill={
-                        entry.status === "over-saturated"
+            <ReactChart>
+              {() => h(ResponsiveContainer, { width: "100%", height: Math.max(280, marginalData().length * 44) },
+                h(BarChart, { data: marginalData(), layout: "vertical", margin: { left: 100, right: 20, top: 5, bottom: 5 } },
+                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
+                  h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => v.toFixed(3) }),
+                  h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 12 }, width: 90 }),
+                  h(Tooltip, {
+                    contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
+                    formatter: (v: number) => [v.toFixed(6), "Marginal ROI"],
+                  }),
+                  h(Bar, { dataKey: "marginal_roi", radius: [0, 4, 4, 0] },
+                    ...marginalData().map((entry, i) =>
+                      h(Cell, {
+                        key: i,
+                        fill: entry.status === "over-saturated"
                           ? "#f59e0b"
                           : entry.status === "under-invested"
                             ? "#6366f1"
-                            : "#10b981"
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                            : "#10b981",
+                      })
+                    )
+                  )
+                )
+              )}
+            </ReactChart>
           </ChartCard>
 
           {/* Per-channel cards */}
