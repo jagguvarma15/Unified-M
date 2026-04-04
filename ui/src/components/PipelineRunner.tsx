@@ -18,6 +18,7 @@ import {
 import { api, type PipelineJob } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { useAnalyticsMode } from "../lib/analyticsMode";
+import { useQueryClient } from "@tanstack/solid-query";
 
 const STEPS = [
   { key: "connect", label: "Connect", icon: Database },
@@ -91,6 +92,7 @@ export default function PipelineRunner(props: Props) {
   let pollInterval: ReturnType<typeof setInterval> | undefined;
   const { addToast } = useToast();
   const { setAnalyticsEnabled } = useAnalyticsMode();
+  const queryClient = useQueryClient();
 
   const isRunning = () => job()?.status === "pending" || job()?.status === "running";
   const isDone = () => job()?.status === "completed" || job()?.status === "failed";
@@ -136,6 +138,7 @@ export default function PipelineRunner(props: Props) {
         if (!cancelled) setJob(j);
         if (j.status === "completed") {
           setAnalyticsEnabled(true);
+          queryClient.invalidateQueries();
           addToast("success", `Pipeline completed (run: ${j.run_id?.slice(0, 12)})`);
         } else if (j.status === "failed") {
           addToast("error", `Pipeline failed: ${j.error || "Unknown error"}`);

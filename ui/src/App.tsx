@@ -33,7 +33,7 @@ function AnalyticsGate(props: { children: JSX.Element }) {
       fallback={
         <EmptyState
           title="Analytics Hidden"
-          message="Enable the sample-data toggle in Run Pipeline to view analytics pages."
+          message="Run the pipeline to generate analytics data. Results will appear automatically."
           action={{ label: "Go to Data", href: "/data" }}
         />
       }

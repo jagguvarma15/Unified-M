@@ -150,49 +150,56 @@ export default function Layout(props: { children?: JSX.Element }) {
         <nav class="flex-1 px-2.5 space-y-3 overflow-y-auto py-2">
           <For each={NAV_SECTIONS}>
             {(section) => {
-              let items = section.items;
-              if (!analyticsEnabled()) {
-                if (section.title === "Overview") {
-                  items = section.items.filter((it) => it.to !== "/");
-                } else if (section.title !== "Configuration") {
-                  items = [];
+              // Derive visible items as a reactive accessor so the
+              // sidebar updates when analyticsEnabled() changes.
+              const items = (): NavItem[] => {
+                if (!analyticsEnabled()) {
+                  if (section.title === "Overview") {
+                    return section.items.filter((it) => it.to !== "/");
+                  }
+                  if (section.title !== "Configuration") {
+                    return [];
+                  }
                 }
-              }
-              if (items.length === 0) return null;
+                return section.items;
+              };
+
               return (
-                <div>
-                  <button
-                    onClick={() => toggleSection(section.title)}
-                    aria-expanded={!collapsed()[section.title]}
-                    aria-label={`${collapsed()[section.title] ? "Expand" : "Collapse"} ${section.title}`}
-                    class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-400 transition-colors"
-                  >
-                    {section.title}
-                    <ChevronDown
-                      size={12}
-                      aria-hidden
-                      class={`shrink-0 transition-transform ${collapsed()[section.title] ? "-rotate-90" : ""}`}
-                    />
-                  </button>
-                  <Show when={!collapsed()[section.title]}>
-                    <div class="mt-0.5 space-y-0.5">
-                      <For each={items}>
-                        {({ to, label, icon: Icon }) => (
-                          <A
-                            href={to}
-                            end={to === "/"}
-                            activeClass="bg-indigo-600 text-white"
-                            inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
-                            class="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
-                          >
-                            <Icon size={16} class="shrink-0" />
-                            {label}
-                          </A>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
-                </div>
+                <Show when={items().length > 0}>
+                  <div>
+                    <button
+                      onClick={() => toggleSection(section.title)}
+                      aria-expanded={!collapsed()[section.title]}
+                      aria-label={`${collapsed()[section.title] ? "Expand" : "Collapse"} ${section.title}`}
+                      class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-400 transition-colors"
+                    >
+                      {section.title}
+                      <ChevronDown
+                        size={12}
+                        aria-hidden
+                        class={`shrink-0 transition-transform ${collapsed()[section.title] ? "-rotate-90" : ""}`}
+                      />
+                    </button>
+                    <Show when={!collapsed()[section.title]}>
+                      <div class="mt-0.5 space-y-0.5">
+                        <For each={items()}>
+                          {(item) => (
+                            <A
+                              href={item.to}
+                              end={item.to === "/"}
+                              activeClass="bg-indigo-600 text-white"
+                              inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                              class="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+                            >
+                              {item.icon({ size: 16, class: "shrink-0" })}
+                              {item.label}
+                            </A>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
               );
             }}
           </For>
