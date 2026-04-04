@@ -135,6 +135,7 @@ export default function PipelineRunner(props: Props) {
         const j = await api.getJob(id);
         if (!cancelled) setJob(j);
         if (j.status === "completed") {
+          setAnalyticsEnabled(true);
           addToast("success", `Pipeline completed (run: ${j.run_id?.slice(0, 12)})`);
         } else if (j.status === "failed") {
           addToast("error", `Pipeline failed: ${j.error || "Unknown error"}`);

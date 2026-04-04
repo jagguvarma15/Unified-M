@@ -108,6 +108,10 @@ export default function Layout(props: { children?: JSX.Element }) {
       }
     } else {
       didClear = false;
+      // Enable analytics when API is up and at least one run exists
+      if (health.data?.latest_run) {
+        setAnalyticsEnabled(true);
+      }
     }
   });
 
