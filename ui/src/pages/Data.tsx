@@ -8,7 +8,7 @@ import {
   Loader2,
   FileText,
   AlertCircle,
-} from "lucide-react";
+} from "../lib/icons";
 import type { DataSourceStatus } from "../lib/api";
 import { qk } from "../lib/queryKeys";
 import { useDataStatusQuery, useTriggerPipelineMutation, useUploadFileMutation } from "../lib/queries";

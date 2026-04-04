@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show, For } from "solid-js";
-import { Shield, AlertTriangle, TrendingUp, Activity } from "lucide-react";
+import { Shield, AlertTriangle, TrendingUp, Activity } from "../lib/icons";
 import {
   BarChart,
   Bar,

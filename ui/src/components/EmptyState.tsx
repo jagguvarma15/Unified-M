@@ -1,4 +1,4 @@
-import { Database, ExternalLink, Play } from "lucide-react";
+import { Database, ExternalLink, Play } from "../lib/icons";
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 

@@ -12,7 +12,7 @@ import {
   Database,
   Cloud,
   Megaphone,
-} from "lucide-react";
+} from "../lib/icons";
 import {
   BarChart,
   Bar,

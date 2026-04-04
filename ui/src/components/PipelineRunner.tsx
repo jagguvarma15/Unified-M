@@ -14,7 +14,7 @@ import {
   GitMerge,
   Target,
   FileCheck,
-} from "lucide-react";
+} from "../lib/icons";
 import { api, type PipelineJob } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { useAnalyticsMode } from "../lib/analyticsMode";

@@ -11,7 +11,7 @@ import {
   Trash2,
   Download,
   X,
-} from "lucide-react";
+} from "../lib/icons";
 import PageHeader from "../components/PageHeader";
 import { api, type SavedConnector } from "../lib/api";
 import { useToast } from "../lib/toast";

@@ -8,14 +8,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Loader2, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, Minus, DollarSign, TrendingUp, Target } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import MetricCard from "../components/MetricCard";
 import Badge from "../components/Badge";
 import ChartCard from "../components/ChartCard";
 import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from "../components/Table";
-import { DollarSign, TrendingUp, Target } from "lucide-react";
 import { api, type SpendPacingData } from "../lib/api";
 import { CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
 import { formatCurrency } from "../lib/format";

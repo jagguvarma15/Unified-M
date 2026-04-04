@@ -15,7 +15,7 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
-import { Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2 } from "../lib/icons";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type DiagnosticsData } from "../lib/api";

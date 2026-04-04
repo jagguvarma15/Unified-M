@@ -11,7 +11,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { Calculator } from "lucide-react";
+import { Calculator } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import { api, type OptimizationData, type ResponseCurvesData } from "../lib/api";
 import { COLORS } from "../lib/colors";

@@ -5,7 +5,7 @@ import {
   AlertTriangle,
   Shield,
   Database,
-} from "lucide-react";
+} from "../lib/icons";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type DataQualityData, type GateResult } from "../lib/api";

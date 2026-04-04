@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show, For } from "solid-js";
-import { CheckCircle, XCircle, Target, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, Target, AlertTriangle } from "../lib/icons";
 import {
   ScatterChart,
   Scatter,
