@@ -201,10 +201,11 @@ jobs:
 
       - name: Verify API starts
         run: |
-          docker run --rm -d --name api-smoke -p 8000:8000 unified-m-api-test
-          sleep 5
-          curl -sf http://localhost:8000/health || (docker logs api-smoke && exit 1)
-          docker stop api-smoke
+          docker run -d --name api-smoke -p 8000:8000 unified-m-api-test
+          sleep 8
+          docker logs api-smoke
+          curl -sf http://localhost:8000/health || (echo "--- health check failed ---" && docker logs api-smoke && docker rm -f api-smoke && exit 1)
+          docker rm -f api-smoke
 
   # ---------------------------------------------------------------------------
   # Markdown link check

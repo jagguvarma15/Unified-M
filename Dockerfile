@@ -42,8 +42,8 @@ USER appuser
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-# Default: run the API server via the uv-managed virtualenv
-CMD ["uv", "run", "python", "-m", "cli", "serve", "--host", "0.0.0.0", "--port", "8000"]
+# Default: run the API server using the venv Python directly
+CMD [".venv/bin/python", "-m", "cli", "serve", "--host", "0.0.0.0", "--port", "8000"]
 
 # ---- UI build stage ----
 FROM node:20-slim AS ui-build
