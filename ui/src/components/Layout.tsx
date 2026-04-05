@@ -41,14 +41,18 @@ interface NavSection {
   items: NavItem[];
 }
 
+// Always-visible items — never hidden, never collapsible
+const PINNED_NAV: NavItem[] = [
+  { to: "/data", label: "Data", icon: Database },
+  { to: "/runs", label: "Runs", icon: History },
+];
+
 const NAV_SECTIONS: NavSection[] = [
   {
     title: "Overview",
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/data", label: "Data", icon: Database },
       { to: "/datapoint", label: "Connections", icon: Link2 },
-      { to: "/runs", label: "Runs", icon: History },
     ],
   },
   {
@@ -148,26 +152,39 @@ export default function Layout(props: { children?: JSX.Element }) {
           </button>
         </div>
 
-        <nav class="flex-1 px-2.5 space-y-3 overflow-y-auto py-2">
+        <nav class="flex-1 px-2.5 overflow-y-auto py-2 space-y-0.5">
+          {/* Pinned items — always visible regardless of analytics state */}
+          <For each={PINNED_NAV}>
+            {(item) => (
+              <A
+                href={item.to}
+                activeClass="bg-indigo-600 text-white"
+                inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                class="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+              >
+                {item.icon({ size: 16, class: "shrink-0" })}
+                {item.label}
+              </A>
+            )}
+          </For>
+
+          {/* Divider */}
+          <div class="my-2 border-t border-slate-800" />
+
+          {/* Collapsible sections — analytics-gated */}
           <For each={NAV_SECTIONS}>
             {(section) => {
-              // Derive visible items as a reactive accessor so the
-              // sidebar updates when analyticsEnabled() changes.
               const items = (): NavItem[] => {
                 if (!analyticsEnabled()) {
-                  if (section.title === "Overview") {
-                    return section.items.filter((it) => it.to !== "/");
-                  }
-                  if (section.title !== "Configuration") {
-                    return [];
-                  }
+                  // Before first run: only show Configuration
+                  if (section.title !== "Configuration") return [];
                 }
                 return section.items;
               };
 
               return (
                 <Show when={items().length > 0}>
-                  <div>
+                  <div class="pt-1">
                     <button
                       onClick={() => toggleSection(section.title)}
                       aria-expanded={!collapsed()[section.title]}
