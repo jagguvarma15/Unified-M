@@ -9,9 +9,14 @@ interface Props {
   value: string | number;
   icon?: LucideIcon;
   delta?: string;
+  /** Numeric % change vs prior period — renders trend arrow + badge */
+  changePct?: number;
+  /** Optional label for the change badge (e.g. "vs Q1") */
+  changeLabel?: string;
   color?: "indigo" | "emerald" | "amber" | "red";
   tooltip?: string;
   sparkline?: number[];
+  onClick?: () => void;
 }
 
 const iconBg: Record<string, string> = {
@@ -32,6 +37,22 @@ export default function MetricCard(props: Props) {
     return "neutral";
   };
 
+  const changeColor = () => {
+    const pct = props.changePct;
+    if (pct == null) return "";
+    if (pct > 0) return "text-emerald-600 bg-emerald-50";
+    if (pct < 0) return "text-red-600 bg-red-50";
+    return "text-slate-500 bg-slate-50";
+  };
+
+  const changeArrow = () => {
+    const pct = props.changePct;
+    if (pct == null) return "";
+    if (pct > 0) return "↑";
+    if (pct < 0) return "↓";
+    return "→";
+  };
+
   const labelEl = () => {
     if (props.tooltip) {
       return (
@@ -44,30 +65,45 @@ export default function MetricCard(props: Props) {
   };
 
   return (
-    <div class={`min-w-0 rounded-lg border border-slate-200/80 bg-white overflow-hidden ${CARD_PAD[density()]}`}>
-      <p class="flex items-center gap-2 text-xs font-medium text-slate-500 truncate">
-        <Show when={props.icon}>
-          {(Icon) => {
-            const Ic = Icon();
-            return (
-              <span class={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color()]}`} aria-hidden>
-                <Ic size={12} />
-              </span>
-            );
-          }}
+    <div
+      class={`min-w-0 rounded-lg border border-slate-200/80 bg-white overflow-hidden transition-shadow hover:shadow-md ${CARD_PAD[density()]} ${props.onClick ? "cursor-pointer" : ""}`}
+      onClick={props.onClick}
+    >
+      <div class="flex items-start justify-between gap-2">
+        <p class="flex items-center gap-2 text-xs font-medium text-slate-500 truncate">
+          <Show when={props.icon}>
+            {(Icon) => {
+              const Ic = Icon();
+              return (
+                <span class={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color()]}`} aria-hidden>
+                  <Ic size={12} />
+                </span>
+              );
+            }}
+          </Show>
+          {labelEl()}
+        </p>
+        <Show when={props.sparkline && props.sparkline.length > 0}>
+          <Sparkline data={props.sparkline!} trend={trend()} height={20} width={48} class="shrink-0 opacity-80" />
         </Show>
-        {labelEl()}
-      </p>
-      <p class={`mt-1 truncate font-semibold tabular-nums text-slate-900 ${VALUE_TEXT[density()]}`} title={String(props.value)}>
-        {props.value}
-      </p>
+      </div>
+
+      <div class="mt-1 flex items-end justify-between gap-2">
+        <p class={`truncate font-semibold tabular-nums text-slate-900 ${VALUE_TEXT[density()]}`} title={String(props.value)}>
+          {props.value}
+        </p>
+        <Show when={props.changePct != null}>
+          <span
+            class={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap ${changeColor()}`}
+            title={props.changeLabel ?? "vs prior period"}
+          >
+            {changeArrow()} {Math.abs(props.changePct!).toFixed(1)}%
+          </span>
+        </Show>
+      </div>
+
       <Show when={props.delta}>
         <p class="mt-0.5 text-xs text-slate-500 truncate">{props.delta}</p>
-      </Show>
-      <Show when={props.sparkline && props.sparkline.length > 0}>
-        <div class="mt-1.5 flex justify-end">
-          <Sparkline data={props.sparkline!} trend={trend()} height={16} width={56} class="shrink-0 opacity-80" />
-        </div>
       </Show>
     </div>
   );

@@ -1,5 +1,5 @@
-import { Show, For } from "solid-js";
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "../lib/icons";
+import { Show, For, createSignal, createEffect, onCleanup } from "solid-js";
+import { X, CheckCircle2, AlertCircle, Info, AlertTriangle, Undo2 } from "../lib/icons";
 import { useToast, type ToastType } from "../lib/toast";
 
 const ICONS: Record<ToastType, typeof CheckCircle2> = {
@@ -23,6 +23,39 @@ const ICON_COLORS: Record<ToastType, string> = {
   warning: "text-amber-500",
 };
 
+const PROGRESS_COLORS: Record<ToastType, string> = {
+  success: "bg-emerald-400",
+  error: "bg-red-400",
+  info: "bg-indigo-400",
+  warning: "bg-amber-400",
+};
+
+function ProgressBar(props: { duration: number; createdAt: number; type: ToastType }) {
+  const [pct, setPct] = createSignal(100);
+
+  createEffect(() => {
+    if (props.duration <= 0) return;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - props.createdAt;
+      const remaining = Math.max(0, 100 - (elapsed / props.duration) * 100);
+      setPct(remaining);
+      if (remaining <= 0) clearInterval(interval);
+    }, 50);
+    onCleanup(() => clearInterval(interval));
+  });
+
+  return (
+    <Show when={props.duration > 0}>
+      <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-black/5 rounded-b-lg overflow-hidden">
+        <div
+          class={`h-full transition-all ease-linear ${PROGRESS_COLORS[props.type]}`}
+          style={{ width: `${pct()}%`, opacity: 0.6 }}
+        />
+      </div>
+    </Show>
+  );
+}
+
 export default function ToastContainer() {
   const { toasts, removeToast } = useToast();
 
@@ -41,10 +74,20 @@ export default function ToastContainer() {
             return (
               <div
                 role="alert"
-                class={`flex items-start gap-2.5 rounded-lg border px-4 py-3 shadow-lg animate-in slide-in-from-right ${COLORS[toast.type]}`}
+                class={`relative flex items-start gap-2.5 rounded-lg border px-4 py-3 shadow-lg animate-in slide-in-from-right overflow-hidden ${COLORS[toast.type]}`}
               >
                 <Icon size={16} aria-hidden class={`mt-0.5 shrink-0 ${ICON_COLORS[toast.type]}`} />
-                <p class="flex-1 text-sm font-medium">{toast.message}</p>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium">{toast.message}</p>
+                  <Show when={toast.onUndo}>
+                    <button
+                      onClick={() => { toast.onUndo!(); removeToast(toast.id); }}
+                      class="mt-1 inline-flex items-center gap-1 text-xs font-semibold underline hover:no-underline"
+                    >
+                      <Undo2 size={11} /> Undo
+                    </button>
+                  </Show>
+                </div>
                 <button
                   onClick={() => removeToast(toast.id)}
                   aria-label="Dismiss notification"
@@ -52,6 +95,7 @@ export default function ToastContainer() {
                 >
                   <X size={14} aria-hidden />
                 </button>
+                <ProgressBar duration={toast.duration} createdAt={toast.createdAt} type={toast.type} />
               </div>
             );
           }}
