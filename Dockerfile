@@ -30,9 +30,9 @@ COPY pyproject.toml uv.lock ./
 ENV UV_COMPILE_BYTECODE=0
 RUN uv sync --frozen --no-dev --no-install-project
 
-# Copy application source, then install the project itself
+# Copy application source + README (needed by hatch to build the wheel metadata)
 COPY src/ src/
-COPY config.yaml ./
+COPY config.yaml README.md ./
 RUN uv sync --frozen --no-dev --no-editable
 
 # Hand ownership to the non-root user and switch
