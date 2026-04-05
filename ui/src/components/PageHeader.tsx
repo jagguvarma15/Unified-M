@@ -1,4 +1,5 @@
 import { Show, type JSX } from "solid-js";
+import { density, PAGE_HEADER_MB } from "../lib/density";
 
 interface PageHeaderProps {
   title: string;
@@ -9,7 +10,7 @@ interface PageHeaderProps {
 
 export default function PageHeader(props: PageHeaderProps) {
   return (
-    <header class="mb-6">
+    <header class={PAGE_HEADER_MB[density()]}>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 class="text-2xl font-bold tracking-tight text-slate-900">{props.title}</h1>

@@ -1,5 +1,6 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
+import { density, CHART_PAD, CHART_HEADER_MB } from "../lib/density";
 
 interface Props {
   title: string;
@@ -22,10 +23,10 @@ interface Props {
 export default function ChartCard(props: Props) {
   return (
     <div
-      class={`rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${props.class ?? ""}`}
+      class={`rounded-xl border border-slate-200/60 bg-white shadow-sm transition-shadow hover:shadow-md ${CHART_PAD[density()]} ${props.class ?? ""}`}
       style={props.minHeight ? { "min-height": `${props.minHeight}px` } : undefined}
     >
-      <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div class={`flex flex-wrap items-start justify-between gap-3 ${CHART_HEADER_MB[density()]}`}>
         <div>
           <h2 class="text-sm font-semibold tracking-tight text-slate-700">{props.title}</h2>
           <Show when={props.description}>

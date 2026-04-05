@@ -1,4 +1,5 @@
 import type { JSX } from "solid-js";
+import { density, TH_PAD, TD_PAD } from "../lib/density";
 
 interface TableProps {
   children: JSX.Element;
@@ -70,7 +71,7 @@ export function TableRow(props: TableRowProps) {
 export function TableHeaderCell(props: TableHeaderCellProps) {
   return (
     <th
-      class={`py-3 px-4 font-semibold text-slate-600 ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}
+      class={`font-semibold text-slate-600 ${TH_PAD[density()]} ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}
     >
       {props.children}
     </th>
@@ -79,6 +80,6 @@ export function TableHeaderCell(props: TableHeaderCellProps) {
 
 export function TableCell(props: TableCellProps) {
   return (
-    <td class={`py-3 px-4 ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}>{props.children}</td>
+    <td class={`${TD_PAD[density()]} ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}>{props.children}</td>
   );
 }

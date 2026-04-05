@@ -28,6 +28,7 @@ import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
 import { useQueryClient } from "@tanstack/solid-query";
 import { trackPageView } from "../lib/telemetry";
+import { density, setDensity, type Density } from "../lib/density";
 
 interface NavItem {
   to: string;
@@ -205,7 +206,7 @@ export default function Layout(props: { children?: JSX.Element }) {
           </For>
         </nav>
 
-        <div class="border-t border-slate-700/60 p-3">
+        <div class="border-t border-slate-700/60 p-3 space-y-2">
           <div class="flex items-center gap-2 text-[11px] text-slate-400">
             <span
               class={`h-1.5 w-1.5 shrink-0 rounded-full ${
@@ -216,13 +217,40 @@ export default function Layout(props: { children?: JSX.Element }) {
             {health.data ? "API connected" : "API offline"}
           </div>
           <Show when={health.data?.latest_run}>
-            <p class="mt-1 truncate text-[11px] text-slate-500" title={health.data!.latest_run!}>
+            <p class="truncate text-[11px] text-slate-500" title={health.data!.latest_run!}>
               {health.data!.latest_run!.slice(0, 14)}…
             </p>
           </Show>
           <Show when={health.data}>
-            <p class="mt-0.5 text-[10px] text-slate-600">v{health.data!.version}</p>
+            <p class="text-[10px] text-slate-600">v{health.data!.version}</p>
           </Show>
+
+          {/* Density toggle */}
+          <div class="flex items-center gap-1.5 pt-0.5">
+            <span class="text-[10px] text-slate-500 select-none">Density</span>
+            <div class="flex rounded-md overflow-hidden border border-slate-700" role="group" aria-label="UI density">
+              {(
+                [
+                  { key: "compact" as Density, label: "S", title: "Compact" },
+                  { key: "default" as Density, label: "M", title: "Default" },
+                  { key: "comfortable" as Density, label: "L", title: "Comfortable" },
+                ] as const
+              ).map(({ key, label, title }) => (
+                <button
+                  onClick={() => setDensity(key)}
+                  title={title}
+                  aria-pressed={density() === key}
+                  class={`px-2 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400 ${
+                    density() === key
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </aside>
 

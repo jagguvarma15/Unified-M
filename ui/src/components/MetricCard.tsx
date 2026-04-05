@@ -2,6 +2,7 @@ import type { LucideIcon } from "../lib/icons";
 import { Show } from "solid-js";
 import Tooltip from "./Tooltip";
 import Sparkline from "./Sparkline";
+import { density, CARD_PAD, VALUE_TEXT } from "../lib/density";
 
 interface Props {
   label: string;
@@ -43,7 +44,7 @@ export default function MetricCard(props: Props) {
   };
 
   return (
-    <div class="min-w-0 rounded-lg border border-slate-200/80 bg-white px-4 py-3 overflow-hidden">
+    <div class={`min-w-0 rounded-lg border border-slate-200/80 bg-white overflow-hidden ${CARD_PAD[density()]}`}>
       <p class="flex items-center gap-2 text-xs font-medium text-slate-500 truncate">
         <Show when={props.icon}>
           {(Icon) => {
@@ -57,7 +58,7 @@ export default function MetricCard(props: Props) {
         </Show>
         {labelEl()}
       </p>
-      <p class="mt-1 truncate text-lg font-semibold tabular-nums text-slate-900" title={String(props.value)}>
+      <p class={`mt-1 truncate font-semibold tabular-nums text-slate-900 ${VALUE_TEXT[density()]}`} title={String(props.value)}>
         {props.value}
       </p>
       <Show when={props.delta}>
