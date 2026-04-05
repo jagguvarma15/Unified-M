@@ -23,16 +23,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Copy dependency manifests first (Docker layer caching)
 COPY pyproject.toml uv.lock ./
 
-# Install from lockfile: fast, deterministic, hash-verified
+# Install dependencies only (not the project itself) for layer caching.
 # --frozen: fail if lockfile is out of date (CI safety net)
 # --no-dev: skip [dependency-groups] dev (production image)
-# --no-editable: install as a regular package (not editable)
+# --no-install-project: install deps first, project source comes next
 ENV UV_COMPILE_BYTECODE=0
-RUN uv sync --frozen --no-dev --no-editable
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Copy application source
+# Copy application source, then install the project itself
 COPY src/ src/
 COPY config.yaml ./
+RUN uv sync --frozen --no-dev --no-editable
 
 # Hand ownership to the non-root user and switch
 RUN chown -R appuser:appgroup /app
