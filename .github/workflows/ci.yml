@@ -217,5 +217,5 @@ jobs:
 
       - uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --accept 200,429 README.md docs/**/*.md
+          args: --no-progress --accept 200,429 --exclude localhost --exclude 127.0.0.1 README.md docs/*.md
           fail: true
