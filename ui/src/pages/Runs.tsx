@@ -6,6 +6,7 @@ import {
   Clock,
   Loader2,
   GitCompareArrows,
+  RefreshCw,
   X,
 } from "../lib/icons";
 import {
@@ -29,7 +30,7 @@ export default function Runs() {
   const [selected, setSelected] = createSignal<string[]>([]);
   const [comparison, setComparison] = createSignal<RunComparisonData | null>(null);
   const [compareError, setCompareError] = createSignal<string | null>(null);
-  const runsQuery = useRunsQuery(200);
+  const runsQuery = useRunsQuery(100);
   const compareRuns = useCompareRunsMutation();
   const runs = () => runsQuery.data?.runs ?? [];
   const useVirtualized = () => runs().length > 60;
@@ -66,13 +67,27 @@ export default function Runs() {
         </div>
       }
     >
+      <Show when={runsQuery.isError}>
+        <div class="rounded-xl border border-red-200 bg-red-50 p-5 mb-6">
+          <p class="text-sm font-medium text-red-800">Failed to load runs</p>
+          <p class="mt-1 text-xs text-red-600">{String((runsQuery.error as any)?.message ?? "Unknown error")}</p>
+          <button
+            onClick={() => runsQuery.refetch()}
+            class="mt-3 text-xs font-medium text-red-700 underline hover:text-red-900"
+          >
+            Retry
+          </button>
+        </div>
+      </Show>
       <Show
         when={runsQuery.data?.runs?.length}
         fallback={
-          <EmptyState
-            title="No pipeline runs"
-            message="Run the pipeline to generate your first set of results."
-          />
+          <Show when={!runsQuery.isError}>
+            <EmptyState
+              title="No pipeline runs"
+              message="Run the pipeline to generate your first set of results."
+            />
+          </Show>
         }
       >
         <div>
@@ -88,6 +103,15 @@ export default function Runs() {
                 </Show>
               </p>
             </div>
+            <div class="flex items-center gap-2">
+              <button
+                onClick={() => runsQuery.refetch()}
+                disabled={runsQuery.isFetching}
+                title="Refresh runs"
+                class="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <RefreshCw size={16} class={runsQuery.isFetching ? "animate-spin" : ""} />
+              </button>
             <Show when={selected().length === 2}>
               <button
                 onClick={handleCompare}
@@ -100,6 +124,7 @@ export default function Runs() {
                 Compare Runs
               </button>
             </Show>
+            </div>
           </div>
 
           <div class="bg-white rounded-xl shadow-sm border border-slate-200/60 mt-6 overflow-hidden">

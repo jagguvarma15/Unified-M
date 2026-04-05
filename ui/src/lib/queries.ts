@@ -15,6 +15,8 @@ export function useRunsQuery(limit = 20) {
     queryKey: qk.runs(limit),
     queryFn: ({ signal }) => api.runs(limit, signal),
     refetchInterval: 15_000,
+    staleTime: 0,
+    refetchOnMount: true,
   }));
 }
 
