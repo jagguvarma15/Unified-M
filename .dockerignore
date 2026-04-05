@@ -54,3 +54,4 @@ models/
 # Docs
 docs/
 *.md
+!README.md
