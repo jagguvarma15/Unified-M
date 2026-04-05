@@ -373,19 +373,18 @@ function ComparisonPanel(props: { data: RunComparisonData; onClose: () => void }
         <Show when={allocOverlay.length > 0}>
           <div>
             <h3 class="text-sm font-semibold text-slate-700 mb-3">Allocation Overlay</h3>
-            <ResponsiveContainer width="100%" height={Math.max(220, allocOverlay.length * 40)}>
-              <BarChart data={allocOverlay} layout="vertical" margin={{ left: 90, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="channel" tick={{ fontSize: 11 }} width={80} />
-                <Tooltip
-                  contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                  formatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                />
-                <Bar dataKey="Run A" fill="#94a3b8" radius={[0, 3, 3, 0]} barSize={14} />
-                <Bar dataKey="Run B" fill="#6366f1" radius={[0, 3, 3, 0]} barSize={14} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ReactChart>
+              {() => h(ResponsiveContainer, { width: "100%", height: Math.max(220, allocOverlay.length * 40) },
+                h(BarChart, { data: allocOverlay, layout: "vertical", margin: { left: 90, right: 20 } },
+                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
+                  h(XAxis, { type: "number", tick: { fontSize: 11 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
+                  h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 11 }, width: 80 }),
+                  h(Tooltip, { contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }, formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}` }),
+                  h(Bar, { dataKey: "Run A", fill: "#94a3b8", radius: [0, 3, 3, 0], barSize: 14 }),
+                  h(Bar, { dataKey: "Run B", fill: "#6366f1", radius: [0, 3, 3, 0], barSize: 14 })
+                )
+              )}
+            </ReactChart>
           </div>
         </Show>
 

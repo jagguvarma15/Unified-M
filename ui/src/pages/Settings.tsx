@@ -287,22 +287,16 @@ function AdstockTab({ params }: { params: ParametersData | null }) {
         <p class="text-xs text-slate-500 mb-4">
           Shows how the effect of advertising decays over time for each channel
         </p>
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={decayCurves}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey="lag"
-              tick={{ fontSize: 12 }}
-              label={{ value: "Lag (periods)", position: "insideBottomRight", offset: -5, fontSize: 12 }}
-            />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              domain={[0, 1]}
-              label={{ value: "Weight", angle: -90, position: "insideLeft", fontSize: 12 }}
-            />
-            <Tooltip />
-          </BarChart>
-        </ResponsiveContainer>
+        <ReactChart>
+          {() => h(ResponsiveContainer, { width: "100%", height: 350 },
+            h(BarChart, { data: decayCurves },
+              h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+              h(XAxis, { dataKey: "lag", tick: { fontSize: 12 }, label: { value: "Lag (periods)", position: "insideBottomRight", offset: -5, fontSize: 12 } }),
+              h(YAxis, { tick: { fontSize: 12 }, domain: [0, 1], label: { value: "Weight", angle: -90, position: "insideLeft", fontSize: 12 } }),
+              h(Tooltip)
+            )
+          )}
+        </ReactChart>
       </div>
 
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">

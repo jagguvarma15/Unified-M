@@ -177,16 +177,18 @@ export default function Diagnostics() {
                 </h2>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div class="lg:col-span-2">
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={histBins}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <ReferenceLine x={findBinForValue(histBins, 0)} stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 4" />
-                        <Bar dataKey="count" fill="#6366f1" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 280 },
+                        h(BarChart, { data: histBins },
+                          h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                          h(XAxis, { dataKey: "label", tick: { fontSize: 10 } }),
+                          h(YAxis, { tick: { fontSize: 11 } }),
+                          h(Tooltip),
+                          h(ReferenceLine, { x: findBinForValue(histBins, 0), stroke: "#64748b", strokeWidth: 1.5, strokeDasharray: "4 4" }),
+                          h(Bar, { dataKey: "count", fill: "#6366f1", fillOpacity: 0.7, radius: [4, 4, 0, 0] }),
+                        )
+                      )}
+                    </ReactChart>
                   </div>
                   <div class="space-y-3">
                     <h3 class="text-sm font-semibold text-slate-700">Residual Statistics</h3>
