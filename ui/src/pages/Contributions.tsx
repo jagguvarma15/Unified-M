@@ -88,26 +88,20 @@ export default function Contributions() {
           {/* ---- Stacked area timeline ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
             <h2 class="text-sm font-semibold text-slate-700 mb-4">Contributions Over Time</h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={timeline()}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" {...getDateAxisProps(timeline().length)} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                <Tooltip />
-                <Legend />
-                {channels().map((ch, i) => (
-                  <Area
-                    key={ch}
-                    type="monotone"
-                    dataKey={ch}
-                    stackId="1"
-                    fill={COLORS[i % COLORS.length]}
-                    stroke={COLORS[i % COLORS.length]}
-                    fillOpacity={0.7}
-                  />
-                ))}
-              </AreaChart>
-            </ResponsiveContainer>
+            <ReactChart>
+              {() => h(ResponsiveContainer, { width: "100%", height: 350 },
+                h(AreaChart, { data: timeline() },
+                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                  h(XAxis, { dataKey: "date", ...getDateAxisProps(timeline().length) }),
+                  h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                  h(Tooltip),
+                  h(Legend),
+                  ...channels().map((ch, i) =>
+                    h(Area, { key: ch, type: "monotone", dataKey: ch, stackId: "1", fill: COLORS[i % COLORS.length], stroke: COLORS[i % COLORS.length], fillOpacity: 0.7 })
+                  )
+                )
+              )}
+            </ReactChart>
           </div>
 
           {/* ---- Summary table ---- */}

@@ -416,42 +416,33 @@ export default function Dashboard() {
                   }
                   minHeight={220}
                 >
-                  <ResponsiveContainer width="100%" height={180}>
-                    <AreaChart
-                      data={downsampleEvenly(diagnostics()!.chart, 240).map((d) => ({
-                        date: String(d.date).slice(0, 10),
-                        residual: (d.actual ?? 0) - (d.predicted ?? 0),
-                      }))}
-                      margin={{ left: 10, right: 10, top: 5, bottom: 5 }}
-                    >
-                      <defs>
-                        <linearGradient id="residPos" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="residNeg" x1="0" y1="1" x2="0" y2="0">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" {...getDateAxisProps(diagnostics()!.chart.length)} />
-                      <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                      <Tooltip
-                        formatter={(v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), "Residual"]}
-                        contentStyle={{ background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                      />
-                      <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 4" />
-                      <Area
-                        type="monotone"
-                        dataKey="residual"
-                        stroke="#6366f1"
-                        strokeWidth={1.5}
-                        fill="url(#residPos)"
-                        fillOpacity={1}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() => h(ResponsiveContainer, { width: "100%", height: 180 },
+                      h(AreaChart, {
+                        data: downsampleEvenly(diagnostics()!.chart, 240).map((d) => ({
+                          date: String(d.date).slice(0, 10),
+                          residual: (d.actual ?? 0) - (d.predicted ?? 0),
+                        })),
+                        margin: { left: 10, right: 10, top: 5, bottom: 5 },
+                      },
+                        h("defs", null,
+                          h("linearGradient", { id: "residPos", x1: "0", y1: "0", x2: "0", y2: "1" },
+                            h("stop", { offset: "5%", stopColor: "#10b981", stopOpacity: 0.25 }),
+                            h("stop", { offset: "95%", stopColor: "#10b981", stopOpacity: 0 })
+                          )
+                        ),
+                        h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                        h(XAxis, { dataKey: "date", ...getDateAxisProps(diagnostics()!.chart.length) }),
+                        h(YAxis, { tick: { fontSize: 10 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                        h(Tooltip, {
+                          formatter: (v: number) => [v.toLocaleString(undefined, { maximumFractionDigits: 0 }), "Residual"],
+                          contentStyle: { background: "rgba(15,23,42,0.9)", border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
+                        }),
+                        h(ReferenceLine, { y: 0, stroke: "#94a3b8", strokeDasharray: "4 4" }),
+                        h(Area, { type: "monotone", dataKey: "residual", stroke: "#6366f1", strokeWidth: 1.5, fill: "url(#residPos)", fillOpacity: 1 })
+                      )
+                    )}
+                  </ReactChart>
                 </ChartCard>
               </Show>
 
@@ -463,26 +454,20 @@ export default function Dashboard() {
                   description="Stacked daily contribution by channel"
                   minHeight={340}
                 >
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={timeline().rows}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" {...getDateAxisProps(timeline().rows.length)} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                      <Tooltip />
-                      <Legend />
-                      {timeline().channels.map((ch, i) => (
-                        <Area
-                          key={ch}
-                          type="monotone"
-                          dataKey={ch}
-                          stackId="1"
-                          fill={COLORS[i % COLORS.length]}
-                          stroke={COLORS[i % COLORS.length]}
-                          fillOpacity={0.7}
-                        />
-                      ))}
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() => h(ResponsiveContainer, { width: "100%", height: 300 },
+                      h(AreaChart, { data: timeline().rows },
+                        h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                        h(XAxis, { dataKey: "date", ...getDateAxisProps(timeline().rows.length) }),
+                        h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                        h(Tooltip),
+                        h(Legend),
+                        ...timeline().channels.map((ch, i) =>
+                          h(Area, { key: ch, type: "monotone", dataKey: ch, stackId: "1", fill: COLORS[i % COLORS.length], stroke: COLORS[i % COLORS.length], fillOpacity: 0.7 })
+                        )
+                      )
+                    )}
+                  </ReactChart>
                 </ChartCard>
               </Show>
             </div>
