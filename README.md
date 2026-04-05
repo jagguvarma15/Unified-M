@@ -1,6 +1,6 @@
 # Unified-M
 
-[![CI](https://github.com/jagguvarma15/Unified-M/actions/workflows/ci.yml/badge.svg)](https://github.com/jagguvarma15/Unified-M/actions/workflows/ci.yml)
+
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
