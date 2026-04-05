@@ -13,7 +13,9 @@ export default function PageHeader(props: PageHeaderProps) {
     <header class={PAGE_HEADER_MB[density()]}>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-slate-900">{props.title}</h1>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+            {props.title}
+          </h1>
           <Show when={props.description}>
             <p class="mt-1 text-sm text-slate-500">{props.description}</p>
           </Show>
@@ -22,7 +24,10 @@ export default function PageHeader(props: PageHeaderProps) {
           </Show>
         </div>
         <Show when={props.hint}>
-          <p class="text-xs text-slate-400 max-w-[200px] hidden sm:block" title={props.hint}>
+          <p
+            class="text-xs text-slate-400 max-w-[200px] hidden sm:block"
+            title={props.hint}
+          >
             {props.hint}
           </p>
         </Show>

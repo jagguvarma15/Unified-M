@@ -19,10 +19,10 @@ from loguru import logger
 
 from core.exceptions import ConnectorError
 
-
 # ---------------------------------------------------------------------------
 # Abstract base
 # ---------------------------------------------------------------------------
+
 
 class BaseConnector(ABC):
     """Interface that every local connector implements."""
@@ -54,6 +54,7 @@ class BaseConnector(ABC):
 # ---------------------------------------------------------------------------
 # CSV
 # ---------------------------------------------------------------------------
+
 
 class CSVConnector(BaseConnector):
     """Read / write CSV files or directories of CSVs."""
@@ -88,17 +89,18 @@ class CSVConnector(BaseConnector):
 # Excel
 # ---------------------------------------------------------------------------
 
+
 class ExcelConnector(BaseConnector):
     """Read / write Excel files (.xlsx, .xls)."""
 
     def load(self, source: str | Path, **kwargs: Any) -> pd.DataFrame:
         path = self._ensure_path(source)
         logger.info(f"Loading Excel from {path}")
-        
+
         # Default to first sheet if sheet_name not specified
-        if 'sheet_name' not in kwargs:
-            kwargs['sheet_name'] = 0
-        
+        if "sheet_name" not in kwargs:
+            kwargs["sheet_name"] = 0
+
         return pd.read_excel(path, **kwargs)
 
     def save(self, df: pd.DataFrame, dest: str | Path, **kwargs: Any) -> Path:
@@ -111,6 +113,7 @@ class ExcelConnector(BaseConnector):
 # ---------------------------------------------------------------------------
 # Parquet
 # ---------------------------------------------------------------------------
+
 
 class ParquetConnector(BaseConnector):
     """Read / write Parquet files (single file or Hive-partitioned dir)."""
@@ -130,6 +133,7 @@ class ParquetConnector(BaseConnector):
 # ---------------------------------------------------------------------------
 # DuckDB
 # ---------------------------------------------------------------------------
+
 
 class DuckDBConnector(BaseConnector):
     """

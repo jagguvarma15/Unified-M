@@ -25,23 +25,19 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
+from connectors.local import load_file
 from core.artifacts import ArtifactStore
 from core.contracts import (
-    ChannelResult,
     ModelMetrics,
     RunManifest,
 )
 from core.exceptions import PipelineError
-from connectors.local import load_file, ParquetConnector
 from models.registry import get_model
+from optimization.allocator import BudgetOptimizer
+from reconciliation.engine import ReconciliationEngine
 from transforms.features import (
     create_mmm_features,
-    pivot_media_spend,
-    add_time_features,
-    add_fourier_features,
 )
-from reconciliation.engine import ReconciliationEngine
-from optimization.allocator import BudgetOptimizer
 
 
 class Pipeline:
@@ -92,7 +88,7 @@ class Pipeline:
         controls: str | Path | pd.DataFrame | None = None,
         incrementality_tests: str | Path | pd.DataFrame | None = None,
         attribution: str | Path | pd.DataFrame | None = None,
-    ) -> "Pipeline":
+    ) -> Pipeline:
         """
         Load data from files or accept pre-loaded DataFrames.
 
@@ -112,12 +108,20 @@ class Pipeline:
             raise PipelineError("outcomes data is required", step="connect")
 
         # Coerce date columns
-        for df_name in ["_media_spend", "_outcomes", "_controls", "_incrementality_tests", "_attribution"]:
+        for df_name in [
+            "_media_spend",
+            "_outcomes",
+            "_controls",
+            "_incrementality_tests",
+            "_attribution",
+        ]:
             df = getattr(self, df_name)
             if df is not None and "date" in df.columns:
                 df["date"] = pd.to_datetime(df["date"])
 
-        n_channels = self._media_spend["channel"].nunique() if "channel" in self._media_spend.columns else 0
+        n_channels = (
+            self._media_spend["channel"].nunique() if "channel" in self._media_spend.columns else 0
+        )
         logger.info(
             f"Connected: media_spend={len(self._media_spend)} rows, "
             f"outcomes={len(self._outcomes)} rows, "
@@ -171,12 +175,14 @@ class Pipeline:
         _emit("connect", "Creating artifact run")
 
         # Create a new artifact run
-        self._run_id = self._store.create_run(config_snapshot={
-            "model": model,
-            "target_col": target_col,
-            "total_budget": total_budget,
-            **self._config,
-        })
+        self._run_id = self._store.create_run(
+            config_snapshot={
+                "model": model,
+                "target_col": target_col,
+                "total_budget": total_budget,
+                **self._config,
+            }
+        )
 
         results: dict[str, Any] = {"run_id": self._run_id}
 
@@ -250,9 +256,7 @@ class Pipeline:
 
             # Response curves
             curves = mmm.get_response_curves()
-            curves_json = {
-                ch: df.to_dict(orient="list") for ch, df in curves.items()
-            }
+            curves_json = {ch: df.to_dict(orient="list") for ch, df in curves.items()}
             self._store.save_json(self._run_id, "response_curves", curves_json)
             results["response_curves"] = curves
 
@@ -281,6 +285,7 @@ class Pipeline:
                 try:
                     logger.info("Pipeline step: calibration eval")
                     from models.calibration_eval import evaluate_calibration
+
                     cal_report = evaluate_calibration(self._incrementality_tests, params)
                     self._store.save_json(self._run_id, "calibration_eval", cal_report.to_dict())
                     results["calibration_eval"] = cal_report.to_dict()
@@ -328,7 +333,16 @@ class Pipeline:
                 duration_seconds=round(duration, 2),
                 status="completed",
                 model_backend=model,
-                pipeline_steps=["connect", "quality_gates", "transform", "train", "reconcile", "optimise", "calibration_eval", "stability"],
+                pipeline_steps=[
+                    "connect",
+                    "quality_gates",
+                    "transform",
+                    "train",
+                    "reconcile",
+                    "optimise",
+                    "calibration_eval",
+                    "stability",
+                ],
                 config_snapshot=self._config,
                 data_hash=data_hash,
                 n_rows=len(self._mmm_input),
@@ -386,11 +400,16 @@ class Pipeline:
         # Identify column types
         self._media_cols = [c for c in self._mmm_input.columns if c.endswith("_spend")]
         control_candidates = [
-            "is_holiday", "promo", "promotion", "price_index",
-            "trend", "is_weekend",
+            "is_holiday",
+            "promo",
+            "promotion",
+            "price_index",
+            "trend",
+            "is_weekend",
         ]
         self._control_cols = [
-            c for c in self._mmm_input.columns
+            c
+            for c in self._mmm_input.columns
             if c in control_candidates or c.startswith("fourier_")
         ]
 
@@ -437,6 +456,7 @@ class Pipeline:
             def _make_fn(s, r):
                 def fn(x):
                     return float(np.interp(x, s, r))
+
                 return fn
 
             response_fns[ch] = _make_fn(spend_arr, response_arr)
@@ -448,10 +468,7 @@ class Pipeline:
 
         # Set current allocation from data
         if self._media_spend is not None and "channel" in self._media_spend.columns:
-            current = (
-                self._media_spend.groupby("channel")["spend"].sum()
-                .to_dict()
-            )
+            current = self._media_spend.groupby("channel")["spend"].sum().to_dict()
             # Map to _spend column names
             current_mapped = {f"{k}_spend": v for k, v in current.items()}
             optimizer.set_current_allocation(current_mapped)

@@ -11,15 +11,25 @@ import {
 } from "../lib/icons";
 import type { DataSourceStatus } from "../lib/api";
 import { qk } from "../lib/queryKeys";
-import { useDataStatusQuery, useTriggerPipelineMutation, useUploadFileMutation } from "../lib/queries";
+import {
+  useDataStatusQuery,
+  useTriggerPipelineMutation,
+  useUploadFileMutation,
+} from "../lib/queries";
 
 const KNOWN_DATA_TYPES: Record<
   string,
-  { label: string; description: string; required: boolean; group: "required" | "optional" }
+  {
+    label: string;
+    description: string;
+    required: boolean;
+    group: "required" | "optional";
+  }
 > = {
   media_spend: {
     label: "Media Spend",
-    description: "Daily/weekly spend by channel (date, channel, spend, impressions, clicks)",
+    description:
+      "Daily/weekly spend by channel (date, channel, spend, impressions, clicks)",
     required: true,
     group: "required",
   },
@@ -37,13 +47,15 @@ const KNOWN_DATA_TYPES: Record<
   },
   incrementality_tests: {
     label: "Incrementality Tests",
-    description: "Test results (test_id, channel, start_date, end_date, lift_estimate, lift_ci_lower, lift_ci_upper)",
+    description:
+      "Test results (test_id, channel, start_date, end_date, lift_estimate, lift_ci_lower, lift_ci_upper)",
     required: false,
     group: "optional",
   },
   attribution: {
     label: "Attribution Data",
-    description: "Attributed conversions/revenue (date, channel, attributed_conversions, attributed_revenue)",
+    description:
+      "Attributed conversions/revenue (date, channel, attributed_conversions, attributed_revenue)",
     required: false,
     group: "optional",
   },
@@ -87,7 +99,9 @@ export default function Data() {
       await statusQuery.refetch();
       await queryClient.invalidateQueries({ queryKey: qk.dataStatus });
     } catch (err) {
-      setRunResult(`Upload failed: ${err instanceof Error ? err.message : String(err)}`);
+      setRunResult(
+        `Upload failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setUploading(null);
       if (fileInputs[dataType]) {
@@ -118,13 +132,20 @@ export default function Data() {
     setRunResult(null);
 
     try {
-      const result = await triggerPipeline.mutateAsync({ model: "builtin", target: "revenue" });
-      setRunResult(`Pipeline job started (job: ${result.job_id}). Track progress via the Run Pipeline panel.`);
+      const result = await triggerPipeline.mutateAsync({
+        model: "builtin",
+        target: "revenue",
+      });
+      setRunResult(
+        `Pipeline job started (job: ${result.job_id}). Track progress via the Run Pipeline panel.`,
+      );
       setTimeout(() => {
         void statusQuery.refetch();
       }, 5000);
     } catch (err) {
-      setRunResult(`Pipeline failed: ${err instanceof Error ? err.message : String(err)}`);
+      setRunResult(
+        `Pipeline failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setRunning(false);
     }
@@ -139,7 +160,9 @@ export default function Data() {
 
   const hasRequired = () =>
     status()
-      ? grouped().required.every((k) => (status()![k] as DataSourceStatus | undefined)?.exists)
+      ? grouped().required.every(
+          (k) => (status()![k] as DataSourceStatus | undefined)?.exists,
+        )
       : false;
 
   return (
@@ -164,8 +187,19 @@ export default function Data() {
             disabled={!hasRequired() || running()}
             class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <Show when={running()} fallback={<><Play size={18} />Run Pipeline</>}>
-              <><Loader2 size={18} class="animate-spin" />Running...</>
+            <Show
+              when={running()}
+              fallback={
+                <>
+                  <Play size={18} />
+                  Run Pipeline
+                </>
+              }
+            >
+              <>
+                <Loader2 size={18} class="animate-spin" />
+                Running...
+              </>
             </Show>
           </button>
         </div>
@@ -173,12 +207,15 @@ export default function Data() {
         <Show when={runResult()}>
           <div
             class={`mb-6 p-4 rounded-lg ${
-              runResult()!.includes("failed") || runResult()!.includes("Missing")
+              runResult()!.includes("failed") ||
+              runResult()!.includes("Missing")
                 ? "bg-red-50 text-red-800 border border-red-200"
                 : "bg-emerald-50 text-emerald-800 border border-emerald-200"
             }`}
           >
-            <pre class="text-sm whitespace-pre-wrap font-mono">{runResult()}</pre>
+            <pre class="text-sm whitespace-pre-wrap font-mono">
+              {runResult()}
+            </pre>
           </div>
         </Show>
 
@@ -187,9 +224,11 @@ export default function Data() {
           {(section) => {
             const keys = () => grouped()[section];
             const sectionLabel =
-              section === "required" ? "Required Data Sources" :
-              section === "optional" ? "Optional Data Sources" :
-              "Custom Data Sources";
+              section === "required"
+                ? "Required Data Sources"
+                : section === "optional"
+                  ? "Optional Data Sources"
+                  : "Custom Data Sources";
 
             return (
               <Show when={keys().length > 0}>
@@ -201,7 +240,8 @@ export default function Data() {
                     <For each={keys()}>
                       {(key) => {
                         const info = getTypeInfo(key);
-                        const sourceStatus = () => status()?.[key] as DataSourceStatus | undefined;
+                        const sourceStatus = () =>
+                          status()?.[key] as DataSourceStatus | undefined;
                         const exists = () => sourceStatus()?.exists ?? false;
                         const isUploading = () => uploading() === key;
 
@@ -210,7 +250,9 @@ export default function Data() {
                             <div class="flex items-start justify-between mb-3">
                               <div class="flex items-center gap-2">
                                 <FileText size={20} class="text-slate-600" />
-                                <h3 class="font-semibold text-slate-900">{info.label}</h3>
+                                <h3 class="font-semibold text-slate-900">
+                                  {info.label}
+                                </h3>
                                 <Show when={info.required}>
                                   <span class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
                                     Required
@@ -222,19 +264,31 @@ export default function Data() {
                                   </span>
                                 </Show>
                               </div>
-                              <Show when={exists()} fallback={<XCircle size={20} class="text-slate-300" />}>
-                                <CheckCircle2 size={20} class="text-emerald-500" />
+                              <Show
+                                when={exists()}
+                                fallback={
+                                  <XCircle size={20} class="text-slate-300" />
+                                }
+                              >
+                                <CheckCircle2
+                                  size={20}
+                                  class="text-emerald-500"
+                                />
                               </Show>
                             </div>
 
-                            <p class="text-xs text-slate-500 mb-4">{info.description}</p>
+                            <p class="text-xs text-slate-500 mb-4">
+                              {info.description}
+                            </p>
 
                             <Show when={exists() && sourceStatus()}>
                               <div class="mb-4 p-3 bg-slate-50 rounded-lg text-xs">
                                 <div class="grid grid-cols-2 gap-2">
                                   <div>
                                     <span class="text-slate-500">Rows:</span>{" "}
-                                    <span class="font-medium">{sourceStatus()!.rows?.toLocaleString()}</span>
+                                    <span class="font-medium">
+                                      {sourceStatus()!.rows?.toLocaleString()}
+                                    </span>
                                   </div>
                                   <div>
                                     <span class="text-slate-500">Size:</span>{" "}
@@ -249,8 +303,11 @@ export default function Data() {
                                   <div class="mt-2">
                                     <span class="text-slate-500">Columns:</span>{" "}
                                     <span class="font-mono text-xs">
-                                      {sourceStatus()!.columns!.slice(0, 5).join(", ")}
-                                      {sourceStatus()!.columns!.length > 5 && "..."}
+                                      {sourceStatus()!
+                                        .columns!.slice(0, 5)
+                                        .join(", ")}
+                                      {sourceStatus()!.columns!.length > 5 &&
+                                        "..."}
                                     </span>
                                   </div>
                                 </Show>
@@ -266,7 +323,9 @@ export default function Data() {
 
                             <label class="block">
                               <input
-                                ref={(el) => { fileInputs[key] = el; }}
+                                ref={(el) => {
+                                  fileInputs[key] = el;
+                                }}
                                 type="file"
                                 accept=".csv,.parquet"
                                 onChange={(e) => handleFileSelect(key, e)}
@@ -285,14 +344,20 @@ export default function Data() {
                                   when={isUploading()}
                                   fallback={
                                     <>
-                                      <Upload size={16} class="text-slate-600" />
+                                      <Upload
+                                        size={16}
+                                        class="text-slate-600"
+                                      />
                                       <span class="text-sm font-medium text-slate-700">
                                         {exists() ? "Replace" : "Upload"} File
                                       </span>
                                     </>
                                   }
                                 >
-                                  <Loader2 size={16} class="animate-spin text-indigo-600" />
+                                  <Loader2
+                                    size={16}
+                                    class="animate-spin text-indigo-600"
+                                  />
                                   <span class="text-sm font-medium text-indigo-600">
                                     Uploading...
                                   </span>
@@ -322,14 +387,17 @@ export default function Data() {
               <code>channel</code>, and <code>spend</code> columns
             </li>
             <li>
-              • <strong>Outcomes:</strong> Must include <code>date</code> and at least one outcome
-              column (<code>revenue</code>, <code>conversions</code>, etc.)
+              • <strong>Outcomes:</strong> Must include <code>date</code> and at
+              least one outcome column (<code>revenue</code>,{" "}
+              <code>conversions</code>, etc.)
             </li>
             <li>
-              • <strong>Date columns:</strong> Should be in YYYY-MM-DD format or parseable datetime
+              • <strong>Date columns:</strong> Should be in YYYY-MM-DD format or
+              parseable datetime
             </li>
             <li>
-              • <strong>File formats:</strong> CSV or Parquet (Parquet recommended for large files)
+              • <strong>File formats:</strong> CSV or Parquet (Parquet
+              recommended for large files)
             </li>
             <li>
               • Files are automatically converted to Parquet and stored in{" "}

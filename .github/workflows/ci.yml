@@ -94,15 +94,15 @@ jobs:
           uv run python -c "
           import sys; sys.path.insert(0, 'src')
           from config import load_config
-          from core.contracts import MediaSpendRow, OutcomeRow
+          from core.contracts import MediaSpendInput, OutcomeInput
           from core.base_model import BaseMMM
-          from core.artifacts import RunArtifact
-          from models.registry import get_model_backend
-          from pipeline.runner import PipelineRunner
+          from core.artifacts import ArtifactStore
+          from models.registry import get_model
+          from pipeline.runner import Pipeline
           from transforms.adstock import geometric_adstock
           from transforms.saturation import hill_saturation
           from reconciliation.engine import ReconciliationEngine
-          from optimization.allocator import BudgetAllocator
+          from optimization.allocator import BudgetOptimizer
           from server.app import create_app
           from connectors.registry import ConnectorStore
           print('All core imports OK')

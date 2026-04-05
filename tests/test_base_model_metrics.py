@@ -12,7 +12,15 @@ from core.base_model import BaseMMM
 
 
 class _DummyMMM(BaseMMM):
-    def fit(self, df: pd.DataFrame, target_col: str, media_cols: list[str], control_cols: list[str] | None = None, date_col: str = "date", **kwargs: Any) -> dict[str, Any]:
+    def fit(
+        self,
+        df: pd.DataFrame,
+        target_col: str,
+        media_cols: list[str],
+        control_cols: list[str] | None = None,
+        date_col: str = "date",
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         return {}
 
     def predict(self, df: pd.DataFrame) -> np.ndarray:
@@ -21,7 +29,9 @@ class _DummyMMM(BaseMMM):
     def get_channel_contributions(self) -> dict[str, np.ndarray]:
         return {}
 
-    def get_response_curves(self, spend_grid: np.ndarray | None = None, n_points: int = 100) -> dict[str, pd.DataFrame]:
+    def get_response_curves(
+        self, spend_grid: np.ndarray | None = None, n_points: int = 100
+    ) -> dict[str, pd.DataFrame]:
         return {}
 
     def get_parameters(self) -> dict[str, Any]:

@@ -17,13 +17,12 @@ from typing import Any
 import pandas as pd
 from loguru import logger
 
-
 # Common FRED series for marketing measurement
 DEFAULT_SERIES = {
-    "UMCSENT": "ctrl_consumer_confidence",      # Univ of Michigan Consumer Sentiment
-    "UNRATE": "ctrl_unemployment_rate",          # Unemployment Rate
-    "CPIAUCSL": "ctrl_cpi",                      # Consumer Price Index
-    "RSXFS": "ctrl_retail_sales",                # Advance Retail Sales
+    "UMCSENT": "ctrl_consumer_confidence",  # Univ of Michigan Consumer Sentiment
+    "UNRATE": "ctrl_unemployment_rate",  # Unemployment Rate
+    "CPIAUCSL": "ctrl_cpi",  # Consumer Price Index
+    "RSXFS": "ctrl_retail_sales",  # Advance Retail Sales
 }
 
 

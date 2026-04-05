@@ -10,25 +10,24 @@ Design principles:
 
 from __future__ import annotations
 
-from datetime import datetime
-import tempfile
+import json
 import os
+import re
+import tempfile
 import threading
 from collections import Counter
-
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Header
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from loguru import logger
-import numpy as np
-import pandas as pd
+from datetime import datetime
 from pathlib import Path
 from typing import Any
-import json
-import re
 
-from core.artifacts import ArtifactStore
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
+
 from config import get_config
+from core.artifacts import ArtifactStore
 from core.contracts import RunManifest
 from server.schemas import (
     AdaptersResponse,
@@ -50,8 +49,9 @@ from server.schemas import (
     PipelineRunTriggerResponse,
     ReconciliationResponse,
     ReportSummaryResponse,
-    RootResponse,
+    ResponseCurveChannel,
     ROASResponse,
+    RootResponse,
     RunsResponse,
     SavedConnector,
     SavedConnectorListResponse,
@@ -61,14 +61,18 @@ from server.schemas import (
     TelemetrySummaryResponse,
     UploadDataResponse,
     WaterfallResponse,
-    ResponseCurveChannel,
 )
 
-
 # Known pipeline data types; custom names allowed via _is_valid_custom_data_type
-KNOWN_DATA_TYPES = frozenset({
-    "media_spend", "outcomes", "controls", "incrementality_tests", "attribution",
-})
+KNOWN_DATA_TYPES = frozenset(
+    {
+        "media_spend",
+        "outcomes",
+        "controls",
+        "incrementality_tests",
+        "attribution",
+    }
+)
 UPLOAD_CHUNK_SIZE_BYTES = 1024 * 1024  # 1 MB
 
 
@@ -219,6 +223,7 @@ def _normalize_channel_spend_key(channel: str) -> str:
 # Artifact reader (thin cache over the store)
 # ---------------------------------------------------------------------------
 
+
 class ArtifactReader:
     """
     Reads the latest run's artifacts and caches them in memory.
@@ -283,7 +288,7 @@ class TelemetryBuffer:
         with self._lock:
             self._events.extend(events)
             if len(self._events) > self._max_events:
-                self._events = self._events[-self._max_events:]
+                self._events = self._events[-self._max_events :]
 
     def summary(self) -> dict[str, Any]:
         with self._lock:
@@ -299,6 +304,7 @@ class TelemetryBuffer:
 # App factory
 # ---------------------------------------------------------------------------
 
+
 def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -309,7 +315,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     telemetry = TelemetryBuffer()
 
     # Import cache layer (Redis with in-memory fallback)
-    from server.cache import get_cache, cache_key as make_cache_key
+    from server.cache import cache_key as make_cache_key
+    from server.cache import get_cache
+
     cache = get_cache()
 
     application = FastAPI(
@@ -333,6 +341,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
     # Optional bearer-token auth (reads API_AUTH_TOKEN from env)
     from server.auth import BearerAuthMiddleware
+
     application.add_middleware(BearerAuthMiddleware)
 
     # ------------------------------------------------------------------
@@ -386,7 +395,8 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     @application.get("/api/v1/adapters", response_model=AdaptersResponse)
     def list_adapters():
         """Discover available model backends, connectors, and cache status."""
-        from models.registry import list_backends, _REGISTRY, _auto_discover
+        from models.registry import _auto_discover, list_backends
+
         _auto_discover()
 
         backend_info = []
@@ -398,11 +408,13 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         }
         available = set(list_backends())
         for name, hint in known_backends.items():
-            backend_info.append({
-                "name": name,
-                "available": name in available,
-                "install_hint": hint if name not in available else None,
-            })
+            backend_info.append(
+                {
+                    "name": name,
+                    "available": name in available,
+                    "install_hint": hint if name not in available else None,
+                }
+            )
 
         return {
             "model_backends": backend_info,
@@ -443,6 +455,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(400, "Cannot compare a run to itself. Select two different runs.")
         try:
             from core.exceptions import ArtifactError
+
             return store.compare_runs(run_a, run_b)
         except ArtifactError as e:
             detail = str(e)
@@ -517,16 +530,20 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         residuals = y_true - y_pred
 
         mask = y_true != 0
-        mape = float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100) if mask.any() else 0
-        rmse = float(np.sqrt(np.mean(residuals ** 2)))
-        ss_res = float(np.sum(residuals ** 2))
+        mape = (
+            float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100)
+            if mask.any()
+            else 0
+        )
+        rmse = float(np.sqrt(np.mean(residuals**2)))
+        ss_res = float(np.sum(residuals**2))
         ss_tot = float(np.sum((y_true - y_true.mean()) ** 2))
         r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
         mae = float(np.mean(np.abs(residuals)))
 
         # Durbin-Watson
         diff = np.diff(residuals)
-        dw = float(np.sum(diff ** 2) / (np.sum(residuals ** 2) + 1e-12))
+        dw = float(np.sum(diff**2) / (np.sum(residuals**2) + 1e-12))
 
         # Downsample for chart
         step = max(1, len(dates) // 200)
@@ -589,14 +606,16 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             if params and "coefficients" in params:
                 mroi = params["coefficients"].get(ch, 0)
 
-            channel_roas.append({
-                "channel": ch,
-                "total_contribution": round(total_contribution, 2),
-                "total_spend": round(spend, 2),
-                "roas": round(roas, 4),
-                "marginal_roi": round(mroi, 4),
-                "cpa": round(spend / total_contribution, 2) if total_contribution > 0 else 0,
-            })
+            channel_roas.append(
+                {
+                    "channel": ch,
+                    "total_contribution": round(total_contribution, 2),
+                    "total_spend": round(spend, 2),
+                    "roas": round(roas, 4),
+                    "marginal_roi": round(mroi, 4),
+                    "cpa": round(spend / total_contribution, 2) if total_contribution > 0 else 0,
+                }
+            )
 
         channel_roas.sort(key=lambda x: x["roas"], reverse=True)
 
@@ -746,6 +765,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             await file.close()
 
     from server.jobs import JobManager
+
     job_manager = JobManager()
 
     def _run_pipeline_sync(
@@ -761,8 +781,8 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     on_progress("connect", "Generating sample data")
                 except Exception:
                     pass
-            from pipeline.runner import Pipeline
             from config import load_config as _load_cfg
+            from pipeline.runner import Pipeline
 
             cfg = _load_cfg()
             cfg.ensure_directories()
@@ -772,25 +792,36 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 dates = pd.date_range(end=pd.Timestamp.now().normalize(), periods=365, freq="D")
                 np.random.seed(42)
 
-                channels = ["google_search", "meta_facebook", "meta_instagram", "tiktok", "tv_linear"]
+                channels = [
+                    "google_search",
+                    "meta_facebook",
+                    "meta_instagram",
+                    "tiktok",
+                    "tv_linear",
+                ]
                 media_records: list[dict[str, Any]] = []
                 for date in dates:
                     for channel in channels:
                         base = {
-                            "google_search": 1200, "meta_facebook": 900,
-                            "meta_instagram": 600, "tiktok": 400, "tv_linear": 1500,
+                            "google_search": 1200,
+                            "meta_facebook": 900,
+                            "meta_instagram": 600,
+                            "tiktok": 400,
+                            "tv_linear": 1500,
                         }[channel]
                         seasonal = 1 + 0.3 * np.sin(date.dayofyear / 365 * 2 * np.pi)
                         noise = 1 + np.random.normal(0, 0.15)
                         spend = max(0, base * seasonal * noise)
-                        media_records.append({
-                            "date": date,
-                            "geo": "national",
-                            "channel": channel,
-                            "spend": round(spend, 2),
-                            "impressions": round(spend * np.random.uniform(40, 60), 0),
-                            "clicks": round(spend * np.random.uniform(0.3, 0.5), 0),
-                        })
+                        media_records.append(
+                            {
+                                "date": date,
+                                "geo": "national",
+                                "channel": channel,
+                                "spend": round(spend, 2),
+                                "impressions": round(spend * np.random.uniform(40, 60), 0),
+                                "clicks": round(spend * np.random.uniform(0.3, 0.5), 0),
+                            }
+                        )
                 media_df = pd.DataFrame(media_records)
                 media_path = tmp_dir / "media_spend.parquet"
                 media_df.to_parquet(media_path, index=False)
@@ -803,24 +834,30 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     noise = np.random.normal(1, 0.08)
                     revenue = base_revenue * seasonal * trend * noise
                     conversions = round(revenue / 100 * np.random.uniform(0.8, 1.2), 0)
-                    outcomes_records.append({
-                        "date": date,
-                        "geo": "national",
-                        "revenue": round(revenue, 2),
-                        "conversions": conversions,
-                        "new_customers": round(conversions * 0.3, 0),
-                    })
+                    outcomes_records.append(
+                        {
+                            "date": date,
+                            "geo": "national",
+                            "revenue": round(revenue, 2),
+                            "conversions": conversions,
+                            "new_customers": round(conversions * 0.3, 0),
+                        }
+                    )
                 outcomes_df = pd.DataFrame(outcomes_records)
                 outcomes_path = tmp_dir / "outcomes.parquet"
                 outcomes_df.to_parquet(outcomes_path, index=False)
 
-                controls_df = pd.DataFrame({
-                    "date": dates,
-                    "geo": "national",
-                    "is_holiday": [1 if d.dayofweek >= 5 else 0 for d in dates],
-                    "promo": np.random.binomial(1, 0.1, len(dates)),
-                    "price_index": np.random.normal(1.0, 0.03, len(dates)).clip(0.8, 1.2).round(3),
-                })
+                controls_df = pd.DataFrame(
+                    {
+                        "date": dates,
+                        "geo": "national",
+                        "is_holiday": [1 if d.dayofweek >= 5 else 0 for d in dates],
+                        "promo": np.random.binomial(1, 0.1, len(dates)),
+                        "price_index": np.random.normal(1.0, 0.03, len(dates))
+                        .clip(0.8, 1.2)
+                        .round(3),
+                    }
+                )
                 controls_path = tmp_dir / "controls.parquet"
                 controls_df.to_parquet(controls_path, index=False)
 
@@ -829,18 +866,20 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     start = dates[60 + i * 30]
                     end = dates[90 + i * 30]
                     lift = np.random.uniform(0.05, 0.25)
-                    tests_records.append({
-                        "test_id": f"test_{channel}_sample",
-                        "channel": channel,
-                        "start_date": start,
-                        "end_date": end,
-                        "test_type": "geo_lift",
-                        "lift_estimate": round(lift, 4),
-                        "lift_ci_lower": round(lift * 0.6, 4),
-                        "lift_ci_upper": round(lift * 1.4, 4),
-                        "confidence_level": 0.95,
-                        "spend_during_test": round(np.random.uniform(20000, 80000), 2),
-                    })
+                    tests_records.append(
+                        {
+                            "test_id": f"test_{channel}_sample",
+                            "channel": channel,
+                            "start_date": start,
+                            "end_date": end,
+                            "test_type": "geo_lift",
+                            "lift_estimate": round(lift, 4),
+                            "lift_ci_lower": round(lift * 0.6, 4),
+                            "lift_ci_upper": round(lift * 1.4, 4),
+                            "confidence_level": 0.95,
+                            "spend_during_test": round(np.random.uniform(20000, 80000), 2),
+                        }
+                    )
                 tests_df = pd.DataFrame(tests_records)
                 tests_path = tmp_dir / "incrementality_tests.parquet"
                 tests_df.to_parquet(tests_path, index=False)
@@ -854,7 +893,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     controls=controls_path,
                     incrementality_tests=tests_path,
                 )
-                results = pipe.run(model=model, target_col=target, total_budget=budget, on_progress=on_progress)
+                results = pipe.run(
+                    model=model, target_col=target, total_budget=budget, on_progress=on_progress
+                )
 
             run_id = pipe.run_id
             if run_id:
@@ -862,8 +903,8 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 (run_dir / ".sample_run").write_text("sample")
             return {"run_id": run_id, "metrics": results.get("metrics", {})}
 
-        from pipeline.runner import Pipeline
         from config import load_config as _load_cfg
+        from pipeline.runner import Pipeline
 
         cfg = _load_cfg()
         cfg.ensure_directories()
@@ -872,15 +913,20 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         pipe = Pipeline(config=cfg.to_flat_dict(), runs_dir=cfg.storage.runs_path)
         pipe.connect(
             media_spend=processed / "media_spend.parquet"
-            if (processed / "media_spend.parquet").exists() else None,
+            if (processed / "media_spend.parquet").exists()
+            else None,
             outcomes=processed / "outcomes.parquet"
-            if (processed / "outcomes.parquet").exists() else None,
+            if (processed / "outcomes.parquet").exists()
+            else None,
             controls=processed / "controls.parquet"
-            if (processed / "controls.parquet").exists() else None,
+            if (processed / "controls.parquet").exists()
+            else None,
             incrementality_tests=processed / "incrementality_tests.parquet"
-            if (processed / "incrementality_tests.parquet").exists() else None,
+            if (processed / "incrementality_tests.parquet").exists()
+            else None,
             attribution=processed / "attribution.parquet"
-            if (processed / "attribution.parquet").exists() else None,
+            if (processed / "attribution.parquet").exists()
+            else None,
         )
         results = pipe.run(
             model=model,
@@ -930,7 +976,14 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # Calibration, Stability, Data Quality
     # ------------------------------------------------------------------
 
-    _empty_calibration = {"n_tests": 0, "points": [], "coverage": 0, "median_lift_error": 0, "mean_lift_error": 0, "calibration_quality": "no_tests"}
+    _empty_calibration = {
+        "n_tests": 0,
+        "points": [],
+        "coverage": 0,
+        "median_lift_error": 0,
+        "mean_lift_error": 0,
+        "calibration_quality": "no_tests",
+    }
 
     @application.get("/api/v1/calibration", response_model=CalibrationResponse)
     def calibration():
@@ -955,6 +1008,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                         tests_df = pd.read_parquet(alt_tests)
                     if tests_df is not None and len(tests_df) > 0:
                         from models.calibration_eval import evaluate_calibration
+
                         report = evaluate_calibration(tests_df, params)
                         data = report.to_dict()
             if data is None:
@@ -988,6 +1042,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     curr_params = store.load_json(curr_id, "parameters")
                     prev_params = store.load_json(prev_id, "parameters")
                     from models.evaluation import compute_stability_report
+
                     curr_alloc = curr_opt.get("optimal_allocation", {}) if curr_opt else None
                     prev_alloc = prev_opt.get("optimal_allocation", {}) if prev_opt else None
                     contributions_data = reader.get_dataframe_as_dict("contributions")
@@ -1038,6 +1093,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     data = {**_empty_data_quality, "timestamp": datetime.now().isoformat()}
                 else:
                     from quality.gates import run_quality_gates
+
                     report = run_quality_gates(media_spend=ms_df, outcomes=oc_df)
                     data = report.to_dict()
             cache.set(ck, data, ttl=300)
@@ -1056,7 +1112,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         try:
             optim_data = reader.get("optimization")
             params_raw = reader.get("parameters")
-            curves_raw = reader.get("response_curves")
+            reader.get("response_curves")  # preload for potential future use
 
             if not optim_data or not params_raw:
                 raise HTTPException(404, "No optimization or parameter data.")
@@ -1081,6 +1137,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
 
                 delta = max(cur_spend * 0.01, 1.0)
                 from transforms.saturation import hill_saturation as _hs  # noqa: E402
+
                 resp_at = float(_hs(np.array([cur_spend]), K=K, S=S)[0]) * coeff
                 resp_at_plus = float(_hs(np.array([cur_spend + delta]), K=K, S=S)[0]) * coeff
                 marginal_roi = (resp_at_plus - resp_at) / delta if delta > 0 else 0
@@ -1098,7 +1155,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 else:
                     sat_point = float(cur_spend * 5)
 
-                headroom_pct = round(((sat_point - cur_spend) / cur_spend * 100) if cur_spend > 0 else 100, 1)
+                headroom_pct = round(
+                    ((sat_point - cur_spend) / cur_spend * 100) if cur_spend > 0 else 100, 1
+                )
                 if headroom_pct < 10:
                     status = "over-saturated"
                 elif headroom_pct > 80:
@@ -1106,16 +1165,18 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 else:
                     status = "efficient"
 
-                insights.append({
-                    "channel": ch,
-                    "current_spend": round(cur_spend, 2),
-                    "optimal_spend": round(opt_spend, 2),
-                    "marginal_roi": round(marginal_roi, 6),
-                    "saturation_point": round(sat_point, 2),
-                    "headroom_pct": headroom_pct,
-                    "status": status,
-                    "coefficient": round(coeff, 6),
-                })
+                insights.append(
+                    {
+                        "channel": ch,
+                        "current_spend": round(cur_spend, 2),
+                        "optimal_spend": round(opt_spend, 2),
+                        "marginal_roi": round(marginal_roi, 6),
+                        "saturation_point": round(sat_point, 2),
+                        "headroom_pct": headroom_pct,
+                        "status": status,
+                        "coefficient": round(coeff, 6),
+                    }
+                )
 
             insights.sort(key=lambda x: x["marginal_roi"], reverse=True)
             return {"channels": insights}
@@ -1145,10 +1206,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 return channel if channel.endswith("_spend") else f"{channel}_spend"
 
             optimal_raw = optim_data.get("optimal_allocation", {})
-            optimal = {
-                _normalize_channel_key(str(ch)): float(v)
-                for ch, v in optimal_raw.items()
-            }
+            optimal = {_normalize_channel_key(str(ch)): float(v) for ch, v in optimal_raw.items()}
             channels = list(optimal.keys())
 
             # Load actual spend from media_spend
@@ -1159,12 +1217,13 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 if "channel" in ms_df.columns and "spend" in ms_df.columns:
                     grouped = ms_df.groupby("channel")["spend"].sum().to_dict()
                     actual_by_channel = {
-                        _normalize_channel_key(str(ch)): float(v)
-                        for ch, v in grouped.items()
+                        _normalize_channel_key(str(ch)): float(v) for ch, v in grouped.items()
                     }
                     if "date" in ms_df.columns:
                         ms_df["date"] = pd.to_datetime(ms_df["date"])
-                        cum = ms_df.groupby("date")["spend"].sum().sort_index().cumsum().reset_index()
+                        cum = (
+                            ms_df.groupby("date")["spend"].sum().sort_index().cumsum().reset_index()
+                        )
                         step = max(1, len(cum) // 60)
                         cumulative = [
                             {"date": str(row["date"])[:10], "actual": round(float(row["spend"]), 2)}
@@ -1187,14 +1246,16 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                     ch_status = "under"
                 else:
                     ch_status = "on-track"
-                pacing_channels.append({
-                    "channel": ch,
-                    "planned": round(planned, 2),
-                    "actual": round(actual, 2),
-                    "diff": round(diff, 2),
-                    "pacing_pct": ch_pacing,
-                    "status": ch_status,
-                })
+                pacing_channels.append(
+                    {
+                        "channel": ch,
+                        "planned": round(planned, 2),
+                        "actual": round(actual, 2),
+                        "diff": round(diff, 2),
+                        "pacing_pct": ch_pacing,
+                        "status": ch_status,
+                    }
+                )
             pacing_channels.sort(key=lambda x: abs(x["diff"]), reverse=True)
 
             return {
@@ -1208,7 +1269,13 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise
         except Exception as e:
             logger.exception("Spend pacing error: %s", e)
-            return {"total_planned": 0, "total_actual": 0, "pacing_pct": 0, "channels": [], "cumulative": []}
+            return {
+                "total_planned": 0,
+                "total_actual": 0,
+                "pacing_pct": 0,
+                "channels": [],
+                "cumulative": [],
+            }
 
     # ------------------------------------------------------------------
     # Executive Summary / Report
@@ -1221,7 +1288,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             run_id = store.get_latest_run_id()
             contrib_data = reader.get_dataframe_as_dict("contributions")
             optim_data = reader.get("optimization")
-            params = reader.get("parameters")
+            reader.get("parameters")  # preload for potential future use
             roas_data = None
             try:
                 roas_data = get_roas()
@@ -1248,7 +1315,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 total_contrib = sum(abs(v) for _, v in ch_totals)
                 for ch, val in ch_totals[:5]:
                     pct = round(abs(val) / total_contrib * 100, 1) if total_contrib > 0 else 0
-                    top_channels.append({"channel": ch, "contribution": round(val, 2), "share_pct": pct})
+                    top_channels.append(
+                        {"channel": ch, "contribution": round(val, 2), "share_pct": pct}
+                    )
 
             # Key recommendations
             recommendations = []
@@ -1282,7 +1351,15 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             }
         except Exception as e:
             logger.exception("Report summary error: %s", e)
-            return {"run_id": None, "generated_at": datetime.now().isoformat(), "metrics": {}, "roas_summary": {}, "top_channels": [], "recommendations": [], "improvement_pct": 0}
+            return {
+                "run_id": None,
+                "generated_at": datetime.now().isoformat(),
+                "metrics": {},
+                "roas_summary": {},
+                "top_channels": [],
+                "recommendations": [],
+                "improvement_pct": 0,
+            }
 
     # ------------------------------------------------------------------
     # Cache control
@@ -1306,43 +1383,45 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     ):
         """
         Test connection to a datapoint (database or cloud storage).
-        
+
         connection_type: 'database' or 'cloud'
         connection_config: JSON string with connection parameters
         """
         import json
-        
+
         try:
             config = json.loads(connection_config)
-            
+
             if connection_type == "database":
                 from connectors.database import create_database_connector
+
                 db_type = config.pop("db_type")
                 connector = create_database_connector(db_type, **config)
                 success = connector.test_connection()
                 connector.close()
-                
+
                 return {
                     "status": "success" if success else "failed",
                     "connected": success,
                     "message": "Connection successful" if success else "Connection failed",
                 }
-            
+
             elif connection_type == "cloud":
                 from connectors.cloud import create_cloud_connector
+
                 cloud_type = config.pop("cloud_type")
                 connector = create_cloud_connector(cloud_type, **config)
                 success = connector.test_connection()
-                
+
                 return {
                     "status": "success" if success else "failed",
                     "connected": success,
                     "message": "Connection successful" if success else "Connection failed",
                 }
-            
+
             else:
                 raise HTTPException(400, f"Invalid connection_type: {connection_type}")
-        
+
         except Exception as e:
             logger.exception("Datapoint connection test failed")
             return {
@@ -1360,14 +1439,12 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     ):
         """
         Fetch data from a datapoint connection.
-        
+
         For databases: query_or_path is SQL query
         For cloud: query_or_path is file path
         data_type: known type or custom name (e.g. promo_flags).
         """
         import json
-        import tempfile
-        from pathlib import Path
 
         _validate_data_type(data_type)
 
@@ -1375,30 +1452,32 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             config = json.loads(connection_config)
             config_obj = get_config()
             processed = config_obj.storage.processed_path
-            
+
             if connection_type == "database":
                 from connectors.database import create_database_connector
+
                 db_type = config.pop("db_type")
                 connector = create_database_connector(db_type, **config)
                 df = connector.load(query_or_path)
                 connector.close()
-            
+
             elif connection_type == "cloud":
                 from connectors.cloud import create_cloud_connector
+
                 cloud_type = config.pop("cloud_type")
                 connector = create_cloud_connector(cloud_type, **config)
                 df = connector.load(query_or_path)
-            
+
             else:
                 raise HTTPException(400, f"Invalid connection_type: {connection_type}")
-            
+
             # Save to processed directory
             output_path = processed / f"{data_type}.parquet"
             df.to_parquet(output_path, index=False)
-            
+
             # Invalidate cache to refresh data status
             reader.invalidate()
-            
+
             return {
                 "status": "success",
                 "rows": len(df),
@@ -1406,7 +1485,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 "path": str(output_path),
                 "data_type": data_type,
             }
-        
+
         except Exception as e:
             logger.exception("Datapoint data fetch failed")
             raise HTTPException(500, f"Failed to fetch data: {str(e)}")
@@ -1428,7 +1507,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         # Validate file extension
         ext = Path(file.filename).suffix.lower()
         if ext not in [".csv", ".parquet", ".xlsx", ".xls"]:
-            raise HTTPException(400, f"Unsupported file type: {ext}. Allowed: .csv, .parquet, .xlsx, .xls")
+            raise HTTPException(
+                400, f"Unsupported file type: {ext}. Allowed: .csv, .parquet, .xlsx, .xls"
+            )
 
         config = get_config()
         processed = config.storage.processed_path
@@ -1479,6 +1560,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
     # ------------------------------------------------------------------
 
     from connectors.registry import ConnectorStore
+
     connector_store = ConnectorStore(config.storage.raw_path.parent / "connectors")
 
     @application.get("/api/v1/connectors", response_model=SavedConnectorListResponse)
@@ -1509,7 +1591,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "Connector not found")
         return record
 
-    @application.post("/api/v1/connectors/{connector_id}/reveal-secrets", response_model=ConnectorRevealResponse)
+    @application.post(
+        "/api/v1/connectors/{connector_id}/reveal-secrets", response_model=ConnectorRevealResponse
+    )
     def reveal_connector_secrets(
         connector_id: str,
         x_reveal_token: str | None = Header(default=None, alias="X-Reveal-Token"),
@@ -1559,7 +1643,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(404, "Connector not found")
         return {"status": "deleted"}
 
-    @application.post("/api/v1/connectors/{connector_id}/test", response_model=ConnectorTestResponse)
+    @application.post(
+        "/api/v1/connectors/{connector_id}/test", response_model=ConnectorTestResponse
+    )
     def test_connector(connector_id: str):
         """Test a saved connection."""
         record = connector_store.get(connector_id, include_secrets=True)
@@ -1575,6 +1661,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         try:
             if conn_type == "database":
                 from connectors.database import create_database_connector
+
                 cfg["db_type"] = subtype
                 db_type = cfg.pop("db_type")
                 connector = create_database_connector(db_type, **cfg)
@@ -1582,6 +1669,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 connector.close()
             elif conn_type == "cloud":
                 from connectors.cloud import create_cloud_connector
+
                 cfg["cloud_type"] = subtype
                 cloud_type = cfg.pop("cloud_type")
                 connector = create_cloud_connector(cloud_type, **cfg)
@@ -1598,7 +1686,9 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
             "message": message or ("Connection successful" if success else "Connection failed"),
         }
 
-    @application.post("/api/v1/connectors/{connector_id}/fetch", response_model=ConnectorFetchResponse)
+    @application.post(
+        "/api/v1/connectors/{connector_id}/fetch", response_model=ConnectorFetchResponse
+    )
     async def fetch_from_connector(
         connector_id: str,
         query_or_path: str = Form(...),
@@ -1619,11 +1709,13 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
         try:
             if conn_type == "database":
                 from connectors.database import create_database_connector
+
                 connector = create_database_connector(subtype, **cfg)
                 df = connector.load(query_or_path)
                 connector.close()
             elif conn_type == "cloud":
                 from connectors.cloud import create_cloud_connector
+
                 connector = create_cloud_connector(subtype, **cfg)
                 df = connector.load(query_or_path)
             else:
@@ -1655,6 +1747,7 @@ app = create_app()
 def run_server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
     """Start the API server (also serves the built UI if ui/dist/ exists)."""
     import uvicorn
+
     _mount_ui(app)
     logger.info(f"Starting Unified-M API on {host}:{port}")
     uvicorn.run("server.app:app", host=host, port=port, reload=reload)

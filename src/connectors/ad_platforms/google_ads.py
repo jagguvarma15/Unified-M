@@ -60,9 +60,7 @@ class GoogleAdsConnector(AdPlatformConnector):
         try:
             from google.ads.googleads.client import GoogleAdsClient
         except ImportError:
-            raise ImportError(
-                "google-ads is not installed. Run: pip install google-ads"
-            )
+            raise ImportError("google-ads is not installed. Run: pip install google-ads")
 
         credentials = {
             "developer_token": self.developer_token,
@@ -95,13 +93,15 @@ class GoogleAdsConnector(AdPlatformConnector):
         records = []
         for batch in stream:
             for row in batch.results:
-                records.append({
-                    "date": row.segments.date,
-                    "channel": f"google_{row.campaign.advertising_channel_type.name.lower()}",
-                    "spend": row.metrics.cost_micros / 1_000_000,
-                    "impressions": row.metrics.impressions,
-                    "clicks": row.metrics.clicks,
-                })
+                records.append(
+                    {
+                        "date": row.segments.date,
+                        "channel": f"google_{row.campaign.advertising_channel_type.name.lower()}",
+                        "spend": row.metrics.cost_micros / 1_000_000,
+                        "impressions": row.metrics.impressions,
+                        "clicks": row.metrics.clicks,
+                    }
+                )
 
         df = pd.DataFrame(records)
         logger.info(f"Fetched {len(df)} rows from Google Ads")
@@ -110,6 +110,7 @@ class GoogleAdsConnector(AdPlatformConnector):
     def test_connection(self) -> bool:
         try:
             from google.ads.googleads.client import GoogleAdsClient
+
             return bool(self.developer_token and self.customer_id)
         except ImportError:
             return False

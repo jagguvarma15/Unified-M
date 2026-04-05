@@ -4,28 +4,28 @@ Data connectors for Unified-M.
 Supports CSV, Parquet, Excel, DuckDB, databases, and cloud storage.
 """
 
-from .local import (
-    BaseConnector,
-    CSVConnector,
-    ParquetConnector,
-    ExcelConnector,
-    DuckDBConnector,
-    auto_connect,
-    load_file,
+from .cloud import (
+    AzureBlobConnector,
+    CloudStorageConnector,
+    S3Connector,
+    create_cloud_connector,
 )
 from .database import (
     DatabaseConnector,
-    PostgreSQLConnector,
     MySQLConnector,
-    SQLServerConnector,
+    PostgreSQLConnector,
     SQLiteConnector,
+    SQLServerConnector,
     create_database_connector,
 )
-from .cloud import (
-    CloudStorageConnector,
-    S3Connector,
-    AzureBlobConnector,
-    create_cloud_connector,
+from .local import (
+    BaseConnector,
+    CSVConnector,
+    DuckDBConnector,
+    ExcelConnector,
+    ParquetConnector,
+    auto_connect,
+    load_file,
 )
 
 __all__ = [

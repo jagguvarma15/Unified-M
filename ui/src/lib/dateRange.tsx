@@ -42,7 +42,11 @@ export function priorPeriod(range: DateRange): DateRange {
 }
 
 export function formatDateShort(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 interface DateRangeContextValue {

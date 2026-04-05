@@ -120,6 +120,7 @@ class SwitchbackAnalyzer:
 
         # t-test
         from scipy import stats
+
         alpha = 1 - self.confidence_level
         z = stats.norm.ppf(1 - alpha / 2)
 

@@ -23,17 +23,17 @@ from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 
 # Routes that never require auth
-_PUBLIC_PATHS = frozenset({
-    "/health",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
-    "/",
-})
-
-_SENSITIVE_PATH_PREFIXES = (
-    "/api/v1/connectors",
+_PUBLIC_PATHS = frozenset(
+    {
+        "/health",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/",
+    }
 )
+
+_SENSITIVE_PATH_PREFIXES = ("/api/v1/connectors",)
 
 
 def _is_truthy(value: str | None) -> bool:

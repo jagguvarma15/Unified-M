@@ -1,6 +1,10 @@
 import { createSignal, Show } from "solid-js";
 import { Calendar, ChevronDown } from "../lib/icons";
-import { useDateRange, formatDateShort, type RangePreset } from "../lib/dateRange";
+import {
+  useDateRange,
+  formatDateShort,
+  type RangePreset,
+} from "../lib/dateRange";
 
 const PRESETS: { key: RangePreset; label: string }[] = [
   { key: "30d", label: "Last 30 days" },
@@ -39,7 +43,10 @@ export default function DateRangePicker() {
       >
         <Calendar size={14} />
         {label()}
-        <ChevronDown size={12} class={`transition-transform ${open() ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={12}
+          class={`transition-transform ${open() ? "rotate-180" : ""}`}
+        />
       </button>
 
       <Show when={open()}>
@@ -47,7 +54,10 @@ export default function DateRangePicker() {
           <div class="space-y-1">
             {PRESETS.filter((p) => p.key !== "custom").map((p) => (
               <button
-                onClick={() => { setPreset(p.key); setOpen(false); }}
+                onClick={() => {
+                  setPreset(p.key);
+                  setOpen(false);
+                }}
                 class={`w-full text-left rounded-md px-3 py-2 text-sm transition-colors ${
                   range().preset === p.key
                     ? "bg-indigo-50 text-indigo-700 font-medium"

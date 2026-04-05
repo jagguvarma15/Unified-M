@@ -14,7 +14,11 @@ import {
 import ReactChart, { h } from "../lib/ReactChart";
 import { Calculator } from "../lib/icons";
 import EmptyState from "../components/EmptyState";
-import { api, type OptimizationData, type ResponseCurvesData } from "../lib/api";
+import {
+  api,
+  type OptimizationData,
+  type ResponseCurvesData,
+} from "../lib/api";
 import { COLORS } from "../lib/colors";
 
 interface ScenarioAllocation {
@@ -31,10 +35,13 @@ interface Scenario {
 
 export default function ScenarioPlanner() {
   const [optData, setOptData] = createSignal<OptimizationData | null>(null);
-  const [curvesData, setCurvesData] = createSignal<ResponseCurvesData | null>(null);
+  const [curvesData, setCurvesData] = createSignal<ResponseCurvesData | null>(
+    null,
+  );
   const [loading, setLoading] = createSignal(true);
   const [scenarios, setScenarios] = createSignal<Scenario[]>([]);
-  const [activeScenarioId, setActiveScenarioId] = createSignal<string>("current");
+  const [activeScenarioId, setActiveScenarioId] =
+    createSignal<string>("current");
 
   onMount(() => {
     Promise.allSettled([
@@ -49,7 +56,10 @@ export default function ScenarioPlanner() {
     if (!d) return;
 
     const channels = Object.keys(d.current_allocation);
-    const currentBudget = Object.values(d.current_allocation).reduce((a, b) => a + b, 0);
+    const currentBudget = Object.values(d.current_allocation).reduce(
+      (a, b) => a + b,
+      0,
+    );
 
     const initialScenarios: Scenario[] = [
       {
@@ -71,7 +81,7 @@ export default function ScenarioPlanner() {
         name: "Conservative (-15%)",
         budget: currentBudget * 0.85,
         allocation: Object.fromEntries(
-          channels.map((ch) => [ch, (d.optimal_allocation[ch] ?? 0) * 0.85])
+          channels.map((ch) => [ch, (d.optimal_allocation[ch] ?? 0) * 0.85]),
         ),
         expectedResponse: d.expected_response * 0.88,
       },
@@ -80,7 +90,7 @@ export default function ScenarioPlanner() {
         name: "Aggressive (+20%)",
         budget: currentBudget * 1.2,
         allocation: Object.fromEntries(
-          channels.map((ch) => [ch, (d.optimal_allocation[ch] ?? 0) * 1.2])
+          channels.map((ch) => [ch, (d.optimal_allocation[ch] ?? 0) * 1.2]),
         ),
         expectedResponse: d.expected_response * 1.15,
       },
@@ -97,9 +107,12 @@ export default function ScenarioPlanner() {
       prev.map((s) => {
         if (s.id !== activeScenarioId()) return s;
         const newAllocation = { ...s.allocation, [channel]: value };
-        const newBudget = Object.values(newAllocation).reduce((a, b) => a + b, 0);
+        const newBudget = Object.values(newAllocation).reduce(
+          (a, b) => a + b,
+          0,
+        );
         return { ...s, allocation: newAllocation, budget: newBudget };
-      })
+      }),
     );
   };
 
@@ -136,15 +149,17 @@ export default function ScenarioPlanner() {
     const d = optData();
     if (!d) return 0;
     const chs = channels();
-    return Math.max(
-      ...chs.map((ch) =>
-        Math.max(
-          ...scenarios().map((s) => s.allocation[ch] ?? 0),
-          d.current_allocation[ch] ?? 0,
-          d.optimal_allocation[ch] ?? 0
-        )
-      )
-    ) * 1.5;
+    return (
+      Math.max(
+        ...chs.map((ch) =>
+          Math.max(
+            ...scenarios().map((s) => s.allocation[ch] ?? 0),
+            d.current_allocation[ch] ?? 0,
+            d.optimal_allocation[ch] ?? 0,
+          ),
+        ),
+      ) * 1.5
+    );
   };
 
   const comparisonData = () =>
@@ -165,7 +180,10 @@ export default function ScenarioPlanner() {
     for (let mult = 0.5; mult <= 2.0; mult += 0.1) {
       const budget = baseBudget * mult;
       const response = d.expected_response * Math.pow(mult, 0.7);
-      result.push({ budget: Math.round(budget), response: Math.round(response) });
+      result.push({
+        budget: Math.round(budget),
+        response: Math.round(response),
+      });
     }
     return result;
   };
@@ -184,9 +202,12 @@ export default function ScenarioPlanner() {
           <div>
             <div class="flex items-center justify-between">
               <div>
-                <h1 class="text-2xl font-bold text-slate-900">Scenario Planner</h1>
+                <h1 class="text-2xl font-bold text-slate-900">
+                  Scenario Planner
+                </h1>
                 <p class="text-sm text-slate-500 mt-1">
-                  Compare budget allocation scenarios and explore what-if analyses
+                  Compare budget allocation scenarios and explore what-if
+                  analyses
                 </p>
               </div>
               <button
@@ -237,13 +258,18 @@ export default function ScenarioPlanner() {
                         {as_().name} — Budget Allocation
                       </h2>
                       <p class="text-xs text-slate-500 mt-0.5">
-                        Total: ${as_().budget.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        Total: $
+                        {as_().budget.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })}
                       </p>
                     </div>
                     <div class="text-right">
                       <p class="text-xs text-slate-500">Est. Response</p>
                       <p class="text-lg font-bold text-indigo-600">
-                        {as_().expectedResponse.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {as_().expectedResponse.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -252,16 +278,28 @@ export default function ScenarioPlanner() {
                     <For each={channels()}>
                       {(ch, i) => {
                         const value = () => as_().allocation[ch] ?? 0;
-                        const currentValue = () => optData()!.current_allocation[ch] ?? 0;
+                        const currentValue = () =>
+                          optData()!.current_allocation[ch] ?? 0;
                         const diff = () => value() - currentValue();
-                        const pct = () => currentValue() > 0 ? (diff() / currentValue()) * 100 : 0;
-                        const isEditable = () => as_().id !== "current" && as_().id !== "optimal";
+                        const pct = () =>
+                          currentValue() > 0
+                            ? (diff() / currentValue()) * 100
+                            : 0;
+                        const isEditable = () =>
+                          as_().id !== "current" && as_().id !== "optimal";
 
                         return (
                           <div class="flex items-center gap-4">
                             <div class="w-28 flex items-center gap-2">
-                              <span class="w-3 h-3 rounded-full flex-shrink-0" style={{ background: COLORS[i() % COLORS.length] }} />
-                              <span class="text-sm font-medium text-slate-700 truncate">{ch}</span>
+                              <span
+                                class="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{
+                                  background: COLORS[i() % COLORS.length],
+                                }}
+                              />
+                              <span class="text-sm font-medium text-slate-700 truncate">
+                                {ch}
+                              </span>
                             </div>
                             <div class="flex-1">
                               <input
@@ -270,7 +308,12 @@ export default function ScenarioPlanner() {
                                 max={maxSpend()}
                                 step={100}
                                 value={value()}
-                                onInput={(e) => handleSliderChange(ch, Number(e.currentTarget.value))}
+                                onInput={(e) =>
+                                  handleSliderChange(
+                                    ch,
+                                    Number(e.currentTarget.value),
+                                  )
+                                }
                                 disabled={!isEditable()}
                                 class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-50"
                               />
@@ -281,10 +324,17 @@ export default function ScenarioPlanner() {
                               </span>
                             </div>
                             <div class="w-20 text-right">
-                              <span class={`text-xs font-medium tabular-nums ${
-                                diff() > 0 ? "text-emerald-600" : diff() < 0 ? "text-red-500" : "text-slate-400"
-                              }`}>
-                                {diff() >= 0 ? "+" : ""}{pct().toFixed(0)}%
+                              <span
+                                class={`text-xs font-medium tabular-nums ${
+                                  diff() > 0
+                                    ? "text-emerald-600"
+                                    : diff() < 0
+                                      ? "text-red-500"
+                                      : "text-slate-400"
+                                }`}
+                              >
+                                {diff() >= 0 ? "+" : ""}
+                                {pct().toFixed(0)}%
                               </span>
                             </div>
                           </div>
@@ -302,26 +352,40 @@ export default function ScenarioPlanner() {
                 Scenario Comparison by Channel
               </h2>
               <ReactChart>
-                {() => h(ResponsiveContainer, { width: "100%", height: 360 },
-                  h(BarChart, { data: comparisonData() },
-                    h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
-                    h(XAxis, { dataKey: "channel", tick: { fontSize: 13 } }),
-                    h(YAxis, { tick: { fontSize: 12 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
-                    h(Tooltip, {
-                      formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-                    }),
-                    h(Legend),
-                    ...scenarios().map((s, i) =>
-                      h(Bar, {
-                        key: s.id,
-                        dataKey: s.name,
-                        fill: COLORS[i % COLORS.length],
-                        radius: [4, 4, 0, 0],
-                        fillOpacity: activeScenarioId() === s.id ? 1 : 0.5,
-                      })
-                    )
+                {() =>
+                  h(
+                    ResponsiveContainer,
+                    { width: "100%", height: 360 },
+                    h(
+                      BarChart,
+                      { data: comparisonData() },
+                      h(CartesianGrid, {
+                        strokeDasharray: "3 3",
+                        stroke: "#e2e8f0",
+                      }),
+                      h(XAxis, { dataKey: "channel", tick: { fontSize: 13 } }),
+                      h(YAxis, {
+                        tick: { fontSize: 12 },
+                        tickFormatter: (v: number) =>
+                          `$${(v / 1000).toFixed(0)}k`,
+                      }),
+                      h(Tooltip, {
+                        formatter: (v: number) =>
+                          `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                      }),
+                      h(Legend),
+                      ...scenarios().map((s, i) =>
+                        h(Bar, {
+                          key: s.id,
+                          dataKey: s.name,
+                          fill: COLORS[i % COLORS.length],
+                          radius: [4, 4, 0, 0],
+                          fillOpacity: activeScenarioId() === s.id ? 1 : 0.5,
+                        }),
+                      ),
+                    ),
                   )
-                )}
+                }
               </ReactChart>
             </div>
 
@@ -334,47 +398,81 @@ export default function ScenarioPlanner() {
                 <table class="w-full text-sm">
                   <thead>
                     <tr class="border-b border-slate-200">
-                      <th class="text-left py-3 px-4 font-semibold text-slate-600">Scenario</th>
-                      <th class="text-right py-3 px-4 font-semibold text-slate-600">Total Budget</th>
-                      <th class="text-right py-3 px-4 font-semibold text-slate-600">Est. Response</th>
-                      <th class="text-right py-3 px-4 font-semibold text-slate-600">ROI</th>
-                      <th class="text-right py-3 px-4 font-semibold text-slate-600">vs Current</th>
+                      <th class="text-left py-3 px-4 font-semibold text-slate-600">
+                        Scenario
+                      </th>
+                      <th class="text-right py-3 px-4 font-semibold text-slate-600">
+                        Total Budget
+                      </th>
+                      <th class="text-right py-3 px-4 font-semibold text-slate-600">
+                        Est. Response
+                      </th>
+                      <th class="text-right py-3 px-4 font-semibold text-slate-600">
+                        ROI
+                      </th>
+                      <th class="text-right py-3 px-4 font-semibold text-slate-600">
+                        vs Current
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <For each={scenarios()}>
                       {(s, i) => {
-                        const currentResponse = () => scenarios()[0]?.expectedResponse ?? 0;
+                        const currentResponse = () =>
+                          scenarios()[0]?.expectedResponse ?? 0;
                         const diff = () =>
                           currentResponse() > 0
-                            ? ((s.expectedResponse - currentResponse()) / currentResponse()) * 100
+                            ? ((s.expectedResponse - currentResponse()) /
+                                currentResponse()) *
+                              100
                             : 0;
-                        const roi = () => s.budget > 0 ? s.expectedResponse / s.budget : 0;
+                        const roi = () =>
+                          s.budget > 0 ? s.expectedResponse / s.budget : 0;
 
                         return (
                           <tr
                             class={`border-b border-slate-100 transition-colors cursor-pointer ${
-                              activeScenarioId() === s.id ? "bg-indigo-50" : "hover:bg-slate-50"
+                              activeScenarioId() === s.id
+                                ? "bg-indigo-50"
+                                : "hover:bg-slate-50"
                             }`}
                             onClick={() => setActiveScenarioId(s.id)}
                           >
                             <td class="py-3 px-4 flex items-center gap-2 font-medium">
-                              <span class="w-3 h-3 rounded-full flex-shrink-0" style={{ background: COLORS[i() % COLORS.length] }} />
+                              <span
+                                class="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{
+                                  background: COLORS[i() % COLORS.length],
+                                }}
+                              />
                               {s.name}
                             </td>
                             <td class="text-right py-3 px-4 tabular-nums">
-                              ${s.budget.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              $
+                              {s.budget.toLocaleString(undefined, {
+                                maximumFractionDigits: 0,
+                              })}
                             </td>
                             <td class="text-right py-3 px-4 tabular-nums">
-                              {s.expectedResponse.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              {s.expectedResponse.toLocaleString(undefined, {
+                                maximumFractionDigits: 0,
+                              })}
                             </td>
                             <td class="text-right py-3 px-4 tabular-nums">
                               {roi().toFixed(2)}x
                             </td>
-                            <td class={`text-right py-3 px-4 tabular-nums font-medium ${
-                              diff() > 0 ? "text-emerald-600" : diff() < 0 ? "text-red-500" : "text-slate-500"
-                            }`}>
-                              {s.id === "current" ? "—" : `${diff() >= 0 ? "+" : ""}${diff().toFixed(1)}%`}
+                            <td
+                              class={`text-right py-3 px-4 tabular-nums font-medium ${
+                                diff() > 0
+                                  ? "text-emerald-600"
+                                  : diff() < 0
+                                    ? "text-red-500"
+                                    : "text-slate-500"
+                              }`}
+                            >
+                              {s.id === "current"
+                                ? "—"
+                                : `${diff() >= 0 ? "+" : ""}${diff().toFixed(1)}%`}
                             </td>
                           </tr>
                         );
@@ -392,36 +490,61 @@ export default function ScenarioPlanner() {
                   Budget Efficiency Frontier
                 </h2>
                 <p class="text-xs text-slate-500 mb-4">
-                  Expected optimal response at different budget levels (diminishing returns)
+                  Expected optimal response at different budget levels
+                  (diminishing returns)
                 </p>
                 <ReactChart>
-                  {() => h(ResponsiveContainer, { width: "100%", height: 300 },
-                    h(LineChart, { data: efficiencyData() },
-                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
-                      h(XAxis, {
-                        dataKey: "budget",
-                        tick: { fontSize: 12 },
-                        tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k`,
-                        label: { value: "Total Budget", position: "insideBottomRight", offset: -5, fontSize: 12 },
-                      }),
-                      h(YAxis, {
-                        tick: { fontSize: 12 },
-                        label: { value: "Expected Response", angle: -90, position: "insideLeft", fontSize: 12 },
-                      }),
-                      h(Tooltip, {
-                        formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-                        labelFormatter: (v: string) => `Budget: $${Number(v).toLocaleString()}`,
-                      }),
-                      h(Line, {
-                        type: "monotone",
-                        dataKey: "response",
-                        stroke: "#6366f1",
-                        strokeWidth: 2.5,
-                        dot: false,
-                        name: "Optimal Response",
-                      })
+                  {() =>
+                    h(
+                      ResponsiveContainer,
+                      { width: "100%", height: 300 },
+                      h(
+                        LineChart,
+                        { data: efficiencyData() },
+                        h(CartesianGrid, {
+                          strokeDasharray: "3 3",
+                          stroke: "#e2e8f0",
+                        }),
+                        h(XAxis, {
+                          dataKey: "budget",
+                          tick: { fontSize: 12 },
+                          tickFormatter: (v: number) =>
+                            `$${(v / 1000).toFixed(0)}k`,
+                          label: {
+                            value: "Total Budget",
+                            position: "insideBottomRight",
+                            offset: -5,
+                            fontSize: 12,
+                          },
+                        }),
+                        h(YAxis, {
+                          tick: { fontSize: 12 },
+                          label: {
+                            value: "Expected Response",
+                            angle: -90,
+                            position: "insideLeft",
+                            fontSize: 12,
+                          },
+                        }),
+                        h(Tooltip, {
+                          formatter: (v: number) =>
+                            v.toLocaleString(undefined, {
+                              maximumFractionDigits: 0,
+                            }),
+                          labelFormatter: (v: string) =>
+                            `Budget: $${Number(v).toLocaleString()}`,
+                        }),
+                        h(Line, {
+                          type: "monotone",
+                          dataKey: "response",
+                          stroke: "#6366f1",
+                          strokeWidth: 2.5,
+                          dot: false,
+                          name: "Optimal Response",
+                        }),
+                      ),
                     )
-                  )}
+                  }
                 </ReactChart>
               </div>
             </Show>

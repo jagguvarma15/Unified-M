@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 from loguru import logger
 
 
@@ -84,7 +83,7 @@ class PriorSet:
             json.dump(self.to_dict(), f, indent=2)
 
     @classmethod
-    def load(cls, path: Path | str) -> "PriorSet":
+    def load(cls, path: Path | str) -> PriorSet:
         with open(path) as f:
             data = json.load(f)
         priors = {}
@@ -190,11 +189,10 @@ def apply_calibration_factors(
 
             # Tighten sigma when we have high-confidence test data
             confidence = conf.get(ch, 0.8)
-            p.beta_sigma *= (1.0 - 0.3 * confidence)  # tighter with more confidence
+            p.beta_sigma *= 1.0 - 0.3 * confidence  # tighter with more confidence
 
             logger.info(
-                f"Applied calibration factor {factor:.2f} to {ch} "
-                f"(new beta_mu={p.beta_mu:.4f})"
+                f"Applied calibration factor {factor:.2f} to {ch} (new beta_mu={p.beta_mu:.4f})"
             )
 
     return priors

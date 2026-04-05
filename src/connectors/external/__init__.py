@@ -6,8 +6,8 @@ External data connectors for control variables.
   - Holiday calendars (``holidays`` Python package -- offline)
 """
 
-from connectors.external.weather import WeatherConnector
 from connectors.external.fred import FREDConnector
 from connectors.external.holidays import HolidayConnector
+from connectors.external.weather import WeatherConnector
 
 __all__ = ["WeatherConnector", "FREDConnector", "HolidayConnector"]

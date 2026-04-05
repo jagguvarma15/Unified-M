@@ -50,8 +50,8 @@ class MetaAdsConnector(AdPlatformConnector):
         **kwargs: Any,
     ) -> pd.DataFrame:
         try:
-            from facebook_business.api import FacebookAdsApi
             from facebook_business.adobjects.adaccount import AdAccount
+            from facebook_business.api import FacebookAdsApi
         except ImportError:
             raise ImportError(
                 "facebook-business is not installed. Run: pip install facebook-business"
@@ -80,13 +80,15 @@ class MetaAdsConnector(AdPlatformConnector):
             else:
                 channel = "meta_facebook"
 
-            records.append({
-                "date": row["date_start"],
-                "channel": channel,
-                "spend": float(row.get("spend", 0)),
-                "impressions": int(row.get("impressions", 0)),
-                "clicks": int(row.get("clicks", 0)),
-            })
+            records.append(
+                {
+                    "date": row["date_start"],
+                    "channel": channel,
+                    "spend": float(row.get("spend", 0)),
+                    "impressions": int(row.get("impressions", 0)),
+                    "clicks": int(row.get("clicks", 0)),
+                }
+            )
 
         df = pd.DataFrame(records)
         logger.info(f"Fetched {len(df)} rows from Meta Ads")
@@ -95,6 +97,7 @@ class MetaAdsConnector(AdPlatformConnector):
     def test_connection(self) -> bool:
         try:
             from facebook_business.api import FacebookAdsApi
+
             return bool(self.access_token and self.ad_account_id)
         except ImportError:
             return False

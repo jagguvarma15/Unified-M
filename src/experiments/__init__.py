@@ -8,8 +8,8 @@ Provides tools for analyzing incrementality experiments:
 """
 
 from experiments.geo_lift import GeoLiftAnalyzer
+from experiments.power_analysis import compute_mde, compute_required_sample_size
 from experiments.switchback import SwitchbackAnalyzer
-from experiments.power_analysis import compute_required_sample_size, compute_mde
 
 __all__ = [
     "GeoLiftAnalyzer",

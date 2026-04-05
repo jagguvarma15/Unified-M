@@ -13,11 +13,12 @@ export function VirtualizedList<T>(props: VirtualizedListProps<T>) {
 
   const overscan = 8;
 
-  const visibleStart = () => Math.max(0, Math.floor(scrollTop() / props.rowHeight) - overscan);
+  const visibleStart = () =>
+    Math.max(0, Math.floor(scrollTop() / props.rowHeight) - overscan);
   const visibleEnd = () =>
     Math.min(
       props.rows.length,
-      Math.ceil((scrollTop() + props.height) / props.rowHeight) + overscan
+      Math.ceil((scrollTop() + props.height) / props.rowHeight) + overscan,
     );
 
   const totalHeight = () => props.rows.length * props.rowHeight;
@@ -34,13 +35,19 @@ export function VirtualizedList<T>(props: VirtualizedListProps<T>) {
   const visibleRows = () => {
     const start = visibleStart();
     const end = visibleEnd();
-    return props.rows.slice(start, end).map((row, i) => ({ row, index: start + i }));
+    return props.rows
+      .slice(start, end)
+      .map((row, i) => ({ row, index: start + i }));
   };
 
   return (
     <div
       ref={containerEl}
-      style={{ height: `${props.height}px`, overflow: "auto", position: "relative" }}
+      style={{
+        height: `${props.height}px`,
+        overflow: "auto",
+        position: "relative",
+      }}
     >
       <div style={{ height: `${totalHeight()}px`, position: "relative" }}>
         <For each={visibleRows()}>

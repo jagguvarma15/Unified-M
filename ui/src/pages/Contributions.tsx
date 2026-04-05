@@ -39,7 +39,8 @@ export default function Contributions() {
       }))
       .sort((a, b) => b.total - a.total);
 
-  const allTotal = () => channelTotals().reduce((s, c) => s + Math.abs(c.total), 0);
+  const allTotal = () =>
+    channelTotals().reduce((s, c) => s + Math.abs(c.total), 0);
 
   const timeline = () => {
     const d = data();
@@ -62,58 +63,130 @@ export default function Contributions() {
     >
       <Show when={data()?.data?.length} fallback={<EmptyState />}>
         <div>
-          <h1 class="text-2xl font-bold text-slate-900">Channel Contributions</h1>
-          <p class="text-sm text-slate-500 mt-1">Breakdown of total response by marketing channel</p>
+          <h1 class="text-2xl font-bold text-slate-900">
+            Channel Contributions
+          </h1>
+          <p class="text-sm text-slate-500 mt-1">
+            Breakdown of total response by marketing channel
+          </p>
 
           {/* ---- Horizontal bar chart ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">Total Contribution by Channel</h2>
+            <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              Total Contribution by Channel
+            </h2>
             <ReactChart>
-              {() => h(ResponsiveContainer, { width: "100%", height: Math.max(200, channels().length * 52) },
-                h(BarChart, { data: channelTotals(), layout: "vertical", margin: { left: 80, right: 20 } },
-                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0", horizontal: false }),
-                  h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
-                  h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 13 }, width: 75 }),
-                  h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
-                  h(Bar, { dataKey: "total", radius: [0, 6, 6, 0] },
-                    ...channelTotals().map((_, i) =>
-                      h(Cell, { key: i, fill: COLORS[i % COLORS.length] })
-                    )
-                  )
+              {() =>
+                h(
+                  ResponsiveContainer,
+                  {
+                    width: "100%",
+                    height: Math.max(200, channels().length * 52),
+                  },
+                  h(
+                    BarChart,
+                    {
+                      data: channelTotals(),
+                      layout: "vertical",
+                      margin: { left: 80, right: 20 },
+                    },
+                    h(CartesianGrid, {
+                      strokeDasharray: "3 3",
+                      stroke: "#e2e8f0",
+                      horizontal: false,
+                    }),
+                    h(XAxis, {
+                      type: "number",
+                      tick: { fontSize: 12 },
+                      tickFormatter: (v: number) => formatCompactNumber(v),
+                    }),
+                    h(YAxis, {
+                      type: "category",
+                      dataKey: "channel",
+                      tick: { fontSize: 13 },
+                      width: 75,
+                    }),
+                    h(Tooltip, {
+                      formatter: (v: number) =>
+                        v.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        }),
+                    }),
+                    h(
+                      Bar,
+                      { dataKey: "total", radius: [0, 6, 6, 0] },
+                      ...channelTotals().map((_, i) =>
+                        h(Cell, { key: i, fill: COLORS[i % COLORS.length] }),
+                      ),
+                    ),
+                  ),
                 )
-              )}
+              }
             </ReactChart>
           </div>
 
           {/* ---- Stacked area timeline ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">Contributions Over Time</h2>
+            <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              Contributions Over Time
+            </h2>
             <ReactChart>
-              {() => h(ResponsiveContainer, { width: "100%", height: 350 },
-                h(AreaChart, { data: timeline() },
-                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
-                  h(XAxis, { dataKey: "date", ...getDateAxisProps(timeline().length) }),
-                  h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
-                  h(Tooltip),
-                  h(Legend),
-                  ...channels().map((ch, i) =>
-                    h(Area, { key: ch, type: "monotone", dataKey: ch, stackId: "1", fill: COLORS[i % COLORS.length], stroke: COLORS[i % COLORS.length], fillOpacity: 0.7 })
-                  )
+              {() =>
+                h(
+                  ResponsiveContainer,
+                  { width: "100%", height: 350 },
+                  h(
+                    AreaChart,
+                    { data: timeline() },
+                    h(CartesianGrid, {
+                      strokeDasharray: "3 3",
+                      stroke: "#e2e8f0",
+                    }),
+                    h(XAxis, {
+                      dataKey: "date",
+                      ...getDateAxisProps(timeline().length),
+                    }),
+                    h(YAxis, {
+                      tick: { fontSize: 11 },
+                      tickFormatter: (v: number) => formatCompactNumber(v),
+                    }),
+                    h(Tooltip),
+                    h(Legend),
+                    ...channels().map((ch, i) =>
+                      h(Area, {
+                        key: ch,
+                        type: "monotone",
+                        dataKey: ch,
+                        stackId: "1",
+                        fill: COLORS[i % COLORS.length],
+                        stroke: COLORS[i % COLORS.length],
+                        fillOpacity: 0.7,
+                      }),
+                    ),
+                  ),
                 )
-              )}
+              }
             </ReactChart>
           </div>
 
           {/* ---- Summary table ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">Channel Summary</h2>
+            <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              Channel Summary
+            </h2>
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-slate-200">
-                    <th class="text-left py-3 px-4 font-semibold text-slate-600">Channel</th>
-                    <th class="text-right py-3 px-4 font-semibold text-slate-600">Total Contribution</th>
-                    <th class="text-right py-3 px-4 font-semibold text-slate-600">Share</th>
+                    <th class="text-left py-3 px-4 font-semibold text-slate-600">
+                      Channel
+                    </th>
+                    <th class="text-right py-3 px-4 font-semibold text-slate-600">
+                      Total Contribution
+                    </th>
+                    <th class="text-right py-3 px-4 font-semibold text-slate-600">
+                      Share
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,7 +201,9 @@ export default function Contributions() {
                           {ch.channel}
                         </td>
                         <td class="text-right py-3 px-4 tabular-nums">
-                          {ch.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          {ch.total.toLocaleString(undefined, {
+                            maximumFractionDigits: 0,
+                          })}
                         </td>
                         <td class="text-right py-3 px-4 tabular-nums">
                           {allTotal() > 0

@@ -17,17 +17,16 @@ Gates implemented:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
-import numpy as np
 import pandas as pd
 from loguru import logger
-
 
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class GateResult:
@@ -74,6 +73,7 @@ class DataQualityReport:
 # ---------------------------------------------------------------------------
 # Individual gates
 # ---------------------------------------------------------------------------
+
 
 def _gate_schema_validation(
     media_spend: pd.DataFrame | None,
@@ -139,7 +139,8 @@ def _gate_completeness(
         severity="warning" if not passed else "info",
         message=(
             f"{len(missing_by_channel)} channels have missing weeks"
-            if not passed else "All channels complete"
+            if not passed
+            else "All channels complete"
         ),
         details={"missing_by_channel": missing_by_channel},
     )
@@ -168,12 +169,14 @@ def _gate_spend_anomaly(
         z_scores = (ch["spend"] - rolling_mean) / (rolling_std + 1e-8)
         outlier_mask = z_scores.abs() > sigma_threshold
         for _, row in ch[outlier_mask].iterrows():
-            anomalies.append({
-                "channel": channel,
-                "date": str(row["date"]),
-                "spend": float(row["spend"]),
-                "z_score": float(z_scores.loc[row.name]),
-            })
+            anomalies.append(
+                {
+                    "channel": channel,
+                    "date": str(row["date"]),
+                    "spend": float(row["spend"]),
+                    "z_score": float(z_scores.loc[row.name]),
+                }
+            )
 
     passed = len(anomalies) == 0
     return GateResult(
@@ -229,11 +232,13 @@ def _gate_target_anomaly(
 
     anomalies = []
     for _, row in outcomes[outlier_mask].iterrows():
-        anomalies.append({
-            "date": str(row.get("date", "")),
-            "value": float(row[col]),
-            "z_score": float(z_scores.loc[row.name]),
-        })
+        anomalies.append(
+            {
+                "date": str(row.get("date", "")),
+                "value": float(row[col]),
+                "z_score": float(z_scores.loc[row.name]),
+            }
+        )
 
     passed = len(anomalies) == 0
     return GateResult(
@@ -266,9 +271,7 @@ def _gate_staleness(
         gate_name="staleness",
         passed=passed,
         severity="warning" if not passed else "info",
-        message=(
-            f"Latest data is {age_days} days old (threshold: {max_age_days})"
-        ),
+        message=(f"Latest data is {age_days} days old (threshold: {max_age_days})"),
         details={"latest_date": str(latest_date), "age_days": age_days},
     )
 
@@ -316,6 +319,7 @@ def _gate_cross_source_consistency(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def run_quality_gates(
     media_spend: pd.DataFrame | None = None,

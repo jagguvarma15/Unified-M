@@ -13,11 +13,11 @@ Install:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
-import pandas as pd
 from loguru import logger
 
 from optimization.allocator import BudgetOptimizer, OptimizationResult
@@ -94,7 +94,9 @@ def optimize_with_constraints(
     # Apply granularity rounding
     if budget_granularity > 0:
         for ch in full_allocation:
-            full_allocation[ch] = round(full_allocation[ch] / budget_granularity) * budget_granularity
+            full_allocation[ch] = (
+                round(full_allocation[ch] / budget_granularity) * budget_granularity
+            )
 
     # Validate group constraints
     violations = _check_group_constraints(full_allocation, total_budget, group_constraints)
@@ -103,8 +105,7 @@ def optimize_with_constraints(
 
     # Compute total response with full allocation
     total_response = sum(
-        response_curves[ch](spend) for ch, spend in full_allocation.items()
-        if ch in response_curves
+        response_curves[ch](spend) for ch, spend in full_allocation.items() if ch in response_curves
     )
 
     return OptimizationResult(
@@ -132,13 +133,9 @@ def _check_group_constraints(
         group_pct = group_spend / total_budget if total_budget > 0 else 0
 
         if group_pct < gc.min_pct:
-            violations.append(
-                f"{gc.name}: {group_pct:.1%} < min {gc.min_pct:.1%}"
-            )
+            violations.append(f"{gc.name}: {group_pct:.1%} < min {gc.min_pct:.1%}")
         if group_pct > gc.max_pct:
-            violations.append(
-                f"{gc.name}: {group_pct:.1%} > max {gc.max_pct:.1%}"
-            )
+            violations.append(f"{gc.name}: {group_pct:.1%} > max {gc.max_pct:.1%}")
 
     return violations
 

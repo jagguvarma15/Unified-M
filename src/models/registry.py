@@ -15,7 +15,6 @@ from loguru import logger
 from core.base_model import BaseMMM
 from core.exceptions import ModelRegistryError
 
-
 # ---------------------------------------------------------------------------
 # Registry storage
 # ---------------------------------------------------------------------------

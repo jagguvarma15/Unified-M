@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -141,7 +140,9 @@ class ArtifactStore:
         """Load a Parquet artifact."""
         path = self._run_dir(run_id) / f"{name}.parquet"
         if not path.exists():
-            raise ArtifactError(f"Artifact '{name}.parquet' not found for run {run_id}", run_id=run_id)
+            raise ArtifactError(
+                f"Artifact '{name}.parquet' not found for run {run_id}", run_id=run_id
+            )
         return pd.read_parquet(path)
 
     def load_json(self, run_id: str, name: str) -> Any:
@@ -274,7 +275,10 @@ class ArtifactStore:
         if params_b and isinstance(params_b.get("coefficients"), dict):
             coefficients_b = {k: float(v) for k, v in params_b["coefficients"].items()}
         all_coef_channels = sorted(set(coefficients_a.keys()) | set(coefficients_b.keys()))
-        coefficient_diff = {ch: round(coefficients_b.get(ch, 0) - coefficients_a.get(ch, 0), 6) for ch in all_coef_channels}
+        coefficient_diff = {
+            ch: round(coefficients_b.get(ch, 0) - coefficients_a.get(ch, 0), 6)
+            for ch in all_coef_channels
+        }
 
         # Allocations: from optimization.json (optimal_allocation or channel_allocations)
         def _get_allocation(opt: dict | None) -> dict[str, float]:
@@ -286,7 +290,10 @@ class ArtifactStore:
         allocation_a = _get_allocation(opt_a)
         allocation_b = _get_allocation(opt_b)
         all_alloc_channels = sorted(set(allocation_a.keys()) | set(allocation_b.keys()))
-        allocation_diff = {ch: round(allocation_b.get(ch, 0) - allocation_a.get(ch, 0), 2) for ch in all_alloc_channels}
+        allocation_diff = {
+            ch: round(allocation_b.get(ch, 0) - allocation_a.get(ch, 0), 2)
+            for ch in all_alloc_channels
+        }
 
         # Current allocation (baseline) if present
         def _get_current_allocation(opt: dict | None) -> dict[str, float]:
@@ -314,14 +321,18 @@ class ArtifactStore:
 
         contribution_totals_a = _contribution_totals(contrib_df_a)
         contribution_totals_b = _contribution_totals(contrib_df_b)
-        contrib_channels = sorted(set(contribution_totals_a.keys()) | set(contribution_totals_b.keys()))
+        contrib_channels = sorted(
+            set(contribution_totals_a.keys()) | set(contribution_totals_b.keys())
+        )
         contribution_diff = {
             ch: round(contribution_totals_b.get(ch, 0) - contribution_totals_a.get(ch, 0), 2)
             for ch in contrib_channels
         }
 
         # Config diff (shallow)
-        config_changes = _dict_diff(ma.get("config_snapshot") or {}, mb.get("config_snapshot") or {})
+        config_changes = _dict_diff(
+            ma.get("config_snapshot") or {}, mb.get("config_snapshot") or {}
+        )
 
         n_rows_a = ma.get("n_rows") or 0
         n_rows_b = mb.get("n_rows") or 0
@@ -365,13 +376,14 @@ class ArtifactStore:
     def compute_data_hash(df: pd.DataFrame) -> str:
         """Deterministic SHA-256 of a DataFrame for reproducibility checks."""
         import numpy as np
+
         h = hashlib.sha256()
         for col in sorted(df.columns):
             h.update(col.encode())
             # Convert to numpy array to handle both regular arrays and nullable IntegerArray
             values = df[col].to_numpy(dtype=None, na_value=0)
             # Ensure we have a contiguous array for tobytes()
-            if not values.flags['C_CONTIGUOUS']:
+            if not values.flags["C_CONTIGUOUS"]:
                 values = np.ascontiguousarray(values)
             h.update(values.tobytes())
         return h.hexdigest()[:16]
@@ -407,6 +419,7 @@ class ArtifactStore:
 # ---------------------------------------------------------------------------
 # Private utilities
 # ---------------------------------------------------------------------------
+
 
 def _json_default(obj: Any) -> Any:
     """JSON fallback serialiser for numpy and pandas types."""

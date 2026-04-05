@@ -72,13 +72,15 @@ export function useDataStatusQuery() {
 
 export function useCompareRunsMutation() {
   return createMutation(() => ({
-    mutationFn: ({ runA, runB }: { runA: string; runB: string }) => api.compareRuns(runA, runB),
+    mutationFn: ({ runA, runB }: { runA: string; runB: string }) =>
+      api.compareRuns(runA, runB),
   }));
 }
 
 export function useUploadFileMutation() {
   return createMutation(() => ({
-    mutationFn: ({ dataType, file }: { dataType: string; file: File }) => api.uploadFile(dataType, file),
+    mutationFn: ({ dataType, file }: { dataType: string; file: File }) =>
+      api.uploadFile(dataType, file),
   }));
 }
 

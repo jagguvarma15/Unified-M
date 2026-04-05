@@ -15,13 +15,19 @@ const MAX_QUEUE_SIZE = 300;
 const queue: TelemetryEvent[] = [];
 let flushTimer: number | null = null;
 
-function sanitizeProps(props?: Record<string, unknown>): EventProps | undefined {
+function sanitizeProps(
+  props?: Record<string, unknown>,
+): EventProps | undefined {
   if (!props) return undefined;
   const out: EventProps = {};
   for (const [k, v] of Object.entries(props)) {
     if (v == null) {
       out[k] = null;
-    } else if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+    } else if (
+      typeof v === "string" ||
+      typeof v === "number" ||
+      typeof v === "boolean"
+    ) {
       out[k] = v;
     } else {
       out[k] = String(v);
@@ -51,7 +57,8 @@ async function flushTelemetry() {
     });
   } catch {
     queue.unshift(...batch);
-    if (queue.length > MAX_QUEUE_SIZE) queue.splice(0, queue.length - MAX_QUEUE_SIZE);
+    if (queue.length > MAX_QUEUE_SIZE)
+      queue.splice(0, queue.length - MAX_QUEUE_SIZE);
   }
 
   if (queue.length > 0) scheduleFlush();
@@ -77,7 +84,12 @@ export function trackPageView(path: string) {
   trackEvent("page_view", { path });
 }
 
-export function trackApiLatency(path: string, durationMs: number, ok: boolean, status: number) {
+export function trackApiLatency(
+  path: string,
+  durationMs: number,
+  ok: boolean,
+  status: number,
+) {
   trackEvent("api_request", {
     endpoint: path,
     duration_ms: Math.round(durationMs),

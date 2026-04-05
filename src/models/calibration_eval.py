@@ -48,7 +48,7 @@ class CalibrationReport:
     """Full calibration evaluation report."""
 
     points: list[CalibrationPoint] = field(default_factory=list)
-    coverage: float = 0.0          # % of tests within CI
+    coverage: float = 0.0  # % of tests within CI
     median_lift_error: float = 0.0  # median |pred - meas| / meas
     mean_lift_error: float = 0.0
     n_tests: int = 0
@@ -118,16 +118,18 @@ def evaluate_calibration(
         else:
             error_pct = 0.0
 
-        points.append(CalibrationPoint(
-            test_id=test.get("test_id", ""),
-            channel=channel,
-            measured_lift=measured_lift,
-            predicted_lift=predicted_lift,
-            predicted_ci_lower=pred_ci_lower,
-            predicted_ci_upper=pred_ci_upper,
-            within_ci=within_ci,
-            error_pct=error_pct,
-        ))
+        points.append(
+            CalibrationPoint(
+                test_id=test.get("test_id", ""),
+                channel=channel,
+                measured_lift=measured_lift,
+                predicted_lift=predicted_lift,
+                predicted_ci_lower=pred_ci_lower,
+                predicted_ci_upper=pred_ci_upper,
+                within_ci=within_ci,
+                error_pct=error_pct,
+            )
+        )
 
     if not points:
         return CalibrationReport(calibration_quality="no_matching_tests")

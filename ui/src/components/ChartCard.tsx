@@ -23,11 +23,17 @@ function downloadCsv(data: Record<string, unknown>[], filename: string) {
   const keys = Object.keys(data[0]);
   const rows = [keys.join(",")];
   for (const row of data) {
-    rows.push(keys.map((k) => {
-      const v = row[k];
-      const s = v == null ? "" : String(v);
-      return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-    }).join(","));
+    rows.push(
+      keys
+        .map((k) => {
+          const v = row[k];
+          const s = v == null ? "" : String(v);
+          return s.includes(",") || s.includes('"')
+            ? `"${s.replace(/"/g, '""')}"`
+            : s;
+        })
+        .join(","),
+    );
   }
   const blob = new Blob([rows.join("\n")], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -59,23 +65,31 @@ function downloadPng(container: HTMLElement, filename: string) {
     a.download = `${filename}.png`;
     a.click();
   };
-  img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  img.src =
+    "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
 }
 
 export default function ChartCard(props: Props) {
   let containerRef!: HTMLDivElement;
   const [showExportMenu, setShowExportMenu] = createSignal(false);
-  const exportName = () => props.exportName ?? props.title.toLowerCase().replace(/\s+/g, "-");
+  const exportName = () =>
+    props.exportName ?? props.title.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <div
       ref={containerRef}
       class={`rounded-xl border border-slate-200/60 bg-white shadow-sm transition-shadow hover:shadow-md ${CHART_PAD[density()]} ${props.class ?? ""}`}
-      style={props.minHeight ? { "min-height": `${props.minHeight}px` } : undefined}
+      style={
+        props.minHeight ? { "min-height": `${props.minHeight}px` } : undefined
+      }
     >
-      <div class={`flex flex-wrap items-start justify-between gap-3 ${CHART_HEADER_MB[density()]}`}>
+      <div
+        class={`flex flex-wrap items-start justify-between gap-3 ${CHART_HEADER_MB[density()]}`}
+      >
         <div>
-          <h2 class="text-sm font-semibold tracking-tight text-slate-700">{props.title}</h2>
+          <h2 class="text-sm font-semibold tracking-tight text-slate-700">
+            {props.title}
+          </h2>
           <Show when={props.description}>
             <p class="mt-0.5 text-xs text-slate-500">{props.description}</p>
           </Show>
@@ -96,14 +110,20 @@ export default function ChartCard(props: Props) {
               <div class="absolute right-0 top-full mt-1 z-30 w-36 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                 <Show when={props.exportData}>
                   <button
-                    onClick={() => { downloadCsv(props.exportData!, exportName()); setShowExportMenu(false); }}
+                    onClick={() => {
+                      downloadCsv(props.exportData!, exportName());
+                      setShowExportMenu(false);
+                    }}
                     class="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                   >
                     <Download size={12} /> Export CSV
                   </button>
                 </Show>
                 <button
-                  onClick={() => { downloadPng(containerRef, exportName()); setShowExportMenu(false); }}
+                  onClick={() => {
+                    downloadPng(containerRef, exportName());
+                    setShowExportMenu(false);
+                  }}
                   class="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                 >
                   <ImageIcon size={12} /> Export PNG

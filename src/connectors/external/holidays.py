@@ -34,9 +34,7 @@ class HolidayConnector:
         try:
             import holidays as holidays_lib
         except ImportError:
-            raise ImportError(
-                "holidays package not installed. Run: pip install holidays"
-            )
+            raise ImportError("holidays package not installed. Run: pip install holidays")
 
         logger.info(f"Generating holiday calendar: {start_date} to {end_date} ({self.country})")
 
@@ -49,11 +47,13 @@ class HolidayConnector:
         records = []
         for d in dates:
             is_holiday = d in cal
-            records.append({
-                "date": d,
-                "ctrl_is_holiday": int(is_holiday),
-                "holiday_name": cal.get(d, ""),
-            })
+            records.append(
+                {
+                    "date": d,
+                    "ctrl_is_holiday": int(is_holiday),
+                    "holiday_name": cal.get(d, ""),
+                }
+            )
 
         df = pd.DataFrame(records)
         n_holidays = df["ctrl_is_holiday"].sum()
@@ -64,7 +64,11 @@ class HolidayConnector:
         """Generate and aggregate to ISO weeks (1 if any day is a holiday)."""
         df = self.generate(start_date, end_date)
         df["week_start"] = df["date"].dt.to_period("W").dt.start_time
-        weekly = df.groupby("week_start").agg(
-            ctrl_is_holiday=("ctrl_is_holiday", "max"),
-        ).reset_index()
+        weekly = (
+            df.groupby("week_start")
+            .agg(
+                ctrl_is_holiday=("ctrl_is_holiday", "max"),
+            )
+            .reset_index()
+        )
         return weekly

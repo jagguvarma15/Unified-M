@@ -22,12 +22,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
+
 
 class TestType(str, Enum):
     GEO_LIFT = "geo_lift"
@@ -66,6 +66,7 @@ class RunMode(str, Enum):
 # ---------------------------------------------------------------------------
 # Input contracts  (what users feed into the framework)
 # ---------------------------------------------------------------------------
+
 
 class MediaSpendInput(BaseModel):
     """One row of media spend data (long format: one row per date x channel)."""
@@ -119,7 +120,9 @@ class IncrementalityTestInput(BaseModel):
     spend_during_test: float | None = Field(default=None, ge=0)
     incremental_kpi: float | None = Field(default=None)
     control_geos: str | None = Field(default=None, description="Comma-separated control geo codes")
-    treatment_geos: str | None = Field(default=None, description="Comma-separated treatment geo codes")
+    treatment_geos: str | None = Field(
+        default=None, description="Comma-separated treatment geo codes"
+    )
     p_value: float | None = Field(default=None, ge=0, le=1)
     statistical_power: float | None = Field(default=None, ge=0, le=1)
 
@@ -143,6 +146,7 @@ class AttributionInput(BaseModel):
 # ---------------------------------------------------------------------------
 # Measurement Mart contracts  (gold-zone canonical schema)
 # ---------------------------------------------------------------------------
+
 
 class MeasurementMartRow(BaseModel):
     """
@@ -208,6 +212,7 @@ class ExperimentRecord(BaseModel):
 # Internal / pipeline contracts
 # ---------------------------------------------------------------------------
 
+
 class ChannelConfig(BaseModel):
     """Per-channel configuration for transforms and priors."""
 
@@ -244,6 +249,7 @@ class MMMDataset(BaseModel):
 # ---------------------------------------------------------------------------
 # Output contracts  (what the framework produces)
 # ---------------------------------------------------------------------------
+
 
 class ModelMetrics(BaseModel):
     """Standard model-fit metrics."""
@@ -296,6 +302,7 @@ class ChannelResult(BaseModel):
 
 class ResponseCurvePoint(BaseModel):
     """Single point on a channel response curve."""
+
     spend: float
     response: float
     marginal_response: float = 0.0
@@ -317,6 +324,7 @@ class OptimizationOutput(BaseModel):
 # ---------------------------------------------------------------------------
 # Run metadata  (audit trail)
 # ---------------------------------------------------------------------------
+
 
 class RunManifest(BaseModel):
     """

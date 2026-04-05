@@ -46,12 +46,7 @@ export default function Sparkline({
     trend === "up" ? "#10b981" : trend === "down" ? "#ef4444" : strokeColor;
 
   return (
-    <svg
-      width={width}
-      height={height}
-      class={className}
-      aria-hidden
-    >
+    <svg width={width} height={height} class={className} aria-hidden>
       <path d={areaD} fill={fillColor} />
       <path
         d={pathD}

@@ -32,7 +32,14 @@ import {
   GripVertical,
   type LucideIcon,
 } from "../lib/icons";
-import { createSignal, createEffect, For, Show, Suspense, type JSX } from "solid-js";
+import {
+  createSignal,
+  createEffect,
+  For,
+  Show,
+  Suspense,
+  type JSX,
+} from "solid-js";
 import { useHealthQuery } from "../lib/queries";
 import { useAnalyticsMode } from "../lib/analyticsMode";
 import { useQueryClient } from "@tanstack/solid-query";
@@ -80,7 +87,11 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/optimization", label: "Budget Optimizer", icon: Target },
       { to: "/scenarios", label: "Scenario Planner", icon: Calculator },
-      { to: "/budget-simulator", label: "Budget Simulator", icon: SlidersHorizontal },
+      {
+        to: "/budget-simulator",
+        label: "Budget Simulator",
+        icon: SlidersHorizontal,
+      },
       { to: "/spend-pacing", label: "Spend Pacing", icon: Gauge },
     ],
   },
@@ -102,18 +113,24 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: "Configuration",
-    items: [
-      { to: "/settings", label: "Settings", icon: Settings },
-    ],
+    items: [{ to: "/settings", label: "Settings", icon: Settings }],
   },
 ];
 
 const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
 
 export default function Layout(props: { children?: JSX.Element }) {
-  const [sectionCollapsed, setSectionCollapsed] = createSignal<Record<string, boolean>>({});
+  const [sectionCollapsed, setSectionCollapsed] = createSignal<
+    Record<string, boolean>
+  >({});
   const [sidebarCollapsed, setSidebarCollapsed] = createSignal(
-    (() => { try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true"; } catch (_e) { return false; } })()
+    (() => {
+      try {
+        return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+      } catch (_e) {
+        return false;
+      }
+    })(),
   );
   const [pipelineOpen, setPipelineOpen] = createSignal(false);
   const health = useHealthQuery();
@@ -154,7 +171,9 @@ export default function Layout(props: { children?: JSX.Element }) {
   const toggleSidebar = () => {
     const next = !sidebarCollapsed();
     setSidebarCollapsed(next);
-    try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)); } catch {}
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+    } catch {}
   };
 
   const sc = () => sidebarCollapsed();
@@ -162,31 +181,43 @@ export default function Layout(props: { children?: JSX.Element }) {
   return (
     <div class="flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar */}
-      <aside class={`flex-shrink-0 flex flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50 transition-all duration-200 ${sc() ? "w-[52px]" : "w-64"}`}>
+      <aside
+        class={`flex-shrink-0 flex flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50 transition-all duration-200 ${sc() ? "w-[52px]" : "w-64"}`}
+      >
         {/* Brand */}
         <div class={`pt-5 pb-3 ${sc() ? "px-2" : "px-5"}`}>
-          <Show when={!sc()} fallback={
-            <div class="flex items-center justify-center">
-              <span class="text-sm font-bold text-white">M</span>
-            </div>
-          }>
-            <h1 class="text-lg font-bold tracking-tight text-white">Unified-M</h1>
-            <p class="mt-0.5 text-[11px] text-slate-400">Marketing Measurement</p>
+          <Show
+            when={!sc()}
+            fallback={
+              <div class="flex items-center justify-center">
+                <span class="text-sm font-bold text-white">M</span>
+              </div>
+            }
+          >
+            <h1 class="text-lg font-bold tracking-tight text-white">
+              Unified-M
+            </h1>
+            <p class="mt-0.5 text-[11px] text-slate-400">
+              Marketing Measurement
+            </p>
           </Show>
         </div>
 
         {/* Run Pipeline */}
         <div class={sc() ? "px-1.5 pb-2" : "px-3 pb-3"}>
-          <Show when={!sc()} fallback={
-            <Tooltip content="Run Pipeline" side="right">
-              <button
-                onClick={() => setPipelineOpen(true)}
-                class="flex w-full items-center justify-center rounded-lg bg-indigo-600 p-2 text-white hover:bg-indigo-700 transition-colors"
-              >
-                <Play size={14} />
-              </button>
-            </Tooltip>
-          }>
+          <Show
+            when={!sc()}
+            fallback={
+              <Tooltip content="Run Pipeline" side="right">
+                <button
+                  onClick={() => setPipelineOpen(true)}
+                  class="flex w-full items-center justify-center rounded-lg bg-indigo-600 p-2 text-white hover:bg-indigo-700 transition-colors"
+                >
+                  <Play size={14} />
+                </button>
+              </Tooltip>
+            }
+          >
             <button
               onClick={() => setPipelineOpen(true)}
               class="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
@@ -197,22 +228,27 @@ export default function Layout(props: { children?: JSX.Element }) {
           </Show>
         </div>
 
-        <nav class={`flex-1 overflow-y-auto py-2 space-y-0.5 ${sc() ? "px-1.5" : "px-2.5"}`}>
+        <nav
+          class={`flex-1 overflow-y-auto py-2 space-y-0.5 ${sc() ? "px-1.5" : "px-2.5"}`}
+        >
           {/* Pinned */}
           <For each={PINNED_NAV}>
             {(item) => (
-              <Show when={!sc()} fallback={
-                <Tooltip content={item.label} side="right">
-                  <A
-                    href={item.to}
-                    activeClass="bg-indigo-600 text-white"
-                    inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
-                    class="flex items-center justify-center rounded-md p-2 transition-colors"
-                  >
-                    {item.icon({ size: 16, class: "shrink-0" })}
-                  </A>
-                </Tooltip>
-              }>
+              <Show
+                when={!sc()}
+                fallback={
+                  <Tooltip content={item.label} side="right">
+                    <A
+                      href={item.to}
+                      activeClass="bg-indigo-600 text-white"
+                      inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                      class="flex items-center justify-center rounded-md p-2 transition-colors"
+                    >
+                      {item.icon({ size: 16, class: "shrink-0" })}
+                    </A>
+                  </Tooltip>
+                }
+              >
                 <A
                   href={item.to}
                   activeClass="bg-indigo-600 text-white"
@@ -241,7 +277,12 @@ export default function Layout(props: { children?: JSX.Element }) {
               return (
                 <Show when={items().length > 0}>
                   <div class="pt-1">
-                    <Show when={!sc()} fallback={<div class="my-1 border-t border-slate-800/40" />}>
+                    <Show
+                      when={!sc()}
+                      fallback={
+                        <div class="my-1 border-t border-slate-800/40" />
+                      }
+                    >
                       <button
                         onClick={() => toggleSection(section.title)}
                         aria-expanded={!sectionCollapsed()[section.title]}
@@ -260,19 +301,22 @@ export default function Layout(props: { children?: JSX.Element }) {
                       <div class={`${sc() ? "" : "mt-0.5"} space-y-0.5`}>
                         <For each={items()}>
                           {(item) => (
-                            <Show when={!sc()} fallback={
-                              <Tooltip content={item.label} side="right">
-                                <A
-                                  href={item.to}
-                                  end={item.to === "/"}
-                                  activeClass="bg-indigo-600 text-white"
-                                  inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
-                                  class="flex items-center justify-center rounded-md p-2 transition-colors"
-                                >
-                                  {item.icon({ size: 16, class: "shrink-0" })}
-                                </A>
-                              </Tooltip>
-                            }>
+                            <Show
+                              when={!sc()}
+                              fallback={
+                                <Tooltip content={item.label} side="right">
+                                  <A
+                                    href={item.to}
+                                    end={item.to === "/"}
+                                    activeClass="bg-indigo-600 text-white"
+                                    inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                                    class="flex items-center justify-center rounded-md p-2 transition-colors"
+                                  >
+                                    {item.icon({ size: 16, class: "shrink-0" })}
+                                  </A>
+                                </Tooltip>
+                              }
+                            >
                               <A
                                 href={item.to}
                                 end={item.to === "/"}
@@ -296,7 +340,9 @@ export default function Layout(props: { children?: JSX.Element }) {
         </nav>
 
         {/* Footer */}
-        <div class={`border-t border-slate-700/60 space-y-2 ${sc() ? "p-1.5" : "p-3"}`}>
+        <div
+          class={`border-t border-slate-700/60 space-y-2 ${sc() ? "p-1.5" : "p-3"}`}
+        >
           {/* Collapse toggle */}
           <button
             onClick={toggleSidebar}
@@ -316,7 +362,10 @@ export default function Layout(props: { children?: JSX.Element }) {
               {health.data ? "API connected" : "API offline"}
             </div>
             <Show when={health.data?.latest_run}>
-              <p class="truncate text-[11px] text-slate-500" title={health.data!.latest_run!}>
+              <p
+                class="truncate text-[11px] text-slate-500"
+                title={health.data!.latest_run!}
+              >
                 {health.data!.latest_run!.slice(0, 14)}…
               </p>
             </Show>
@@ -326,13 +375,23 @@ export default function Layout(props: { children?: JSX.Element }) {
 
             {/* Density toggle */}
             <div class="flex items-center gap-1.5 pt-0.5">
-              <span class="text-[10px] text-slate-500 select-none">Density</span>
-              <div class="flex rounded-md overflow-hidden border border-slate-700" role="group" aria-label="UI density">
+              <span class="text-[10px] text-slate-500 select-none">
+                Density
+              </span>
+              <div
+                class="flex rounded-md overflow-hidden border border-slate-700"
+                role="group"
+                aria-label="UI density"
+              >
                 {(
                   [
                     { key: "compact" as Density, label: "S", title: "Compact" },
                     { key: "default" as Density, label: "M", title: "Default" },
-                    { key: "comfortable" as Density, label: "L", title: "Comfortable" },
+                    {
+                      key: "comfortable" as Density,
+                      label: "L",
+                      title: "Comfortable",
+                    },
                   ] as const
                 ).map(({ key, label, title }) => (
                   <button
@@ -380,15 +439,16 @@ export default function Layout(props: { children?: JSX.Element }) {
               </div>
             }
           >
-            <PageErrorBoundary>
-              {props.children}
-            </PageErrorBoundary>
+            <PageErrorBoundary>{props.children}</PageErrorBoundary>
           </Suspense>
         </div>
       </main>
 
       {/* Pipeline Runner slide-out */}
-      <PipelineRunner open={pipelineOpen()} onClose={() => setPipelineOpen(false)} />
+      <PipelineRunner
+        open={pipelineOpen()}
+        onClose={() => setPipelineOpen(false)}
+      />
 
       {/* Command Palette */}
       <CommandPalette />

@@ -63,17 +63,21 @@ class AmazonAdsConnector(AdPlatformConnector):
 
         # Step 1: Get access token
         token_url = "https://api.amazon.com/auth/o2/token"
-        token_resp = requests.post(token_url, data={
-            "grant_type": "refresh_token",
-            "refresh_token": self.refresh_token,
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-        }, timeout=30)
+        token_resp = requests.post(
+            token_url,
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": self.refresh_token,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+            },
+            timeout=30,
+        )
         token_resp.raise_for_status()
         access_token = token_resp.json()["access_token"]
 
         # Step 2: Request report (simplified -- real impl needs polling)
-        headers = {
+        _headers = {
             "Authorization": f"Bearer {access_token}",
             "Amazon-Advertising-API-ClientId": self.client_id,
             "Amazon-Advertising-API-Scope": self.profile_id,
@@ -86,7 +90,9 @@ class AmazonAdsConnector(AdPlatformConnector):
             "Use file-drop (data/raw/amazon_ads/) or Airbyte for production."
         )
 
-        return self.normalize(pd.DataFrame(columns=["date", "channel", "spend", "impressions", "clicks"]))
+        return self.normalize(
+            pd.DataFrame(columns=["date", "channel", "spend", "impressions", "clicks"])
+        )
 
     def test_connection(self) -> bool:
         return bool(self.client_id and self.refresh_token and self.profile_id)

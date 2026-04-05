@@ -55,7 +55,7 @@ def _mmm_model(
     )
 
     # Adstock decay
-    adstock_alpha = numpyro.sample(
+    _adstock_alpha = numpyro.sample(  # noqa: F841 – sampled; used by NumPyro trace
         "adstock_alpha",
         dist.Beta(jnp.ones(n_media) * 2, jnp.ones(n_media) * 2),
     )
@@ -102,10 +102,7 @@ class NumPyroAdapter(BaseMMM):
         **kwargs: Any,
     ):
         if not _NUMPYRO_AVAILABLE:
-            raise ImportError(
-                "numpyro is not installed. "
-                "Run: pip install numpyro jax jaxlib"
-            )
+            raise ImportError("numpyro is not installed. Run: pip install numpyro jax jaxlib")
 
         self._n_samples = n_samples
         self._n_chains = n_chains
@@ -184,8 +181,7 @@ class NumPyroAdapter(BaseMMM):
         metrics = self.get_metrics(np.array(y), np.array(y_pred))
 
         logger.info(
-            f"NumPyro fit complete. R2={metrics['r_squared']:.3f} "
-            f"MAPE={metrics['mape']:.2f}%"
+            f"NumPyro fit complete. R2={metrics['r_squared']:.3f} MAPE={metrics['mape']:.2f}%"
         )
 
         return {"metrics": metrics}
@@ -257,11 +253,13 @@ class NumPyroAdapter(BaseMMM):
             response = beta[i] * (1.0 - np.exp(-lam[i] * grid_norm))
             marginal = beta[i] * lam[i] / media_scale * np.exp(-lam[i] * grid_norm)
 
-            curves[ch] = pd.DataFrame({
-                "spend": grid,
-                "response": response,
-                "marginal_response": marginal,
-            })
+            curves[ch] = pd.DataFrame(
+                {
+                    "spend": grid,
+                    "response": response,
+                    "marginal_response": marginal,
+                }
+            )
 
         return curves
 
@@ -294,13 +292,16 @@ class NumPyroAdapter(BaseMMM):
         # Convert JAX arrays to numpy for pickling
         samples_np = {k: np.array(v) for k, v in self._samples.items()}
         with open(directory / "numpyro_model.pkl", "wb") as f:
-            pickle.dump({
-                "samples": samples_np,
-                "media_cols": self._media_cols,
-                "control_cols": self._control_cols,
-                "target_col": self._target_col,
-                "date_col": self._date_col,
-            }, f)
+            pickle.dump(
+                {
+                    "samples": samples_np,
+                    "media_cols": self._media_cols,
+                    "control_cols": self._control_cols,
+                    "target_col": self._target_col,
+                    "date_col": self._date_col,
+                },
+                f,
+            )
         params = self.get_parameters()
         with open(directory / "parameters.json", "w") as f:
             json.dump(params, f, indent=2)
@@ -320,10 +321,12 @@ class NumPyroAdapter(BaseMMM):
     def _check_fitted(self) -> None:
         if not self._samples:
             from core.exceptions import ModelNotFittedError
+
             raise ModelNotFittedError("NumPyroAdapter")
 
 
 # Self-register only if NumPyro is available
 if _NUMPYRO_AVAILABLE:
     from models.registry import register_backend
+
     register_backend("numpyro", NumPyroAdapter)

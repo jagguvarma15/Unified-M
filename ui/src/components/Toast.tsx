@@ -1,5 +1,12 @@
 import { Show, For, createSignal, createEffect, onCleanup } from "solid-js";
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle, Undo2 } from "../lib/icons";
+import {
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  AlertTriangle,
+  Undo2,
+} from "../lib/icons";
 import { useToast, type ToastType } from "../lib/toast";
 
 const ICONS: Record<ToastType, typeof CheckCircle2> = {
@@ -30,7 +37,11 @@ const PROGRESS_COLORS: Record<ToastType, string> = {
   warning: "bg-amber-400",
 };
 
-function ProgressBar(props: { duration: number; createdAt: number; type: ToastType }) {
+function ProgressBar(props: {
+  duration: number;
+  createdAt: number;
+  type: ToastType;
+}) {
   const [pct, setPct] = createSignal(100);
 
   createEffect(() => {
@@ -76,12 +87,19 @@ export default function ToastContainer() {
                 role="alert"
                 class={`relative flex items-start gap-2.5 rounded-lg border px-4 py-3 shadow-lg animate-in slide-in-from-right overflow-hidden ${COLORS[toast.type]}`}
               >
-                <Icon size={16} aria-hidden class={`mt-0.5 shrink-0 ${ICON_COLORS[toast.type]}`} />
+                <Icon
+                  size={16}
+                  aria-hidden
+                  class={`mt-0.5 shrink-0 ${ICON_COLORS[toast.type]}`}
+                />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium">{toast.message}</p>
                   <Show when={toast.onUndo}>
                     <button
-                      onClick={() => { toast.onUndo!(); removeToast(toast.id); }}
+                      onClick={() => {
+                        toast.onUndo!();
+                        removeToast(toast.id);
+                      }}
                       class="mt-1 inline-flex items-center gap-1 text-xs font-semibold underline hover:no-underline"
                     >
                       <Undo2 size={11} /> Undo
@@ -95,7 +113,11 @@ export default function ToastContainer() {
                 >
                   <X size={14} aria-hidden />
                 </button>
-                <ProgressBar duration={toast.duration} createdAt={toast.createdAt} type={toast.type} />
+                <ProgressBar
+                  duration={toast.duration}
+                  createdAt={toast.createdAt}
+                  type={toast.type}
+                />
               </div>
             );
           }}

@@ -16,20 +16,20 @@ be anchored to real-world test results.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal
-import json
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 from loguru import logger
 
-
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ChannelEstimate:
@@ -82,9 +82,7 @@ class ReconciliationResult:
 
     def to_dict(self) -> dict:
         return {
-            "channel_estimates": {
-                k: v.to_dict() for k, v in self.channel_estimates.items()
-            },
+            "channel_estimates": {k: v.to_dict() for k, v in self.channel_estimates.items()},
             "total_incremental_value": self.total_incremental_value,
             "reconciliation_method": self.reconciliation_method,
             "timestamp": self.timestamp,
@@ -101,6 +99,7 @@ class ReconciliationResult:
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
+
 
 class ReconciliationEngine:
     """
@@ -156,11 +155,17 @@ class ReconciliationEngine:
 
         if self.fusion_method == "bayesian":
             return self._bayesian_fusion(
-                channels, mmm_results, incrementality_tests, attribution_data,
+                channels,
+                mmm_results,
+                incrementality_tests,
+                attribution_data,
             )
 
         return self._weighted_average_fusion(
-            channels, mmm_results, incrementality_tests, attribution_data,
+            channels,
+            mmm_results,
+            incrementality_tests,
+            attribution_data,
         )
 
     # ------------------------------------------------------------------
@@ -180,7 +185,8 @@ class ReconciliationEngine:
         for channel in channels:
             mmm_lift, mmm_ci, mmm_ok = self._extract_mmm(channel, mmm_results)
             incr_lift, incr_ci, incr_ok, last_test = self._extract_incrementality(
-                channel, incrementality_tests,
+                channel,
+                incrementality_tests,
             )
             attr_lift, attr_ok = self._extract_attribution(channel, attribution_data)
 
@@ -222,7 +228,9 @@ class ReconciliationEngine:
                 lift_ci_upper=ci[1],
                 confidence_score=confidence,
                 mmm_contribution=mmm_lift * self.mmm_weight if mmm_ok else 0,
-                incrementality_contribution=incr_lift * self.incrementality_weight if incr_ok else 0,
+                incrementality_contribution=incr_lift * self.incrementality_weight
+                if incr_ok
+                else 0,
                 attribution_contribution=attr_lift * self.attribution_weight if attr_ok else 0,
                 calibration_factor=cal_factor,
                 last_test_date=last_test,
@@ -255,7 +263,8 @@ class ReconciliationEngine:
         for channel in channels:
             mmm_lift, mmm_ci, mmm_ok = self._extract_mmm(channel, mmm_results)
             incr_lift, incr_ci, incr_ok, last_test = self._extract_incrementality(
-                channel, incrementality_tests,
+                channel,
+                incrementality_tests,
             )
 
             # Prior from MMM
@@ -267,8 +276,8 @@ class ReconciliationEngine:
                 likelihood_mean = incr_lift
                 likelihood_std = (incr_ci[1] - incr_ci[0]) / 3.92
 
-                prior_prec = 1 / (prior_std ** 2)
-                like_prec = 1 / (likelihood_std ** 2 + 1e-12)
+                prior_prec = 1 / (prior_std**2)
+                like_prec = 1 / (likelihood_std**2 + 1e-12)
                 post_prec = prior_prec + like_prec
 
                 posterior_mean = (prior_prec * prior_mean + like_prec * likelihood_mean) / post_prec

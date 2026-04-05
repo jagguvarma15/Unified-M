@@ -13,7 +13,11 @@ export interface Toast {
 
 interface ToastContextValue {
   toasts: () => Toast[];
-  addToast: (type: ToastType, message: string, options?: { onUndo?: () => void; duration?: number }) => void;
+  addToast: (
+    type: ToastType,
+    message: string,
+    options?: { onUndo?: () => void; duration?: number },
+  ) => void;
   removeToast: (id: string) => void;
 }
 
@@ -28,10 +32,24 @@ export function ToastProvider(props: { children: JSX.Element }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const addToast = (type: ToastType, message: string, options?: { onUndo?: () => void; duration?: number }) => {
+  const addToast = (
+    type: ToastType,
+    message: string,
+    options?: { onUndo?: () => void; duration?: number },
+  ) => {
     const id = String(++_nextId);
     const duration = options?.duration ?? (type === "error" ? 0 : 5000);
-    setToasts((prev) => [...prev, { id, type, message, duration, createdAt: Date.now(), onUndo: options?.onUndo }]);
+    setToasts((prev) => [
+      ...prev,
+      {
+        id,
+        type,
+        message,
+        duration,
+        createdAt: Date.now(),
+        onUndo: options?.onUndo,
+      },
+    ]);
     if (duration > 0) {
       setTimeout(() => removeToast(id), duration);
     }

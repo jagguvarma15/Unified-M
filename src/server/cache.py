@@ -25,6 +25,7 @@ from loguru import logger
 # Optional Rust extension for fast in-memory cache
 try:
     import unified_m_core
+
     _RUST_CACHE_AVAILABLE = True
 except ImportError:
     _RUST_CACHE_AVAILABLE = False
@@ -35,24 +36,19 @@ class CacheBackend(ABC):
     """Abstract cache interface."""
 
     @abstractmethod
-    def get(self, key: str) -> Any | None:
-        ...
+    def get(self, key: str) -> Any | None: ...
 
     @abstractmethod
-    def set(self, key: str, value: Any, ttl: int = 300) -> None:
-        ...
+    def set(self, key: str, value: Any, ttl: int = 300) -> None: ...
 
     @abstractmethod
-    def delete(self, key: str) -> None:
-        ...
+    def delete(self, key: str) -> None: ...
 
     @abstractmethod
-    def clear(self) -> None:
-        ...
+    def clear(self) -> None: ...
 
     @abstractmethod
-    def stats(self) -> dict[str, Any]:
-        ...
+    def stats(self) -> dict[str, Any]: ...
 
 
 class RustLruCache(CacheBackend):
@@ -165,10 +161,7 @@ class RedisCache(CacheBackend):
         try:
             import redis
         except ImportError:
-            raise ImportError(
-                "redis package not installed. "
-                "Run: pip install redis"
-            )
+            raise ImportError("redis package not installed. Run: pip install redis")
 
         self._url = url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self._prefix = prefix

@@ -1,4 +1,11 @@
-import { createSignal, createEffect, onMount, onCleanup, Show, For } from "solid-js";
+import {
+  createSignal,
+  createEffect,
+  onMount,
+  onCleanup,
+  Show,
+  For,
+} from "solid-js";
 import {
   X,
   Play,
@@ -68,7 +75,8 @@ const RUN_TEMPLATES: RunTemplate[] = [
   {
     id: "bayesian_deep_dive",
     label: "Bayesian Deep Dive",
-    description: "Higher-fidelity Bayesian run (slower) for deeper diagnostics.",
+    description:
+      "Higher-fidelity Bayesian run (slower) for deeper diagnostics.",
     model: "pymc",
     target: "revenue",
     useSampleData: false,
@@ -94,10 +102,13 @@ export default function PipelineRunner(props: Props) {
   const { setAnalyticsEnabled } = useAnalyticsMode();
   const queryClient = useQueryClient();
 
-  const isRunning = () => job()?.status === "pending" || job()?.status === "running";
-  const isDone = () => job()?.status === "completed" || job()?.status === "failed";
+  const isRunning = () =>
+    job()?.status === "pending" || job()?.status === "running";
+  const isDone = () =>
+    job()?.status === "completed" || job()?.status === "failed";
   const showConfig = () => !isRunning();
-  const selectedTemplate = () => RUN_TEMPLATES.find((t) => t.id === templateId()) ?? RUN_TEMPLATES[0];
+  const selectedTemplate = () =>
+    RUN_TEMPLATES.find((t) => t.id === templateId()) ?? RUN_TEMPLATES[0];
 
   const applyTemplate = (template: RunTemplate) => {
     setTemplateId(template.id);
@@ -111,15 +122,27 @@ export default function PipelineRunner(props: Props) {
   const startPipeline = async () => {
     setStarting(true);
     try {
-      const parsedBudget = budgetInput().trim() === "" ? undefined : Number(budgetInput());
-      if (parsedBudget != null && (!Number.isFinite(parsedBudget) || parsedBudget <= 0)) {
+      const parsedBudget =
+        budgetInput().trim() === "" ? undefined : Number(budgetInput());
+      if (
+        parsedBudget != null &&
+        (!Number.isFinite(parsedBudget) || parsedBudget <= 0)
+      ) {
         throw new Error("Budget must be a positive number");
       }
       setAnalyticsEnabled(useSampleData());
-      const res = await api.triggerPipeline(model(), target(), useSampleData(), parsedBudget);
+      const res = await api.triggerPipeline(
+        model(),
+        target(),
+        useSampleData(),
+        parsedBudget,
+      );
       setJobId(res.job_id);
       setJob(null);
-      addToast("info", useSampleData() ? "Sample data pipeline started" : "Pipeline started");
+      addToast(
+        "info",
+        useSampleData() ? "Sample data pipeline started" : "Pipeline started",
+      );
     } catch (e: any) {
       addToast("error", `Failed to start pipeline: ${e.message}`);
     } finally {
@@ -139,7 +162,10 @@ export default function PipelineRunner(props: Props) {
         if (j.status === "completed") {
           setAnalyticsEnabled(true);
           queryClient.invalidateQueries();
-          addToast("success", `Pipeline completed (run: ${j.run_id?.slice(0, 12)})`);
+          addToast(
+            "success",
+            `Pipeline completed (run: ${j.run_id?.slice(0, 12)})`,
+          );
         } else if (j.status === "failed") {
           addToast("error", `Pipeline failed: ${j.error || "Unknown error"}`);
         }
@@ -172,7 +198,10 @@ export default function PipelineRunner(props: Props) {
           {/* Header */}
           <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <h2 class="text-base font-semibold text-slate-900">Run Pipeline</h2>
-            <button onClick={props.onClose} class="rounded p-1 text-slate-400 hover:text-slate-600 transition-colors">
+            <button
+              onClick={props.onClose}
+              class="rounded p-1 text-slate-400 hover:text-slate-600 transition-colors"
+            >
               <X size={18} />
             </button>
           </div>
@@ -182,11 +211,15 @@ export default function PipelineRunner(props: Props) {
             <Show when={showConfig()}>
               <div class="space-y-3">
                 <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Execution template</label>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">
+                    Execution template
+                  </label>
                   <select
                     value={templateId()}
                     onChange={(e) => {
-                      const tmpl = RUN_TEMPLATES.find((t) => t.id === e.target.value);
+                      const tmpl = RUN_TEMPLATES.find(
+                        (t) => t.id === e.target.value,
+                      );
                       if (tmpl) applyTemplate(tmpl);
                     }}
                     class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -197,10 +230,14 @@ export default function PipelineRunner(props: Props) {
                       )}
                     </For>
                   </select>
-                  <p class="mt-1 text-[11px] text-slate-500">{selectedTemplate().description}</p>
+                  <p class="mt-1 text-[11px] text-slate-500">
+                    {selectedTemplate().description}
+                  </p>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Model backend</label>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">
+                    Model backend
+                  </label>
                   <select
                     value={model()}
                     onChange={(e) => setModel(e.target.value)}
@@ -213,7 +250,9 @@ export default function PipelineRunner(props: Props) {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Target column</label>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">
+                    Target column
+                  </label>
                   <select
                     value={target()}
                     onChange={(e) => setTarget(e.target.value)}
@@ -224,7 +263,9 @@ export default function PipelineRunner(props: Props) {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Total budget (optional)</label>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">
+                    Total budget (optional)
+                  </label>
                   <input
                     type="number"
                     min={0}
@@ -236,7 +277,9 @@ export default function PipelineRunner(props: Props) {
                   />
                 </div>
                 <label class="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <span class="text-xs font-medium text-slate-700">Use sample data (demo run)</span>
+                  <span class="text-xs font-medium text-slate-700">
+                    Use sample data (demo run)
+                  </span>
                   <input
                     type="checkbox"
                     checked={useSampleData()}
@@ -261,7 +304,11 @@ export default function PipelineRunner(props: Props) {
                   <Show when={starting()} fallback={<Play size={16} />}>
                     <Loader2 size={16} class="animate-spin" />
                   </Show>
-                  {starting() ? "Starting..." : jobId() ? "Run Pipeline" : "Start Pipeline"}
+                  {starting()
+                    ? "Starting..."
+                    : jobId()
+                      ? "Run Pipeline"
+                      : "Start Pipeline"}
                 </button>
               </div>
             </Show>
@@ -277,8 +324,16 @@ export default function PipelineRunner(props: Props) {
                       const idx = currentIdx();
                       if (!j) return "pending" as const;
                       if (i() < idx) return "done" as const;
-                      if (i() === idx) return isRunning() ? "running" as const : isDone() ? (j.status === "completed" ? "done" as const : "failed" as const) : "running" as const;
-                      if (isDone() && j.status === "completed") return "done" as const;
+                      if (i() === idx)
+                        return isRunning()
+                          ? ("running" as const)
+                          : isDone()
+                            ? j.status === "completed"
+                              ? ("done" as const)
+                              : ("failed" as const)
+                            : ("running" as const);
+                      if (isDone() && j.status === "completed")
+                        return "done" as const;
                       return "pending" as const;
                     };
 
@@ -289,7 +344,10 @@ export default function PipelineRunner(props: Props) {
                             <CheckCircle2 size={18} class="text-emerald-500" />
                           </Show>
                           <Show when={status() === "running"}>
-                            <Loader2 size={18} class="text-indigo-500 animate-spin" />
+                            <Loader2
+                              size={18}
+                              class="text-indigo-500 animate-spin"
+                            />
                           </Show>
                           <Show when={status() === "failed"}>
                             <AlertCircle size={18} class="text-red-500" />
@@ -299,7 +357,9 @@ export default function PipelineRunner(props: Props) {
                           </Show>
                         </div>
                         <div class="flex-1 min-w-0">
-                          <p class={`text-sm font-medium ${status() === "done" ? "text-emerald-700" : status() === "running" ? "text-indigo-700" : status() === "failed" ? "text-red-700" : "text-slate-400"}`}>
+                          <p
+                            class={`text-sm font-medium ${status() === "done" ? "text-emerald-700" : status() === "running" ? "text-indigo-700" : status() === "failed" ? "text-red-700" : "text-slate-400"}`}
+                          >
                             {step.label}
                           </p>
                         </div>
@@ -330,19 +390,28 @@ export default function PipelineRunner(props: Props) {
             {/* Result */}
             <Show when={job()?.status === "completed"}>
               <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-2">
-                <p class="text-sm font-medium text-emerald-800">Pipeline completed</p>
+                <p class="text-sm font-medium text-emerald-800">
+                  Pipeline completed
+                </p>
                 <Show when={job()!.metrics}>
                   <div class="grid grid-cols-2 gap-2 text-xs text-emerald-700">
                     <Show when={job()!.metrics!.mape != null}>
-                      <div>MAPE: {Number(job()!.metrics!.mape).toFixed(1)}%</div>
+                      <div>
+                        MAPE: {Number(job()!.metrics!.mape).toFixed(1)}%
+                      </div>
                     </Show>
                     <Show when={job()!.metrics!.r_squared != null}>
-                      <div>R²: {Number(job()!.metrics!.r_squared).toFixed(3)}</div>
+                      <div>
+                        R²: {Number(job()!.metrics!.r_squared).toFixed(3)}
+                      </div>
                     </Show>
                   </div>
                 </Show>
                 <Show when={job()!.run_id}>
-                  <a href="/" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                  <a
+                    href="/"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                  >
                     <Link2 size={12} /> View Dashboard
                   </a>
                 </Show>
@@ -363,9 +432,7 @@ export default function PipelineRunner(props: Props) {
               <div>
                 <h3 class="text-xs font-medium text-slate-500 mb-2">Logs</h3>
                 <div class="rounded-md bg-slate-900 p-3 max-h-40 overflow-y-auto font-mono text-xs text-slate-300 space-y-0.5">
-                  <For each={job()!.logs}>
-                    {(log) => <div>{log}</div>}
-                  </For>
+                  <For each={job()!.logs}>{(log) => <div>{log}</div>}</For>
                 </div>
               </div>
             </Show>
@@ -373,7 +440,10 @@ export default function PipelineRunner(props: Props) {
             {/* Reset */}
             <Show when={isDone()}>
               <button
-                onClick={() => { setJobId(null); setJob(null); }}
+                onClick={() => {
+                  setJobId(null);
+                  setJob(null);
+                }}
                 class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Run Another

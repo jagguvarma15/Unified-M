@@ -34,7 +34,11 @@ export function makeDateTickFormatter(totalPoints: number) {
 
     if (totalPoints > 220) return SHORT_MONTH.format(d);
     if (totalPoints > 90) return SHORT_MONTH_DAY.format(d);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "2-digit",
+    });
   };
 }
 

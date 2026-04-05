@@ -28,7 +28,10 @@ interface Props {
 
 function AnimatedIllustration() {
   return (
-    <div class="relative rounded-full bg-gradient-to-br from-indigo-50 to-slate-50 p-6 ring-4 ring-slate-200/40" aria-hidden>
+    <div
+      class="relative rounded-full bg-gradient-to-br from-indigo-50 to-slate-50 p-6 ring-4 ring-slate-200/40"
+      aria-hidden
+    >
       <div class="relative">
         <Database size={32} class="text-slate-400" />
         <div class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-indigo-400 animate-ping" />
@@ -40,12 +43,17 @@ function AnimatedIllustration() {
 }
 
 export default function EmptyState(props: Props) {
-  const displayMessage = () => props.message ?? props.description ?? "Run the pipeline first to generate results.";
+  const displayMessage = () =>
+    props.message ??
+    props.description ??
+    "Run the pipeline first to generate results.";
 
   return (
     <div class="flex flex-col items-center justify-center py-20 text-center">
       <AnimatedIllustration />
-      <h3 class="mt-5 text-lg font-semibold text-slate-800">{props.title ?? "No data available"}</h3>
+      <h3 class="mt-5 text-lg font-semibold text-slate-800">
+        {props.title ?? "No data available"}
+      </h3>
       <p class="mt-1.5 max-w-sm text-sm text-slate-500">{displayMessage()}</p>
 
       {/* Guided steps */}
@@ -59,9 +67,13 @@ export default function EmptyState(props: Props) {
                     {i() + 1}
                   </div>
                   <div class="flex-1 text-left">
-                    <p class="text-sm font-medium text-slate-800">{step.label}</p>
+                    <p class="text-sm font-medium text-slate-800">
+                      {step.label}
+                    </p>
                     <Show when={step.description}>
-                      <p class="text-xs text-slate-500 mt-0.5">{step.description}</p>
+                      <p class="text-xs text-slate-500 mt-0.5">
+                        {step.description}
+                      </p>
                     </Show>
                   </div>
                   <Show when={step.action}>
@@ -152,15 +164,19 @@ export default function EmptyState(props: Props) {
           <p class="mt-2 font-mono text-xs leading-relaxed text-slate-300">
             <span class="text-slate-500"># generate demo data + train</span>
             <br />
-            <span class="text-emerald-400">$</span> PYTHONPATH=src python -m cli demo
+            <span class="text-emerald-400">$</span> PYTHONPATH=src python -m cli
+            demo
             <br />
             <br />
             <span class="text-slate-500"># start the API server</span>
             <br />
-            <span class="text-emerald-400">$</span> PYTHONPATH=src python -m cli serve
+            <span class="text-emerald-400">$</span> PYTHONPATH=src python -m cli
+            serve
             <br />
             <br />
-            <span class="text-slate-500"># start the UI (separate terminal)</span>
+            <span class="text-slate-500">
+              # start the UI (separate terminal)
+            </span>
             <br />
             <span class="text-emerald-400">$</span> cd ui && bun dev
           </p>

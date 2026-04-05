@@ -52,38 +52,52 @@ export default function Calibration() {
         </div>
       }
     >
-      <Show when={!error()} fallback={
-        <div class="min-h-[60vh] flex items-center justify-center">
-          <EmptyState
-            icon={<AlertTriangle class="w-10 h-10 text-amber-400" />}
-            title="Calibration data unavailable"
-            description={error()!}
-          />
-        </div>
-      }>
-        <Show when={data() && (data()!.n_tests ?? 0) > 0} fallback={
+      <Show
+        when={!error()}
+        fallback={
           <div class="min-h-[60vh] flex items-center justify-center">
             <EmptyState
-              icon={<Target class="w-10 h-10 text-gray-400" />}
-              title="No calibration data yet"
-              description="Run an experiment calibration to see predictions vs. measured lift."
+              icon={<AlertTriangle class="w-10 h-10 text-amber-400" />}
+              title="Calibration data unavailable"
+              description={error()!}
             />
           </div>
-        }>
+        }
+      >
+        <Show
+          when={data() && (data()!.n_tests ?? 0) > 0}
+          fallback={
+            <div class="min-h-[60vh] flex items-center justify-center">
+              <EmptyState
+                icon={<Target class="w-10 h-10 text-gray-400" />}
+                title="No calibration data yet"
+                description="Run an experiment calibration to see predictions vs. measured lift."
+              />
+            </div>
+          }
+        >
           {(d) => {
             const points = () => data()!.points ?? [];
-            const scatterData = () => points().map((p) => ({
-              ...p,
-              x: p.measured_lift ?? 0,
-              y: p.predicted_lift ?? 0,
-            }));
-            const minX = () => scatterData().length ? Math.min(...scatterData().map((d) => toFinite(d.x))) : 0;
-            const maxX = () => scatterData().length ? Math.max(...scatterData().map((d) => toFinite(d.x))) : 0;
-            const barData = () => points().map((p) => ({
-              channel: p.channel ?? "",
-              error_pct: Math.round(p.error_pct ?? 0),
-              within_ci: p.within_ci ?? false,
-            }));
+            const scatterData = () =>
+              points().map((p) => ({
+                ...p,
+                x: p.measured_lift ?? 0,
+                y: p.predicted_lift ?? 0,
+              }));
+            const minX = () =>
+              scatterData().length
+                ? Math.min(...scatterData().map((d) => toFinite(d.x)))
+                : 0;
+            const maxX = () =>
+              scatterData().length
+                ? Math.max(...scatterData().map((d) => toFinite(d.x)))
+                : 0;
+            const barData = () =>
+              points().map((p) => ({
+                channel: p.channel ?? "",
+                error_pct: Math.round(p.error_pct ?? 0),
+                within_ci: p.within_ci ?? false,
+              }));
             const qualityColor = () =>
               data()!.calibration_quality === "good"
                 ? "text-green-600"
@@ -99,9 +113,21 @@ export default function Calibration() {
 
                 {/* Summary cards */}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <MetricCard icon={Target} label="Tests Compared" value={data()!.n_tests} />
-                  <MetricCard icon={CheckCircle} label="Coverage (within CI)" value={`${((data()!.coverage ?? 0) * 100).toFixed(0)}%`} />
-                  <MetricCard icon={AlertTriangle} label="Median Lift Error" value={`${(data()!.median_lift_error ?? 0).toFixed(1)}%`} />
+                  <MetricCard
+                    icon={Target}
+                    label="Tests Compared"
+                    value={data()!.n_tests}
+                  />
+                  <MetricCard
+                    icon={CheckCircle}
+                    label="Coverage (within CI)"
+                    value={`${((data()!.coverage ?? 0) * 100).toFixed(0)}%`}
+                  />
+                  <MetricCard
+                    icon={AlertTriangle}
+                    label="Median Lift Error"
+                    value={`${(data()!.median_lift_error ?? 0).toFixed(1)}%`}
+                  />
                   <div class="bg-white rounded-xl shadow-sm border border-gray-200 px-5 py-4">
                     <p class="text-xs text-gray-500 mb-1">Quality</p>
                     <p class={`text-xl font-bold capitalize ${qualityColor()}`}>
@@ -121,31 +147,84 @@ export default function Calibration() {
                   </p>
                   <ReactChart>
                     {() =>
-                      h(ResponsiveContainer, { width: "100%", height: 400 },
-                        h(ScatterChart, { margin: { top: 10, right: 30, bottom: 20, left: 20 } },
+                      h(
+                        ResponsiveContainer,
+                        { width: "100%", height: 400 },
+                        h(
+                          ScatterChart,
+                          {
+                            margin: {
+                              top: 10,
+                              right: 30,
+                              bottom: 20,
+                              left: 20,
+                            },
+                          },
                           h(CartesianGrid, { strokeDasharray: "3 3" }),
                           h(XAxis, {
                             type: "number",
                             dataKey: "x",
                             name: "Measured Lift",
-                            label: { value: "Measured Lift", position: "insideBottom", offset: -10 },
+                            label: {
+                              value: "Measured Lift",
+                              position: "insideBottom",
+                              offset: -10,
+                            },
                           }),
                           h(YAxis, {
                             type: "number",
                             dataKey: "y",
                             name: "Predicted Lift",
-                            label: { value: "Predicted Lift", angle: -90, position: "insideLeft" },
+                            label: {
+                              value: "Predicted Lift",
+                              angle: -90,
+                              position: "insideLeft",
+                            },
                           }),
                           h(Tooltip, {
                             content: ({ payload }: any) => {
                               if (!payload?.length) return null;
                               const p = payload[0].payload;
-                              return h("div", { className: "bg-white border border-gray-200 rounded shadow-lg p-3 text-sm" },
-                                h("p", { className: "font-semibold" }, p.channel),
-                                h("p", null, `Measured: ${toFinite(p.measured_lift).toFixed(4)}`),
-                                h("p", null, `Predicted: ${toFinite(p.predicted_lift).toFixed(4)}`),
-                                h("p", null, `Error: ${toFinite(p.error_pct).toFixed(1)}%`),
-                                h("p", null, "Within CI: ", h("span", { className: p.within_ci ? "text-green-600" : "text-red-600" }, p.within_ci ? "Yes" : "No"))
+                              return h(
+                                "div",
+                                {
+                                  className:
+                                    "bg-white border border-gray-200 rounded shadow-lg p-3 text-sm",
+                                },
+                                h(
+                                  "p",
+                                  { className: "font-semibold" },
+                                  p.channel,
+                                ),
+                                h(
+                                  "p",
+                                  null,
+                                  `Measured: ${toFinite(p.measured_lift).toFixed(4)}`,
+                                ),
+                                h(
+                                  "p",
+                                  null,
+                                  `Predicted: ${toFinite(p.predicted_lift).toFixed(4)}`,
+                                ),
+                                h(
+                                  "p",
+                                  null,
+                                  `Error: ${toFinite(p.error_pct).toFixed(1)}%`,
+                                ),
+                                h(
+                                  "p",
+                                  null,
+                                  "Within CI: ",
+                                  h(
+                                    "span",
+                                    {
+                                      className: p.within_ci
+                                        ? "text-green-600"
+                                        : "text-red-600",
+                                    },
+                                    p.within_ci ? "Yes" : "No",
+                                  ),
+                                ),
                               );
                             },
                           }),
@@ -158,10 +237,18 @@ export default function Calibration() {
                             strokeDasharray: "6 4",
                             label: "Perfect",
                           }),
-                          h(Scatter, { data: scatterData() },
-                            ...scatterData().map((entry, i) => h(Cell, { key: i, fill: entry.within_ci ? "#16a34a" : "#dc2626", r: 8 }))
-                          )
-                        )
+                          h(
+                            Scatter,
+                            { data: scatterData() },
+                            ...scatterData().map((entry, i) =>
+                              h(Cell, {
+                                key: i,
+                                fill: entry.within_ci ? "#16a34a" : "#dc2626",
+                                r: 8,
+                              }),
+                            ),
+                          ),
+                        ),
                       )
                     }
                   </ReactChart>
@@ -174,16 +261,36 @@ export default function Calibration() {
                   </h2>
                   <ReactChart>
                     {() =>
-                      h(ResponsiveContainer, { width: "100%", height: 300 },
-                        h(BarChart, { data: barData(), margin: { top: 5, right: 30, bottom: 5, left: 20 } },
+                      h(
+                        ResponsiveContainer,
+                        { width: "100%", height: 300 },
+                        h(
+                          BarChart,
+                          {
+                            data: barData(),
+                            margin: { top: 5, right: 30, bottom: 5, left: 20 },
+                          },
                           h(CartesianGrid, { strokeDasharray: "3 3" }),
                           h(XAxis, { dataKey: "channel" }),
-                          h(YAxis, { label: { value: "Error %", angle: -90, position: "insideLeft" } }),
+                          h(YAxis, {
+                            label: {
+                              value: "Error %",
+                              angle: -90,
+                              position: "insideLeft",
+                            },
+                          }),
                           h(Tooltip, null),
-                          h(Bar, { dataKey: "error_pct", name: "Error %" },
-                            ...barData().map((entry, i) => h(Cell, { key: i, fill: entry.within_ci ? "#16a34a" : "#dc2626" }))
-                          )
-                        )
+                          h(
+                            Bar,
+                            { dataKey: "error_pct", name: "Error %" },
+                            ...barData().map((entry, i) =>
+                              h(Cell, {
+                                key: i,
+                                fill: entry.within_ci ? "#16a34a" : "#dc2626",
+                              }),
+                            ),
+                          ),
+                        ),
                       )
                     }
                   </ReactChart>
@@ -194,25 +301,50 @@ export default function Calibration() {
                   <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                       <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test ID</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Channel</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Measured</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Predicted</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Error %</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">In CI?</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Test ID
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Channel
+                        </th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                          Measured
+                        </th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                          Predicted
+                        </th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                          Error %
+                        </th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                          In CI?
+                        </th>
                       </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                       <For each={points()}>
                         {(p, i) => (
                           <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm font-mono">{p.test_id ?? ""}</td>
+                            <td class="px-4 py-3 text-sm font-mono">
+                              {p.test_id ?? ""}
+                            </td>
                             <td class="px-4 py-3 text-sm">{p.channel ?? ""}</td>
-                            <td class="px-4 py-3 text-sm text-right">{(p.measured_lift ?? 0).toFixed(4)}</td>
-                            <td class="px-4 py-3 text-sm text-right">{(p.predicted_lift ?? 0).toFixed(4)}</td>
-                            <td class="px-4 py-3 text-sm text-right">{(p.error_pct ?? 0).toFixed(1)}%</td>
+                            <td class="px-4 py-3 text-sm text-right">
+                              {(p.measured_lift ?? 0).toFixed(4)}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-right">
+                              {(p.predicted_lift ?? 0).toFixed(4)}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-right">
+                              {(p.error_pct ?? 0).toFixed(1)}%
+                            </td>
                             <td class="px-4 py-3 text-center">
-                              <Show when={p.within_ci} fallback={<XCircle class="w-5 h-5 text-red-600 inline" />}>
+                              <Show
+                                when={p.within_ci}
+                                fallback={
+                                  <XCircle class="w-5 h-5 text-red-600 inline" />
+                                }
+                              >
                                 <CheckCircle class="w-5 h-5 text-green-600 inline" />
                               </Show>
                             </td>

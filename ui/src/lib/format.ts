@@ -10,7 +10,11 @@ export function formatCompact(value: number, decimals = 1): string {
   return value.toFixed(decimals);
 }
 
-export function formatCurrency(value: number, compact = true, decimals = 0): string {
+export function formatCurrency(
+  value: number,
+  compact = true,
+  decimals = 0,
+): string {
   if (compact && Math.abs(value) >= 1_000) {
     const suffix = value >= 1_000_000 ? "M" : "k";
     const scaled = value >= 1_000_000 ? value / 1_000_000 : value / 1_000;
@@ -28,10 +32,16 @@ export function formatPercent(value: number, decimals = 1): string {
   return `${value.toFixed(decimals)}%`;
 }
 
-export function formatNumber(value: number, options?: { decimals?: number; compact?: boolean }): string {
+export function formatNumber(
+  value: number,
+  options?: { decimals?: number; compact?: boolean },
+): string {
   const { decimals = 0, compact = false } = options ?? {};
   if (compact) return formatCompact(value, decimals);
-  return value.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: 0 });
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: decimals,
+    minimumFractionDigits: 0,
+  });
 }
 
 export function formatROAS(value: number, decimals = 2): string {

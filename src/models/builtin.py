@@ -105,8 +105,7 @@ class BuiltinMMM(BaseMMM):
         # impressions, reach, grp, clicks, etc. (not _spend and not _transformed)
         exposure_suffixes = ("_impressions", "_reach", "_grp", "_clicks")
         self._exposure_cols = [
-            c for c in df.columns
-            if any(c.endswith(s) for s in exposure_suffixes)
+            c for c in df.columns if any(c.endswith(s) for s in exposure_suffixes)
         ]
 
         if not self._media_cols:
@@ -272,7 +271,7 @@ class BuiltinMMM(BaseMMM):
             max_spend = self._data[col].max() * 1.5
             grid = spend_grid if spend_grid is not None else np.linspace(0, max_spend, n_points)
 
-            alpha = self._adstock_alphas.get(col, 0.5)
+            _alpha = self._adstock_alphas.get(col, 0.5)  # reserved for adstock grid
             K = self._saturation_K.get(col, float(self._data[col].median()) + 1.0)
             S = self._saturation_S.get(col, 1.0)
             coef = self._coefficients.get(col, 0)
@@ -282,15 +281,17 @@ class BuiltinMMM(BaseMMM):
             response = saturated * coef
 
             # Marginal response (derivative of Hill * coef)
-            K_s = K ** S
+            K_s = K**S
             x_s = np.power(grid + 1e-10, S)
             marginal = coef * S * K_s * np.power(grid + 1e-10, S - 1) / np.power(K_s + x_s, 2)
 
-            curves[col] = pd.DataFrame({
-                "spend": grid,
-                "response": response,
-                "marginal_response": marginal,
-            })
+            curves[col] = pd.DataFrame(
+                {
+                    "spend": grid,
+                    "response": response,
+                    "marginal_response": marginal,
+                }
+            )
 
         return curves
 
@@ -327,8 +328,7 @@ class BuiltinMMM(BaseMMM):
                 for ch, p in adstock_params.items()
             },
             "saturation": {
-                ch: {"K": p.get("K"), "S": p.get("S")}
-                for ch, p in saturation_params.items()
+                ch: {"K": p.get("K"), "S": p.get("S")} for ch, p in saturation_params.items()
             },
             # Legacy keys preserved for backward compatibility.
             "adstock_params": adstock_params,
@@ -343,7 +343,9 @@ class BuiltinMMM(BaseMMM):
     def save_state(self, directory: Path) -> None:
         self._check_fitted()
         # Sklearn objects use joblib (sklearn's recommended serializer).
-        joblib.dump({"model": self._model, "scaler": self._scaler}, directory / "builtin_sklearn.joblib")
+        joblib.dump(
+            {"model": self._model, "scaler": self._scaler}, directory / "builtin_sklearn.joblib"
+        )
         # All JSON-serializable metadata is stored separately to avoid
         # untrusted-pickle deserialization on this data.
         meta = {
@@ -403,6 +405,7 @@ class BuiltinMMM(BaseMMM):
     def _check_fitted(self) -> None:
         if self._model is None:
             from core.exceptions import ModelNotFittedError
+
             raise ModelNotFittedError("BuiltinMMM")
 
 

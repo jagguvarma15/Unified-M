@@ -16,10 +16,10 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Section configs
 # ---------------------------------------------------------------------------
+
 
 class StorageConfig(BaseModel):
     """Filesystem paths for data and artifacts (lakehouse zones)."""
@@ -78,6 +78,7 @@ class ServerConfig(BaseModel):
 # Root config
 # ---------------------------------------------------------------------------
 
+
 class UnifiedMConfig(BaseModel):
     """Root configuration for Unified-M."""
 
@@ -91,7 +92,7 @@ class UnifiedMConfig(BaseModel):
     server: ServerConfig = Field(default_factory=ServerConfig)
 
     @classmethod
-    def from_yaml(cls, path: Path | str) -> "UnifiedMConfig":
+    def from_yaml(cls, path: Path | str) -> UnifiedMConfig:
         """Load config from a YAML file."""
         with open(Path(path)) as f:
             data = yaml.safe_load(f) or {}

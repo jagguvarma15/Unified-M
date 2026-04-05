@@ -68,13 +68,15 @@ class TikTokAdsConnector(AdPlatformConnector):
         for row in data.get("data", {}).get("list", []):
             dims = row.get("dimensions", {})
             metrics = row.get("metrics", {})
-            records.append({
-                "date": dims.get("stat_time_day", ""),
-                "channel": "tiktok",
-                "spend": float(metrics.get("spend", 0)),
-                "impressions": int(metrics.get("impressions", 0)),
-                "clicks": int(metrics.get("clicks", 0)),
-            })
+            records.append(
+                {
+                    "date": dims.get("stat_time_day", ""),
+                    "channel": "tiktok",
+                    "spend": float(metrics.get("spend", 0)),
+                    "impressions": int(metrics.get("impressions", 0)),
+                    "clicks": int(metrics.get("clicks", 0)),
+                }
+            )
 
         df = pd.DataFrame(records)
         logger.info(f"Fetched {len(df)} rows from TikTok Ads")

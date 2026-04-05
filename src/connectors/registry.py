@@ -24,12 +24,13 @@ def _get_fernet():
     if not key:
         return None
     from cryptography.fernet import Fernet, InvalidToken  # noqa: F401
+
     try:
         return Fernet(key.encode() if isinstance(key, str) else key)
     except Exception as exc:
         raise ValueError(
             "CONNECTOR_SECRET_KEY is set but is not a valid Fernet key. "
-            "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
         ) from exc
 
 
@@ -45,6 +46,7 @@ def _decrypt(value: str) -> str:
     if f is None:
         return value
     from cryptography.fernet import InvalidToken
+
     try:
         return f.decrypt(value.encode()).decode()
     except InvalidToken as exc:
@@ -54,10 +56,17 @@ def _decrypt(value: str) -> str:
         ) from exc
 
 
-_SENSITIVE_KEYS = frozenset({
-    "password", "secret", "token", "key", "account_key",
-    "aws_secret_access_key", "sas_token",
-})
+_SENSITIVE_KEYS = frozenset(
+    {
+        "password",
+        "secret",
+        "token",
+        "key",
+        "account_key",
+        "aws_secret_access_key",
+        "sas_token",
+    }
+)
 
 
 def _is_sensitive_key(key: str) -> bool:

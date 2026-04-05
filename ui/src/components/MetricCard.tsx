@@ -57,7 +57,9 @@ export default function MetricCard(props: Props) {
     if (props.tooltip) {
       return (
         <Tooltip content={props.tooltip} side="top">
-          <span class="cursor-help border-b border-dotted border-slate-300">{props.label}</span>
+          <span class="cursor-help border-b border-dotted border-slate-300">
+            {props.label}
+          </span>
         </Tooltip>
       );
     }
@@ -75,7 +77,10 @@ export default function MetricCard(props: Props) {
             {(Icon) => {
               const Ic = Icon();
               return (
-                <span class={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color()]}`} aria-hidden>
+                <span
+                  class={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${iconBg[color()]}`}
+                  aria-hidden
+                >
                   <Ic size={12} />
                 </span>
               );
@@ -84,12 +89,21 @@ export default function MetricCard(props: Props) {
           {labelEl()}
         </p>
         <Show when={props.sparkline && props.sparkline.length > 0}>
-          <Sparkline data={props.sparkline!} trend={trend()} height={20} width={48} class="shrink-0 opacity-80" />
+          <Sparkline
+            data={props.sparkline!}
+            trend={trend()}
+            height={20}
+            width={48}
+            class="shrink-0 opacity-80"
+          />
         </Show>
       </div>
 
       <div class="mt-1 flex items-end justify-between gap-2">
-        <p class={`truncate font-semibold tabular-nums text-slate-900 ${VALUE_TEXT[density()]}`} title={String(props.value)}>
+        <p
+          class={`truncate font-semibold tabular-nums text-slate-900 ${VALUE_TEXT[density()]}`}
+          title={String(props.value)}
+        >
           {props.value}
         </p>
         <Show when={props.changePct != null}>

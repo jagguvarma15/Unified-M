@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any
+
 import pandas as pd
 from loguru import logger
 
@@ -52,15 +53,20 @@ class DatabaseConnector(ABC):
 class PostgreSQLConnector(DatabaseConnector):
     """PostgreSQL database connector."""
 
-    def __init__(self, host: str, port: int = 5432, database: str = "", 
-                 user: str = "", password: str = "", **kwargs: Any):
+    def __init__(
+        self,
+        host: str,
+        port: int = 5432,
+        database: str = "",
+        user: str = "",
+        password: str = "",
+        **kwargs: Any,
+    ):
         try:
             import psycopg2
         except ImportError:
-            raise ConnectorError(
-                "psycopg2 is not installed. Run: pip install psycopg2-binary"
-            )
-        
+            raise ConnectorError("psycopg2 is not installed. Run: pip install psycopg2-binary")
+
         self.host = host
         self.port = port
         self.database = database
@@ -71,13 +77,14 @@ class PostgreSQLConnector(DatabaseConnector):
     def connect(self) -> Any:
         try:
             import psycopg2
+
             conn = psycopg2.connect(
                 host=self.host,
                 port=self.port,
                 database=self.database,
                 user=self.user,
                 password=self.password,
-                **self.kwargs
+                **self.kwargs,
             )
             logger.info(f"Connected to PostgreSQL: {self.host}:{self.port}/{self.database}")
             return conn
@@ -99,15 +106,20 @@ class PostgreSQLConnector(DatabaseConnector):
 class MySQLConnector(DatabaseConnector):
     """MySQL/MariaDB database connector."""
 
-    def __init__(self, host: str, port: int = 3306, database: str = "",
-                 user: str = "", password: str = "", **kwargs: Any):
+    def __init__(
+        self,
+        host: str,
+        port: int = 3306,
+        database: str = "",
+        user: str = "",
+        password: str = "",
+        **kwargs: Any,
+    ):
         try:
             import pymysql
         except ImportError:
-            raise ConnectorError(
-                "pymysql is not installed. Run: pip install pymysql"
-            )
-        
+            raise ConnectorError("pymysql is not installed. Run: pip install pymysql")
+
         self.host = host
         self.port = port
         self.database = database
@@ -118,13 +130,14 @@ class MySQLConnector(DatabaseConnector):
     def connect(self) -> Any:
         try:
             import pymysql
+
             conn = pymysql.connect(
                 host=self.host,
                 port=self.port,
                 database=self.database,
                 user=self.user,
                 password=self.password,
-                **self.kwargs
+                **self.kwargs,
             )
             logger.info(f"Connected to MySQL: {self.host}:{self.port}/{self.database}")
             return conn
@@ -146,15 +159,20 @@ class MySQLConnector(DatabaseConnector):
 class SQLServerConnector(DatabaseConnector):
     """SQL Server database connector."""
 
-    def __init__(self, server: str, database: str = "", user: str = "",
-                 password: str = "", driver: str = "ODBC Driver 17 for SQL Server", **kwargs: Any):
+    def __init__(
+        self,
+        server: str,
+        database: str = "",
+        user: str = "",
+        password: str = "",
+        driver: str = "ODBC Driver 17 for SQL Server",
+        **kwargs: Any,
+    ):
         try:
             import pyodbc
         except ImportError:
-            raise ConnectorError(
-                "pyodbc is not installed. Run: pip install pyodbc"
-            )
-        
+            raise ConnectorError("pyodbc is not installed. Run: pip install pyodbc")
+
         self.server = server
         self.database = database
         self.user = user
@@ -165,6 +183,7 @@ class SQLServerConnector(DatabaseConnector):
     def connect(self) -> Any:
         try:
             import pyodbc
+
             conn_str = (
                 f"DRIVER={{{self.driver}}};"
                 f"SERVER={self.server};"
@@ -198,13 +217,14 @@ class SQLiteConnector(DatabaseConnector):
             import sqlite3
         except ImportError:
             raise ConnectorError("sqlite3 should be available in standard library")
-        
+
         self.database = database
         super().__init__(**kwargs)
 
     def connect(self) -> Any:
         try:
             import sqlite3
+
             conn = sqlite3.connect(self.database, **self.kwargs)
             logger.info(f"Connected to SQLite: {self.database}")
             return conn
@@ -226,13 +246,10 @@ class SQLiteConnector(DatabaseConnector):
             return False
 
 
-def create_database_connector(
-    db_type: str,
-    **kwargs: Any
-) -> DatabaseConnector:
+def create_database_connector(db_type: str, **kwargs: Any) -> DatabaseConnector:
     """Factory function to create appropriate database connector."""
     db_type_lower = db_type.lower()
-    
+
     if db_type_lower in ["postgresql", "postgres"]:
         return PostgreSQLConnector(**kwargs)
     elif db_type_lower in ["mysql", "mariadb"]:

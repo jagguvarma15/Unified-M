@@ -29,15 +29,26 @@ export default function Report() {
       "",
       "KEY METRICS",
     ];
-    if (d.metrics.r_squared != null) lines.push(`  R²: ${d.metrics.r_squared.toFixed(3)}`);
-    if (d.metrics.mape != null) lines.push(`  MAPE: ${d.metrics.mape.toFixed(1)}%`);
-    if (d.roas_summary?.blended_roas != null) lines.push(`  Blended ROAS: ${d.roas_summary.blended_roas.toFixed(2)}`);
-    if (d.roas_summary?.total_spend != null) lines.push(`  Total Spend: $${d.roas_summary.total_spend.toLocaleString()}`);
-    if (d.improvement_pct) lines.push(`  Optimization Uplift: +${d.improvement_pct.toFixed(1)}%`);
+    if (d.metrics.r_squared != null)
+      lines.push(`  R²: ${d.metrics.r_squared.toFixed(3)}`);
+    if (d.metrics.mape != null)
+      lines.push(`  MAPE: ${d.metrics.mape.toFixed(1)}%`);
+    if (d.roas_summary?.blended_roas != null)
+      lines.push(`  Blended ROAS: ${d.roas_summary.blended_roas.toFixed(2)}`);
+    if (d.roas_summary?.total_spend != null)
+      lines.push(
+        `  Total Spend: $${d.roas_summary.total_spend.toLocaleString()}`,
+      );
+    if (d.improvement_pct)
+      lines.push(`  Optimization Uplift: +${d.improvement_pct.toFixed(1)}%`);
     lines.push("");
     if (d.top_channels.length) {
       lines.push("TOP CHANNELS");
-      d.top_channels.forEach((c) => lines.push(`  ${c.channel}: ${c.share_pct}% share ($${c.contribution.toLocaleString()})`));
+      d.top_channels.forEach((c) =>
+        lines.push(
+          `  ${c.channel}: ${c.share_pct}% share ($${c.contribution.toLocaleString()})`,
+        ),
+      );
       lines.push("");
     }
     if (d.recommendations.length) {
@@ -72,8 +83,12 @@ export default function Report() {
             {/* Toolbar (hidden on print) */}
             <div class="flex items-center justify-between mb-6 print:hidden">
               <div>
-                <h1 class="text-2xl font-bold tracking-tight text-slate-900">Executive Summary</h1>
-                <p class="mt-1 text-sm text-slate-500">One-click report for stakeholders</p>
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+                  Executive Summary
+                </h1>
+                <p class="mt-1 text-sm text-slate-500">
+                  One-click report for stakeholders
+                </p>
               </div>
               <div class="flex items-center gap-2">
                 <button
@@ -104,12 +119,24 @@ export default function Report() {
                     <TrendingUp size={20} class="text-indigo-600" />
                   </div>
                   <div>
-                    <h2 class="text-lg font-bold text-slate-900">Unified-M Marketing Report</h2>
+                    <h2 class="text-lg font-bold text-slate-900">
+                      Unified-M Marketing Report
+                    </h2>
                     <p class="text-xs text-slate-500">
-                      {new Date(data()!.generated_at).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                      {new Date(data()!.generated_at).toLocaleDateString(
+                        undefined,
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        },
+                      )}
                       <Show when={data()!.run_id}>
                         {" · Run "}
-                        <span class="font-mono">{data()!.run_id!.slice(0, 12)}</span>
+                        <span class="font-mono">
+                          {data()!.run_id!.slice(0, 12)}
+                        </span>
                       </Show>
                     </p>
                   </div>
@@ -118,22 +145,41 @@ export default function Report() {
                 {/* Metric pills */}
                 <div class="flex flex-wrap gap-3">
                   <Show when={data()!.metrics.r_squared != null}>
-                    <MetricPill label="R²" value={data()!.metrics.r_squared!.toFixed(3)} />
+                    <MetricPill
+                      label="R²"
+                      value={data()!.metrics.r_squared!.toFixed(3)}
+                    />
                   </Show>
                   <Show when={data()!.metrics.mape != null}>
-                    <MetricPill label="MAPE" value={`${data()!.metrics.mape!.toFixed(1)}%`} />
+                    <MetricPill
+                      label="MAPE"
+                      value={`${data()!.metrics.mape!.toFixed(1)}%`}
+                    />
                   </Show>
                   <Show when={data()!.roas_summary?.blended_roas != null}>
-                    <MetricPill label="Blended ROAS" value={data()!.roas_summary!.blended_roas.toFixed(2)} />
+                    <MetricPill
+                      label="Blended ROAS"
+                      value={data()!.roas_summary!.blended_roas.toFixed(2)}
+                    />
                   </Show>
                   <Show when={data()!.roas_summary?.total_spend != null}>
-                    <MetricPill label="Total Spend" value={`$${data()!.roas_summary!.total_spend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+                    <MetricPill
+                      label="Total Spend"
+                      value={`$${data()!.roas_summary!.total_spend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                    />
                   </Show>
                   <Show when={data()!.roas_summary?.total_contribution != null}>
-                    <MetricPill label="Total Contribution" value={`$${data()!.roas_summary!.total_contribution.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+                    <MetricPill
+                      label="Total Contribution"
+                      value={`$${data()!.roas_summary!.total_contribution.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                    />
                   </Show>
                   <Show when={data()!.improvement_pct > 0}>
-                    <MetricPill label="Optimization Uplift" value={`+${data()!.improvement_pct.toFixed(1)}%`} accent />
+                    <MetricPill
+                      label="Optimization Uplift"
+                      value={`+${data()!.improvement_pct.toFixed(1)}%`}
+                      accent
+                    />
                   </Show>
                 </div>
               </div>
@@ -141,7 +187,9 @@ export default function Report() {
               {/* Top channels */}
               <Show when={data()!.top_channels.length > 0}>
                 <div class="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
-                  <h3 class="text-base font-semibold text-slate-800 mb-4">Top Channels by Contribution</h3>
+                  <h3 class="text-base font-semibold text-slate-800 mb-4">
+                    Top Channels by Contribution
+                  </h3>
                   <div class="space-y-3">
                     <For each={data()!.top_channels}>
                       {(ch) => (
@@ -168,7 +216,9 @@ export default function Report() {
               {/* Recommendations */}
               <Show when={data()!.recommendations.length > 0}>
                 <div class="rounded-xl border border-indigo-200 bg-indigo-50/50 p-6 shadow-sm">
-                  <h3 class="text-base font-semibold text-indigo-900 mb-3">Key Recommendations</h3>
+                  <h3 class="text-base font-semibold text-indigo-900 mb-3">
+                    Key Recommendations
+                  </h3>
                   <ul class="space-y-2">
                     <For each={data()!.recommendations}>
                       {(rec, i) => (
@@ -193,9 +243,15 @@ export default function Report() {
 
 function MetricPill(props: { label: string; value: string; accent?: boolean }) {
   return (
-    <div class={`rounded-lg border px-3 py-2 ${props.accent ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}>
+    <div
+      class={`rounded-lg border px-3 py-2 ${props.accent ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}
+    >
       <p class="text-[11px] text-slate-500">{props.label}</p>
-      <p class={`text-sm font-bold tabular-nums ${props.accent ? "text-indigo-700" : "text-slate-800"}`}>{props.value}</p>
+      <p
+        class={`text-sm font-bold tabular-nums ${props.accent ? "text-indigo-700" : "text-slate-800"}`}
+      >
+        {props.value}
+      </p>
     </div>
   );
 }

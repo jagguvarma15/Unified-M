@@ -10,8 +10,10 @@ export default function Tooltip(props: TooltipProps) {
   const [visible, setVisible] = createSignal(false);
 
   const positionClass = () => {
-    if (props.side === "bottom") return "top-full mt-2 left-1/2 -translate-x-1/2";
-    if (props.side === "right") return "left-full ml-2 top-1/2 -translate-y-1/2";
+    if (props.side === "bottom")
+      return "top-full mt-2 left-1/2 -translate-x-1/2";
+    if (props.side === "right")
+      return "left-full ml-2 top-1/2 -translate-y-1/2";
     return "bottom-full mb-2 left-1/2 -translate-x-1/2";
   };
 

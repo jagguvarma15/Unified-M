@@ -13,14 +13,13 @@ Provides commands for:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
 import shutil
+from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import typer
 from loguru import logger
-import pandas as pd
-import numpy as np
 
 app = typer.Typer(
     name="unified-m",
@@ -33,7 +32,10 @@ app = typer.Typer(
 # run
 # ---------------------------------------------------------------------------
 
-def _connect_pipeline(cfg, pipe, media_spend=None, outcomes=None, controls=None, tests=None, attribution=None):
+
+def _connect_pipeline(
+    cfg, pipe, media_spend=None, outcomes=None, controls=None, tests=None, attribution=None
+):
     """Helper: resolve data paths and connect sources to a Pipeline."""
     ms = media_spend or cfg.storage.processed_path / "media_spend.parquet"
     oc = outcomes or cfg.storage.processed_path / "outcomes.parquet"
@@ -52,41 +54,69 @@ def _connect_pipeline(cfg, pipe, media_spend=None, outcomes=None, controls=None,
 
 @app.command()
 def run(
-    config_path: Optional[Path] = typer.Option(
-        None, "--config", "-c", help="Path to config.yaml",
+    config_path: Path | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to config.yaml",
     ),
     model: str = typer.Option(
-        "builtin", "--model", "-m", help="Model backend (builtin, pymc, ...)",
+        "builtin",
+        "--model",
+        "-m",
+        help="Model backend (builtin, pymc, ...)",
     ),
     target: str = typer.Option(
-        "revenue", "--target", "-t", help="Target column in outcomes",
+        "revenue",
+        "--target",
+        "-t",
+        help="Target column in outcomes",
     ),
-    budget: Optional[float] = typer.Option(
-        None, "--budget", "-b", help="Total budget for optimisation",
+    budget: float | None = typer.Option(
+        None,
+        "--budget",
+        "-b",
+        help="Total budget for optimisation",
     ),
     mode: str = typer.Option(
-        "local-dev", "--mode", help="Run mode: local-dev, weekly-prod, backfill, what-if, experiment-calibration",
+        "local-dev",
+        "--mode",
+        help="Run mode: local-dev, weekly-prod, backfill, what-if, experiment-calibration",
     ),
-    start: Optional[str] = typer.Option(
-        None, "--start", help="Backfill start date (YYYY-MM-DD)",
+    start: str | None = typer.Option(
+        None,
+        "--start",
+        help="Backfill start date (YYYY-MM-DD)",
     ),
-    end: Optional[str] = typer.Option(
-        None, "--end", help="Backfill end date (YYYY-MM-DD)",
+    end: str | None = typer.Option(
+        None,
+        "--end",
+        help="Backfill end date (YYYY-MM-DD)",
     ),
-    media_spend: Optional[Path] = typer.Option(
-        None, "--media-spend", help="Path to media spend data",
+    media_spend: Path | None = typer.Option(
+        None,
+        "--media-spend",
+        help="Path to media spend data",
     ),
-    outcomes: Optional[Path] = typer.Option(
-        None, "--outcomes", help="Path to outcomes data",
+    outcomes: Path | None = typer.Option(
+        None,
+        "--outcomes",
+        help="Path to outcomes data",
     ),
-    controls: Optional[Path] = typer.Option(
-        None, "--controls", help="Path to control variables",
+    controls: Path | None = typer.Option(
+        None,
+        "--controls",
+        help="Path to control variables",
     ),
-    tests: Optional[Path] = typer.Option(
-        None, "--tests", help="Path to incrementality test results",
+    tests: Path | None = typer.Option(
+        None,
+        "--tests",
+        help="Path to incrementality test results",
     ),
-    attribution: Optional[Path] = typer.Option(
-        None, "--attribution", help="Path to attribution data",
+    attribution: Path | None = typer.Option(
+        None,
+        "--attribution",
+        help="Path to attribution data",
     ),
 ):
     """
@@ -95,8 +125,8 @@ def run(
     Results are written to the runs/ directory as versioned artifacts.
     """
     from config import load_config
-    from pipeline.runner import Pipeline
     from pipeline.modes import resolve_run_mode
+    from pipeline.runner import Pipeline
 
     cfg = load_config(config_path)
     cfg.ensure_directories()
@@ -133,10 +163,15 @@ def run(
 # Individual pipeline steps (for CI / granular execution)
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def ingest(
-    source: Path = typer.Option(Path("data/raw"), "--source", "-s", help="Source directory with raw data files"),
-    output: Path = typer.Option(Path("data/gold"), "--output", "-o", help="Output directory for validated data"),
+    source: Path = typer.Option(
+        Path("data/raw"), "--source", "-s", help="Source directory with raw data files"
+    ),
+    output: Path = typer.Option(
+        Path("data/gold"), "--output", "-o", help="Output directory for validated data"
+    ),
 ):
     """
     Ingest raw data files into the processing zone.
@@ -177,7 +212,9 @@ def ingest(
 
 @app.command()
 def validate(
-    input_dir: Path = typer.Option(Path("data/gold"), "--input", "-i", help="Directory with ingested data"),
+    input_dir: Path = typer.Option(
+        Path("data/gold"), "--input", "-i", help="Directory with ingested data"
+    ),
     target: str = typer.Option("revenue", "--target", "-t", help="Target column in outcomes"),
 ):
     """
@@ -202,7 +239,9 @@ def validate(
 
     report = run_quality_gates(media_spend=media_spend, outcomes=outcomes, target_col=target)
 
-    logger.info(f"Quality gates: {report.n_passed} passed, {report.n_warnings} warnings, {report.n_failed} failures")
+    logger.info(
+        f"Quality gates: {report.n_passed} passed, {report.n_warnings} warnings, {report.n_failed} failures"
+    )
 
     if not report.overall_pass:
         logger.warning("Quality gates produced failures -- review before training")
@@ -215,8 +254,12 @@ def validate(
 
 @app.command()
 def transform(
-    input_dir: Path = typer.Option(Path("data/gold"), "--input", "-i", help="Directory with ingested data"),
-    output: Path = typer.Option(Path("data/gold/mmm_input.parquet"), "--output", "-o", help="Path for MMM-ready parquet"),
+    input_dir: Path = typer.Option(
+        Path("data/gold"), "--input", "-i", help="Directory with ingested data"
+    ),
+    output: Path = typer.Option(
+        Path("data/gold/mmm_input.parquet"), "--output", "-o", help="Path for MMM-ready parquet"
+    ),
     target: str = typer.Option("revenue", "--target", "-t", help="Target column"),
 ):
     """
@@ -247,18 +290,24 @@ def transform(
 
     mmm_df.to_parquet(output, index=False)
     media_cols = [c for c in mmm_df.columns if c.endswith("_spend")]
-    logger.info(f"Transform complete: {len(mmm_df)} rows, {len(media_cols)} media channels -> {output}")
+    logger.info(
+        f"Transform complete: {len(mmm_df)} rows, {len(media_cols)} media channels -> {output}"
+    )
 
 
 @app.command()
 def train(
-    input_dir: Path = typer.Option(Path("data/gold"), "--input", "-i", help="Directory with ingested data"),
+    input_dir: Path = typer.Option(
+        Path("data/gold"), "--input", "-i", help="Directory with ingested data"
+    ),
     model: str = typer.Option("builtin", "--model", "-m", help="Model backend"),
     target: str = typer.Option("revenue", "--target", "-t", help="Target column"),
-    budget: Optional[float] = typer.Option(None, "--budget", "-b", help="Total budget for optimisation"),
+    budget: float | None = typer.Option(
+        None, "--budget", "-b", help="Total budget for optimisation"
+    ),
     samples: int = typer.Option(1000, "--samples", help="MCMC samples (Bayesian backends)"),
     chains: int = typer.Option(4, "--chains", help="MCMC chains (Bayesian backends)"),
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
 ):
     """
     Train an MMM model on prepared data.
@@ -277,15 +326,20 @@ def train(
     pipe = Pipeline(config=cfg.to_flat_dict(), runs_dir=cfg.storage.runs_path)
     pipe.connect(
         media_spend=input_dir / "media_spend.parquet"
-        if (input_dir / "media_spend.parquet").exists() else None,
+        if (input_dir / "media_spend.parquet").exists()
+        else None,
         outcomes=input_dir / "outcomes.parquet"
-        if (input_dir / "outcomes.parquet").exists() else None,
+        if (input_dir / "outcomes.parquet").exists()
+        else None,
         controls=input_dir / "controls.parquet"
-        if (input_dir / "controls.parquet").exists() else None,
+        if (input_dir / "controls.parquet").exists()
+        else None,
         incrementality_tests=input_dir / "incrementality_tests.parquet"
-        if (input_dir / "incrementality_tests.parquet").exists() else None,
+        if (input_dir / "incrementality_tests.parquet").exists()
+        else None,
         attribution=input_dir / "attribution.parquet"
-        if (input_dir / "attribution.parquet").exists() else None,
+        if (input_dir / "attribution.parquet").exists()
+        else None,
     )
 
     model_kwargs = {}
@@ -307,8 +361,10 @@ def train(
 
 @app.command()
 def reconcile(
-    run_id: Optional[str] = typer.Option(None, "--run-id", help="Run ID to reconcile (latest if omitted)"),
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c"),
+    run_id: str | None = typer.Option(
+        None, "--run-id", help="Run ID to reconcile (latest if omitted)"
+    ),
+    config_path: Path | None = typer.Option(None, "--config", "-c"),
 ):
     """
     Re-run reconciliation on an existing run's artifacts.
@@ -316,10 +372,10 @@ def reconcile(
     Reads MMM parameters and experiment data from a completed run and
     re-computes the reconciled channel estimates.
     """
+
     from config import load_config
     from core.artifacts import ArtifactStore
     from reconciliation.engine import ReconciliationEngine
-    import json
 
     cfg = load_config(config_path)
     store = ArtifactStore(cfg.storage.runs_path)
@@ -357,19 +413,19 @@ def reconcile(
 
 @app.command()
 def optimize(
-    run_id: Optional[str] = typer.Option(None, "--run-id", help="Run ID (latest if omitted)"),
-    budget: Optional[float] = typer.Option(None, "--budget", "-b", help="Override total budget"),
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c"),
+    run_id: str | None = typer.Option(None, "--run-id", help="Run ID (latest if omitted)"),
+    budget: float | None = typer.Option(None, "--budget", "-b", help="Override total budget"),
+    config_path: Path | None = typer.Option(None, "--config", "-c"),
 ):
     """
     Re-run budget optimisation on an existing run's response curves.
 
     Useful for what-if analysis without retraining the model.
     """
+
     from config import load_config
     from core.artifacts import ArtifactStore
     from optimization.allocator import BudgetOptimizer
-    import json
 
     cfg = load_config(config_path)
     store = ArtifactStore(cfg.storage.runs_path)
@@ -411,16 +467,26 @@ def optimize(
 # scenario (what-if)
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def scenario(
     budget: float = typer.Option(
-        100_000, "--budget", "-b", help="Total budget for scenario",
+        100_000,
+        "--budget",
+        "-b",
+        help="Total budget for scenario",
     ),
-    config_path: Optional[Path] = typer.Option(
-        None, "--config", "-c", help="Path to config.yaml",
+    config_path: Path | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to config.yaml",
     ),
     model: str = typer.Option(
-        "builtin", "--model", "-m", help="Model backend to load artifacts from",
+        "builtin",
+        "--model",
+        "-m",
+        help="Model backend to load artifacts from",
     ),
 ):
     """
@@ -429,10 +495,11 @@ def scenario(
     Uses the latest run's model artifacts (response curves) to compute
     an optimal allocation for the specified budget.
     """
+    import json
+
     from config import load_config
     from core.artifacts import ArtifactStore
     from optimization.allocator import BudgetOptimizer
-    import json
 
     cfg = load_config(config_path)
     store = ArtifactStore(cfg.storage.runs_path)
@@ -455,9 +522,7 @@ def scenario(
     for ch, curve in curves_data.items():
         spend_pts = np.array(curve["spend"])
         resp_pts = np.array(curve["response"])
-        response_fns[ch] = lambda s, sp=spend_pts, rp=resp_pts: float(
-            np.interp(s, sp, rp)
-        )
+        response_fns[ch] = lambda s, sp=spend_pts, rp=resp_pts: float(np.interp(s, sp, rp))
 
     optimizer = BudgetOptimizer(
         response_curves=response_fns,
@@ -465,7 +530,7 @@ def scenario(
     )
     result = optimizer.optimize()
 
-    logger.info(f"Scenario result:")
+    logger.info("Scenario result:")
     logger.info(f"  Expected response: {result.expected_response:,.2f}")
     logger.info(f"  Expected ROI:      {result.expected_roi:.2f}")
     for ch, alloc in result.optimal_allocation.items():
@@ -489,13 +554,20 @@ def scenario(
 # calibrate (experiment calibration)
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def calibrate(
     test_file: Path = typer.Option(
-        ..., "--test-file", "-f", help="Path to experiment results (CSV/Parquet)",
+        ...,
+        "--test-file",
+        "-f",
+        help="Path to experiment results (CSV/Parquet)",
     ),
-    config_path: Optional[Path] = typer.Option(
-        None, "--config", "-c", help="Path to config.yaml",
+    config_path: Path | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to config.yaml",
     ),
 ):
     """
@@ -504,11 +576,12 @@ def calibrate(
     Reads experiment results, compares against MMM predictions, computes
     calibration factors, and updates the prior set for the next run.
     """
+    import json
+
     from config import load_config
     from core.artifacts import ArtifactStore
     from models.calibration_eval import evaluate_calibration
-    from models.priors import PriorSet, apply_calibration_factors, warm_start_from_run
-    import json
+    from models.priors import apply_calibration_factors, warm_start_from_run
 
     cfg = load_config(config_path)
     store = ArtifactStore(cfg.storage.runs_path)
@@ -567,6 +640,7 @@ def calibrate(
 # serve
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def serve(
     host: str = typer.Option("127.0.0.1", "--host", "-h"),
@@ -575,6 +649,7 @@ def serve(
 ):
     """Start the REST API server (serves latest run artifacts)."""
     from server.app import run_server
+
     run_server(host=host, port=port, reload=reload)
 
 
@@ -582,14 +657,15 @@ def serve(
 # ui
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def ui(
     port: int = typer.Option(5173, "--port", "-p"),
     install: bool = typer.Option(False, "--install", help="Run bun install first"),
 ):
     """Start the React dashboard (requires Bun)."""
-    import subprocess
     import shutil
+    import subprocess
 
     ui_dir = Path("ui")
     if not ui_dir.exists():
@@ -598,9 +674,7 @@ def ui(
 
     bun = shutil.which("bun")
     if bun is None:
-        logger.error(
-            "Bun not found.  Install it: curl -fsSL https://bun.sh/install | bash"
-        )
+        logger.error("Bun not found.  Install it: curl -fsSL https://bun.sh/install | bash")
         raise typer.Exit(1)
 
     if install or not (ui_dir / "node_modules").exists():
@@ -619,10 +693,14 @@ def ui(
 # demo
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def demo(
-    output: Optional[Path] = typer.Option(
-        None, "--output", "-o", help="Output directory (defaults to gold zone)",
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory (defaults to gold zone)",
     ),
     n_days: int = typer.Option(365, "--days"),
 ):
@@ -657,20 +735,25 @@ def demo(
     for date in dates:
         for channel in channels:
             base = {
-                "google_search": 1200, "meta_facebook": 900,
-                "meta_instagram": 600, "tiktok": 400, "tv_linear": 1500,
+                "google_search": 1200,
+                "meta_facebook": 900,
+                "meta_instagram": 600,
+                "tiktok": 400,
+                "tv_linear": 1500,
             }[channel]
             seasonal = 1 + 0.3 * np.sin(date.dayofyear / 365 * 2 * np.pi)
             noise = 1 + np.random.normal(0, 0.15)
             spend = max(0, base * seasonal * noise)
-            media_records.append({
-                "date": date,
-                "geo": geo,
-                "channel": channel,
-                "spend": round(spend, 2),
-                "impressions": round(spend * np.random.uniform(40, 60), 0),
-                "clicks": round(spend * np.random.uniform(0.3, 0.5), 0),
-            })
+            media_records.append(
+                {
+                    "date": date,
+                    "geo": geo,
+                    "channel": channel,
+                    "spend": round(spend, 2),
+                    "impressions": round(spend * np.random.uniform(40, 60), 0),
+                    "clicks": round(spend * np.random.uniform(0.3, 0.5), 0),
+                }
+            )
     media_df = pd.DataFrame(media_records)
     media_df.to_parquet(gold_dir / "media_spend.parquet", index=False)
     media_df.to_parquet(raw_dir / "media_spend.parquet", index=False)
@@ -684,25 +767,29 @@ def demo(
         noise = np.random.normal(1, 0.08)
         revenue = base_revenue * seasonal * trend * noise
         conversions = round(revenue / 100 * np.random.uniform(0.8, 1.2), 0)
-        outcomes_records.append({
-            "date": date,
-            "geo": geo,
-            "revenue": round(revenue, 2),
-            "conversions": conversions,
-            "new_customers": round(conversions * 0.3, 0),
-        })
+        outcomes_records.append(
+            {
+                "date": date,
+                "geo": geo,
+                "revenue": round(revenue, 2),
+                "conversions": conversions,
+                "new_customers": round(conversions * 0.3, 0),
+            }
+        )
     outcomes_df = pd.DataFrame(outcomes_records)
     outcomes_df.to_parquet(gold_dir / "outcomes.parquet", index=False)
     outcomes_df.to_parquet(raw_dir / "outcomes.parquet", index=False)
 
     # --- Controls (with geo) ---
-    controls_df = pd.DataFrame({
-        "date": dates,
-        "geo": geo,
-        "is_holiday": [1 if d.dayofweek >= 5 else 0 for d in dates],
-        "promo": np.random.binomial(1, 0.1, n_days),
-        "price_index": np.random.normal(1.0, 0.03, n_days).clip(0.8, 1.2).round(3),
-    })
+    controls_df = pd.DataFrame(
+        {
+            "date": dates,
+            "geo": geo,
+            "is_holiday": [1 if d.dayofweek >= 5 else 0 for d in dates],
+            "promo": np.random.binomial(1, 0.1, n_days),
+            "price_index": np.random.normal(1.0, 0.03, n_days).clip(0.8, 1.2).round(3),
+        }
+    )
     controls_df.to_parquet(gold_dir / "controls.parquet", index=False)
     controls_df.to_parquet(raw_dir / "controls.parquet", index=False)
 
@@ -712,18 +799,20 @@ def demo(
         start = dates[60 + i * 30]
         end = dates[90 + i * 30]
         lift = np.random.uniform(0.05, 0.25)
-        test_records.append({
-            "test_id": f"test_{channel}_2025",
-            "channel": channel,
-            "start_date": start,
-            "end_date": end,
-            "test_type": "geo_lift",
-            "lift_estimate": round(lift, 4),
-            "lift_ci_lower": round(lift * 0.6, 4),
-            "lift_ci_upper": round(lift * 1.4, 4),
-            "confidence_level": 0.95,
-            "spend_during_test": round(np.random.uniform(20000, 80000), 2),
-        })
+        test_records.append(
+            {
+                "test_id": f"test_{channel}_2025",
+                "channel": channel,
+                "start_date": start,
+                "end_date": end,
+                "test_type": "geo_lift",
+                "lift_estimate": round(lift, 4),
+                "lift_ci_lower": round(lift * 0.6, 4),
+                "lift_ci_upper": round(lift * 1.4, 4),
+                "confidence_level": 0.95,
+                "spend_during_test": round(np.random.uniform(20000, 80000), 2),
+            }
+        )
     tests_df = pd.DataFrame(test_records)
     tests_df.to_parquet(gold_dir / "incrementality_tests.parquet", index=False)
     tests_df.to_parquet(raw_dir / "incrementality_tests.parquet", index=False)
@@ -763,7 +852,7 @@ def demo(
 
 @app.command("cleanup-sample")
 def cleanup_sample(
-    config_path: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
+    config_path: Path | None = typer.Option(None, "--config", "-c", help="Path to config.yaml"),
 ):
     """
     Remove sample/demo runs created by server sample mode.
@@ -778,10 +867,7 @@ def cleanup_sample(
         logger.info("No runs directory found; nothing to clean.")
         return
 
-    sample_dirs = [
-        d for d in runs_path.iterdir()
-        if d.is_dir() and (d / ".sample_run").exists()
-    ]
+    sample_dirs = [d for d in runs_path.iterdir() if d.is_dir() and (d / ".sample_run").exists()]
     removed = 0
     for d in sample_dirs:
         shutil.rmtree(d, ignore_errors=True)
@@ -835,7 +921,8 @@ def cleanup_sample(
 
     latest = runs_path / "latest"
     remaining = [
-        d for d in sorted(runs_path.iterdir(), reverse=True)
+        d
+        for d in sorted(runs_path.iterdir(), reverse=True)
         if d.is_dir() and (d / "manifest.json").exists()
     ]
     if remaining:
@@ -850,6 +937,7 @@ def cleanup_sample(
 # runs (inspection)
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def runs(
     limit: int = typer.Option(10, "--limit", "-n"),
@@ -857,6 +945,7 @@ def runs(
 ):
     """List recent pipeline runs."""
     from core.artifacts import ArtifactStore
+
     store = ArtifactStore(runs_dir)
     manifests = store.list_runs(limit=limit)
 
@@ -882,10 +971,12 @@ def runs(
 # backends
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def backends():
     """List available model backends."""
     from models.registry import list_backends
+
     available = list_backends()
     logger.info(f"Available backends: {', '.join(available) if available else '(none)'}")
 

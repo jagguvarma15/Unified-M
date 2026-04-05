@@ -134,25 +134,23 @@ class PyMCAdapter(BaseMMM):
         self._trace = self._model.fit_result
 
         # Compute metrics
-        y_pred = (
-            self._model.posterior_predictive
-            .mean(dim=["chain", "draw"])["y"]
-            .values
-        )
+        y_pred = self._model.posterior_predictive.mean(dim=["chain", "draw"])["y"].values
         metrics = self.get_metrics(y, y_pred)
 
         # Bayesian diagnostics
         import arviz as az
+
         summary = az.summary(self._trace)
         metrics["rhat_max"] = float(summary["r_hat"].max()) if "r_hat" in summary.columns else None
-        metrics["ess_min"] = float(summary["ess_bulk"].min()) if "ess_bulk" in summary.columns else None
+        metrics["ess_min"] = (
+            float(summary["ess_bulk"].min()) if "ess_bulk" in summary.columns else None
+        )
         if hasattr(self._trace, "sample_stats"):
             div = self._trace.sample_stats.get("diverging")
             metrics["divergences"] = int(div.sum()) if div is not None else 0
 
         logger.info(
-            f"PyMC MMM fit complete.  "
-            f"R2={metrics['r_squared']:.3f}  MAPE={metrics['mape']:.2f}%"
+            f"PyMC MMM fit complete.  R2={metrics['r_squared']:.3f}  MAPE={metrics['mape']:.2f}%"
         )
 
         return {"metrics": metrics}
@@ -195,17 +193,27 @@ class PyMCAdapter(BaseMMM):
             max_spend = self._data[ch].max() * 1.5
             grid = spend_grid if spend_grid is not None else np.linspace(0, max_spend, n_points)
 
-            coef = float(posterior["beta_channel"][:, :, i].mean()) if "beta_channel" in posterior else 1.0
-            lam = float(posterior["saturation_lam"][:, :, i].mean()) if "saturation_lam" in posterior else 1.0
+            coef = (
+                float(posterior["beta_channel"][:, :, i].mean())
+                if "beta_channel" in posterior
+                else 1.0
+            )
+            lam = (
+                float(posterior["saturation_lam"][:, :, i].mean())
+                if "saturation_lam" in posterior
+                else 1.0
+            )
 
             response = coef * (1 - np.exp(-lam * grid))
             marginal = coef * lam * np.exp(-lam * grid)
 
-            curves[ch] = pd.DataFrame({
-                "spend": grid,
-                "response": response,
-                "marginal_response": marginal,
-            })
+            curves[ch] = pd.DataFrame(
+                {
+                    "spend": grid,
+                    "response": response,
+                    "marginal_response": marginal,
+                }
+            )
 
         return curves
 
@@ -250,14 +258,17 @@ class PyMCAdapter(BaseMMM):
     def save_state(self, directory: Path) -> None:
         self._check_fitted()
         with open(directory / "pymc_model.pkl", "wb") as f:
-            pickle.dump({
-                "model": self._model,
-                "trace": self._trace,
-                "media_cols": self._media_cols,
-                "control_cols": self._control_cols,
-                "target_col": self._target_col,
-                "date_col": self._date_col,
-            }, f)
+            pickle.dump(
+                {
+                    "model": self._model,
+                    "trace": self._trace,
+                    "media_cols": self._media_cols,
+                    "control_cols": self._control_cols,
+                    "target_col": self._target_col,
+                    "date_col": self._date_col,
+                },
+                f,
+            )
         params = self.get_parameters()
         with open(directory / "parameters.json", "w") as f:
             json.dump(params, f, indent=2)
@@ -284,6 +295,7 @@ class PyMCAdapter(BaseMMM):
     def _check_fitted(self) -> None:
         if self._model is None:
             from core.exceptions import ModelNotFittedError
+
             raise ModelNotFittedError("PyMCAdapter")
 
 

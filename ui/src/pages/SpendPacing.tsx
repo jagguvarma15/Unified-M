@@ -9,13 +9,28 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import ReactChart, { h } from "../lib/ReactChart";
-import { Loader2, ArrowUp, ArrowDown, Minus, DollarSign, TrendingUp, Target } from "../lib/icons";
+import {
+  Loader2,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  DollarSign,
+  TrendingUp,
+  Target,
+} from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import MetricCard from "../components/MetricCard";
 import Badge from "../components/Badge";
 import ChartCard from "../components/ChartCard";
-import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from "../components/Table";
+import {
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+} from "../components/Table";
 import { api, type SpendPacingData } from "../lib/api";
 import { CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
 import { formatCurrency } from "../lib/format";
@@ -38,7 +53,8 @@ export default function SpendPacing() {
       .finally(() => setLoading(false));
   });
 
-  const offPace = () => data()?.channels?.filter((c) => c.status !== "on-track") ?? [];
+  const offPace = () =>
+    data()?.channels?.filter((c) => c.status !== "on-track") ?? [];
   const pacingColor = () => {
     const d = data();
     if (!d) return "emerald";
@@ -92,7 +108,11 @@ export default function SpendPacing() {
                 value={`${data()!.pacing_pct}%`}
                 icon={TrendingUp}
                 color={pacingColor() as "indigo" | "emerald" | "amber" | "red"}
-                delta={offPace().length > 0 ? `${offPace().length} channel${offPace().length > 1 ? "s" : ""} off-pace` : "All channels on track"}
+                delta={
+                  offPace().length > 0
+                    ? `${offPace().length} channel${offPace().length > 1 ? "s" : ""} off-pace`
+                    : "All channels on track"
+                }
                 tooltip="Actual / Planned as a percentage — 100% means perfectly on-pace"
               />
             </div>
@@ -106,24 +126,73 @@ export default function SpendPacing() {
                 minHeight={320}
               >
                 <ReactChart>
-                  {() => h(ResponsiveContainer, { width: "100%", height: 260 },
-                    h(AreaChart, { data: data()!.cumulative, margin: { left: 10, right: 10, top: 5, bottom: 5 } },
-                      h("defs", null,
-                        h("linearGradient", { id: "spendGrad", x1: "0", y1: "0", x2: "0", y2: "1" },
-                          h("stop", { offset: "5%", stopColor: "#6366f1", stopOpacity: 0.15 }),
-                          h("stop", { offset: "95%", stopColor: "#6366f1", stopOpacity: 0 })
-                        )
+                  {() =>
+                    h(
+                      ResponsiveContainer,
+                      { width: "100%", height: 260 },
+                      h(
+                        AreaChart,
+                        {
+                          data: data()!.cumulative,
+                          margin: { left: 10, right: 10, top: 5, bottom: 5 },
+                        },
+                        h(
+                          "defs",
+                          null,
+                          h(
+                            "linearGradient",
+                            {
+                              id: "spendGrad",
+                              x1: "0",
+                              y1: "0",
+                              x2: "0",
+                              y2: "1",
+                            },
+                            h("stop", {
+                              offset: "5%",
+                              stopColor: "#6366f1",
+                              stopOpacity: 0.15,
+                            }),
+                            h("stop", {
+                              offset: "95%",
+                              stopColor: "#6366f1",
+                              stopOpacity: 0,
+                            }),
+                          ),
+                        ),
+                        h(CartesianGrid, {
+                          strokeDasharray: "3 3",
+                          stroke: CHART_GRID,
+                        }),
+                        h(XAxis, { dataKey: "date", tick: { fontSize: 11 } }),
+                        h(YAxis, {
+                          tick: { fontSize: 11 },
+                          tickFormatter: (v: number) =>
+                            `$${(v / 1000).toFixed(0)}k`,
+                        }),
+                        h(Tooltip, {
+                          contentStyle: {
+                            background: CHART_TOOLTIP_BG,
+                            border: "none",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            color: "#e2e8f0",
+                          },
+                          formatter: (v: number) => [
+                            `$${v.toLocaleString()}`,
+                            "Cumulative Spend",
+                          ],
+                        }),
+                        h(Area, {
+                          type: "monotone",
+                          dataKey: "actual",
+                          stroke: "#6366f1",
+                          fill: "url(#spendGrad)",
+                          strokeWidth: 2,
+                        }),
                       ),
-                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID }),
-                      h(XAxis, { dataKey: "date", tick: { fontSize: 11 } }),
-                      h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
-                      h(Tooltip, {
-                        contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
-                        formatter: (v: number) => [`$${v.toLocaleString()}`, "Cumulative Spend"],
-                      }),
-                      h(Area, { type: "monotone", dataKey: "actual", stroke: "#6366f1", fill: "url(#spendGrad)", strokeWidth: 2 })
                     )
-                  )}
+                  }
                 </ReactChart>
               </ChartCard>
             </Show>
@@ -149,8 +218,14 @@ export default function SpendPacing() {
                   <For each={data()!.channels}>
                     {(ch) => {
                       const variant = PACING_VARIANT[ch.status] ?? "default";
-                      const label = ch.status === "on-track" ? "On Track" : ch.status === "over" ? "Over" : "Under";
-                      const DirIcon = ch.diff > 0 ? ArrowUp : ch.diff < 0 ? ArrowDown : Minus;
+                      const label =
+                        ch.status === "on-track"
+                          ? "On Track"
+                          : ch.status === "over"
+                            ? "Over"
+                            : "Under";
+                      const DirIcon =
+                        ch.diff > 0 ? ArrowUp : ch.diff < 0 ? ArrowDown : Minus;
                       return (
                         <TableRow>
                           <TableCell class="font-medium text-slate-800">
@@ -163,12 +238,17 @@ export default function SpendPacing() {
                             {formatCurrency(ch.actual)}
                           </TableCell>
                           <TableCell align="right" class="tabular-nums">
-                            <span class={`inline-flex items-center gap-0.5 ${ch.diff > 0 ? "text-amber-600" : ch.diff < 0 ? "text-red-600" : "text-slate-500"}`}>
+                            <span
+                              class={`inline-flex items-center gap-0.5 ${ch.diff > 0 ? "text-amber-600" : ch.diff < 0 ? "text-red-600" : "text-slate-500"}`}
+                            >
                               <DirIcon size={12} />
                               {formatCurrency(Math.abs(ch.diff))}
                             </span>
                           </TableCell>
-                          <TableCell align="right" class="tabular-nums font-medium">
+                          <TableCell
+                            align="right"
+                            class="tabular-nums font-medium"
+                          >
                             {ch.pacing_pct}%
                           </TableCell>
                           <TableCell align="center">

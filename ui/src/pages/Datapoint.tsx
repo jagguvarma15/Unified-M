@@ -49,32 +49,86 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: Megaphone,
     category: "Ad Platforms",
     subtypes: [
-      { key: "google_ads", label: "Google Ads (incl. YouTube)", tier: 1, fields: [
-        { key: "client_id", label: "Client ID" }, { key: "client_secret", label: "Client Secret", type: "password" },
-        { key: "refresh_token", label: "Refresh Token", type: "password" }, { key: "customer_id", label: "Customer ID" },
-      ]},
-      { key: "meta_ads", label: "Meta Ads (FB + IG)", tier: 1, fields: [
-        { key: "access_token", label: "Access Token", type: "password" }, { key: "account_id", label: "Ad Account ID" },
-      ]},
-      { key: "tiktok_ads", label: "TikTok Ads", tier: 1, fields: [
-        { key: "access_token", label: "Access Token", type: "password" }, { key: "advertiser_id", label: "Advertiser ID" },
-      ]},
-      { key: "linkedin_ads", label: "LinkedIn Ads", tier: 1, fields: [
-        { key: "access_token", label: "Access Token", type: "password" }, { key: "account_id", label: "Account ID" },
-      ]},
-      { key: "pinterest_ads", label: "Pinterest Ads", tier: 1, fields: [
-        { key: "access_token", label: "Access Token", type: "password" }, { key: "advertiser_id", label: "Advertiser ID" },
-      ]},
-      { key: "snapchat_ads", label: "Snapchat Ads", tier: 1, fields: [
-        { key: "access_token", label: "Access Token", type: "password" }, { key: "ad_account_id", label: "Ad Account ID" },
-      ]},
-      { key: "twitter_ads", label: "X (Twitter) Ads", tier: 1, fields: [
-        { key: "consumer_key", label: "Consumer Key" }, { key: "consumer_secret", label: "Consumer Secret", type: "password" },
-        { key: "access_token", label: "Access Token", type: "password" }, { key: "access_secret", label: "Access Secret", type: "password" },
-      ]},
-      { key: "apple_search_ads", label: "Apple Search Ads", tier: 1, fields: [
-        { key: "api_key", label: "API Key", type: "password" }, { key: "org_id", label: "Org ID" },
-      ]},
+      {
+        key: "google_ads",
+        label: "Google Ads (incl. YouTube)",
+        tier: 1,
+        fields: [
+          { key: "client_id", label: "Client ID" },
+          { key: "client_secret", label: "Client Secret", type: "password" },
+          { key: "refresh_token", label: "Refresh Token", type: "password" },
+          { key: "customer_id", label: "Customer ID" },
+        ],
+      },
+      {
+        key: "meta_ads",
+        label: "Meta Ads (FB + IG)",
+        tier: 1,
+        fields: [
+          { key: "access_token", label: "Access Token", type: "password" },
+          { key: "account_id", label: "Ad Account ID" },
+        ],
+      },
+      {
+        key: "tiktok_ads",
+        label: "TikTok Ads",
+        tier: 1,
+        fields: [
+          { key: "access_token", label: "Access Token", type: "password" },
+          { key: "advertiser_id", label: "Advertiser ID" },
+        ],
+      },
+      {
+        key: "linkedin_ads",
+        label: "LinkedIn Ads",
+        tier: 1,
+        fields: [
+          { key: "access_token", label: "Access Token", type: "password" },
+          { key: "account_id", label: "Account ID" },
+        ],
+      },
+      {
+        key: "pinterest_ads",
+        label: "Pinterest Ads",
+        tier: 1,
+        fields: [
+          { key: "access_token", label: "Access Token", type: "password" },
+          { key: "advertiser_id", label: "Advertiser ID" },
+        ],
+      },
+      {
+        key: "snapchat_ads",
+        label: "Snapchat Ads",
+        tier: 1,
+        fields: [
+          { key: "access_token", label: "Access Token", type: "password" },
+          { key: "ad_account_id", label: "Ad Account ID" },
+        ],
+      },
+      {
+        key: "twitter_ads",
+        label: "X (Twitter) Ads",
+        tier: 1,
+        fields: [
+          { key: "consumer_key", label: "Consumer Key" },
+          {
+            key: "consumer_secret",
+            label: "Consumer Secret",
+            type: "password",
+          },
+          { key: "access_token", label: "Access Token", type: "password" },
+          { key: "access_secret", label: "Access Secret", type: "password" },
+        ],
+      },
+      {
+        key: "apple_search_ads",
+        label: "Apple Search Ads",
+        tier: 1,
+        fields: [
+          { key: "api_key", label: "API Key", type: "password" },
+          { key: "org_id", label: "Org ID" },
+        ],
+      },
     ],
   },
   {
@@ -83,12 +137,28 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: BarChart3,
     category: "Analytics",
     subtypes: [
-      { key: "ga4", label: "Google Analytics 4", tier: 2, fields: [
-        { key: "property_id", label: "Property ID" }, { key: "service_account_json", label: "Service Account Key (JSON)", type: "password" },
-      ]},
-      { key: "adobe_analytics", label: "Adobe Analytics", tier: 2, fields: [
-        { key: "api_key", label: "API Key", type: "password" }, { key: "company_id", label: "Company ID" },
-      ]},
+      {
+        key: "ga4",
+        label: "Google Analytics 4",
+        tier: 2,
+        fields: [
+          { key: "property_id", label: "Property ID" },
+          {
+            key: "service_account_json",
+            label: "Service Account Key (JSON)",
+            type: "password",
+          },
+        ],
+      },
+      {
+        key: "adobe_analytics",
+        label: "Adobe Analytics",
+        tier: 2,
+        fields: [
+          { key: "api_key", label: "API Key", type: "password" },
+          { key: "company_id", label: "Company ID" },
+        ],
+      },
     ],
   },
   {
@@ -97,17 +167,31 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: DollarSign,
     category: "CRM/Revenue",
     subtypes: [
-      { key: "shopify", label: "Shopify", tier: 2, fields: [
-        { key: "shop_domain", label: "Shop Domain", placeholder: "your-store.myshopify.com" },
-        { key: "api_token", label: "Private App Token", type: "password" },
-      ]},
-      { key: "salesforce", label: "Salesforce CRM", tier: 2, fields: [
-        { key: "instance_url", label: "Instance URL" },
-        { key: "client_id", label: "Connected App Client ID" },
-        { key: "client_secret", label: "Client Secret", type: "password" },
-        { key: "username", label: "Username" },
-        { key: "password", label: "Password", type: "password" },
-      ]},
+      {
+        key: "shopify",
+        label: "Shopify",
+        tier: 2,
+        fields: [
+          {
+            key: "shop_domain",
+            label: "Shop Domain",
+            placeholder: "your-store.myshopify.com",
+          },
+          { key: "api_token", label: "Private App Token", type: "password" },
+        ],
+      },
+      {
+        key: "salesforce",
+        label: "Salesforce CRM",
+        tier: 2,
+        fields: [
+          { key: "instance_url", label: "Instance URL" },
+          { key: "client_id", label: "Connected App Client ID" },
+          { key: "client_secret", label: "Client Secret", type: "password" },
+          { key: "username", label: "Username" },
+          { key: "password", label: "Password", type: "password" },
+        ],
+      },
     ],
   },
   {
@@ -116,32 +200,71 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: Server,
     category: "Warehouse",
     subtypes: [
-      { key: "bigquery", label: "BigQuery", tier: 3, fields: [
-        { key: "project_id", label: "Project ID" },
-        { key: "dataset", label: "Dataset" },
-        { key: "service_account_json", label: "Service Account Key (JSON)", type: "password" },
-      ]},
-      { key: "snowflake", label: "Snowflake", tier: 3, fields: [
-        { key: "account_url", label: "Account URL", placeholder: "abc123.snowflakecomputing.com" },
-        { key: "warehouse", label: "Warehouse" },
-        { key: "database", label: "Database" },
-        { key: "schema", label: "Schema" },
-        { key: "user", label: "Username" },
-        { key: "password", label: "Password", type: "password" },
-      ]},
-      { key: "redshift", label: "Redshift", tier: 3, fields: [
-        { key: "host", label: "Host" }, { key: "port", label: "Port" },
-        { key: "database", label: "Database" },
-        { key: "user", label: "Username" }, { key: "password", label: "Password", type: "password" },
-      ]},
-      { key: "databricks", label: "Databricks", tier: 3, fields: [
-        { key: "host", label: "Workspace URL" },
-        { key: "token", label: "Personal Access Token", type: "password" },
-        { key: "cluster_id", label: "Cluster ID" },
-      ]},
-      { key: "duckdb", label: "DuckDB", tier: 3, fields: [
-        { key: "path", label: "File Path / S3 URI", placeholder: "/data/analytics.duckdb or s3://bucket/path" },
-      ]},
+      {
+        key: "bigquery",
+        label: "BigQuery",
+        tier: 3,
+        fields: [
+          { key: "project_id", label: "Project ID" },
+          { key: "dataset", label: "Dataset" },
+          {
+            key: "service_account_json",
+            label: "Service Account Key (JSON)",
+            type: "password",
+          },
+        ],
+      },
+      {
+        key: "snowflake",
+        label: "Snowflake",
+        tier: 3,
+        fields: [
+          {
+            key: "account_url",
+            label: "Account URL",
+            placeholder: "abc123.snowflakecomputing.com",
+          },
+          { key: "warehouse", label: "Warehouse" },
+          { key: "database", label: "Database" },
+          { key: "schema", label: "Schema" },
+          { key: "user", label: "Username" },
+          { key: "password", label: "Password", type: "password" },
+        ],
+      },
+      {
+        key: "redshift",
+        label: "Redshift",
+        tier: 3,
+        fields: [
+          { key: "host", label: "Host" },
+          { key: "port", label: "Port" },
+          { key: "database", label: "Database" },
+          { key: "user", label: "Username" },
+          { key: "password", label: "Password", type: "password" },
+        ],
+      },
+      {
+        key: "databricks",
+        label: "Databricks",
+        tier: 3,
+        fields: [
+          { key: "host", label: "Workspace URL" },
+          { key: "token", label: "Personal Access Token", type: "password" },
+          { key: "cluster_id", label: "Cluster ID" },
+        ],
+      },
+      {
+        key: "duckdb",
+        label: "DuckDB",
+        tier: 3,
+        fields: [
+          {
+            key: "path",
+            label: "File Path / S3 URI",
+            placeholder: "/data/analytics.duckdb or s3://bucket/path",
+          },
+        ],
+      },
     ],
   },
   {
@@ -150,16 +273,30 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: Database,
     category: "Database",
     subtypes: [
-      { key: "postgresql", label: "PostgreSQL", tier: 3, fields: [
-        { key: "host", label: "Host" }, { key: "port", label: "Port" },
-        { key: "database", label: "Database" },
-        { key: "user", label: "Username" }, { key: "password", label: "Password", type: "password" },
-      ]},
-      { key: "mysql", label: "MySQL", tier: 3, fields: [
-        { key: "host", label: "Host" }, { key: "port", label: "Port" },
-        { key: "database", label: "Database" },
-        { key: "user", label: "Username" }, { key: "password", label: "Password", type: "password" },
-      ]},
+      {
+        key: "postgresql",
+        label: "PostgreSQL",
+        tier: 3,
+        fields: [
+          { key: "host", label: "Host" },
+          { key: "port", label: "Port" },
+          { key: "database", label: "Database" },
+          { key: "user", label: "Username" },
+          { key: "password", label: "Password", type: "password" },
+        ],
+      },
+      {
+        key: "mysql",
+        label: "MySQL",
+        tier: 3,
+        fields: [
+          { key: "host", label: "Host" },
+          { key: "port", label: "Port" },
+          { key: "database", label: "Database" },
+          { key: "user", label: "Username" },
+          { key: "password", label: "Password", type: "password" },
+        ],
+      },
     ],
   },
   {
@@ -168,17 +305,31 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: Cloud,
     category: "Cloud",
     subtypes: [
-      { key: "s3", label: "AWS S3", tier: 3, fields: [
-        { key: "bucket", label: "Bucket" },
-        { key: "aws_access_key_id", label: "Access Key ID" },
-        { key: "aws_secret_access_key", label: "Secret Access Key", type: "password" },
-        { key: "region_name", label: "Region" },
-      ]},
-      { key: "azure", label: "Azure Blob", tier: 3, fields: [
-        { key: "account_name", label: "Account Name" },
-        { key: "container_name", label: "Container" },
-        { key: "account_key", label: "Account Key", type: "password" },
-      ]},
+      {
+        key: "s3",
+        label: "AWS S3",
+        tier: 3,
+        fields: [
+          { key: "bucket", label: "Bucket" },
+          { key: "aws_access_key_id", label: "Access Key ID" },
+          {
+            key: "aws_secret_access_key",
+            label: "Secret Access Key",
+            type: "password",
+          },
+          { key: "region_name", label: "Region" },
+        ],
+      },
+      {
+        key: "azure",
+        label: "Azure Blob",
+        tier: 3,
+        fields: [
+          { key: "account_name", label: "Account Name" },
+          { key: "container_name", label: "Container" },
+          { key: "account_key", label: "Account Key", type: "password" },
+        ],
+      },
     ],
   },
   {
@@ -187,21 +338,44 @@ const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
     icon: Zap,
     category: "External",
     subtypes: [
-      { key: "holidays", label: "Holidays / Events", tier: 4, fields: [
-        { key: "country", label: "Country Code", placeholder: "US" },
-      ]},
-      { key: "weather", label: "Weather (NOAA / Open-Meteo)", tier: 4, fields: [
-        { key: "latitude", label: "Latitude" }, { key: "longitude", label: "Longitude" },
-      ]},
-      { key: "fred", label: "FRED Economic Data", tier: 4, fields: [
-        { key: "api_key", label: "API Key", type: "password" },
-        { key: "series_id", label: "Series ID", placeholder: "UNRATE" },
-      ]},
+      {
+        key: "holidays",
+        label: "Holidays / Events",
+        tier: 4,
+        fields: [{ key: "country", label: "Country Code", placeholder: "US" }],
+      },
+      {
+        key: "weather",
+        label: "Weather (NOAA / Open-Meteo)",
+        tier: 4,
+        fields: [
+          { key: "latitude", label: "Latitude" },
+          { key: "longitude", label: "Longitude" },
+        ],
+      },
+      {
+        key: "fred",
+        label: "FRED Economic Data",
+        tier: 4,
+        fields: [
+          { key: "api_key", label: "API Key", type: "password" },
+          { key: "series_id", label: "Series ID", placeholder: "UNRATE" },
+        ],
+      },
     ],
   },
 ];
 
-const CATEGORIES = ["Ad Platforms", "Analytics", "CRM/Revenue", "Warehouse", "Database", "Cloud", "External", "File Upload"];
+const CATEGORIES = [
+  "Ad Platforms",
+  "Analytics",
+  "CRM/Revenue",
+  "Warehouse",
+  "Database",
+  "Cloud",
+  "External",
+  "File Upload",
+];
 
 const STATUS_COLORS: Record<string, string> = {
   connected: "bg-emerald-400",
@@ -209,7 +383,13 @@ const STATUS_COLORS: Record<string, string> = {
   untested: "bg-slate-300",
 };
 
-const DATA_TYPES = ["media_spend", "outcomes", "controls", "incrementality_tests", "attribution"];
+const DATA_TYPES = [
+  "media_spend",
+  "outcomes",
+  "controls",
+  "incrementality_tests",
+  "attribution",
+];
 
 const MMM_FIELDS = [
   { value: "date", label: "Date" },
@@ -232,7 +412,9 @@ function ConnectorCard(props: {
   onDelete: () => void;
   onFetch: () => void;
 }) {
-  const group = CONNECTOR_TYPES.find((g) => g.subtypes.some((s) => s.key === props.connector.subtype));
+  const group = CONNECTOR_TYPES.find((g) =>
+    g.subtypes.some((s) => s.key === props.connector.subtype),
+  );
   const Icon = group?.icon ?? Database;
 
   return (
@@ -243,13 +425,17 @@ function ConnectorCard(props: {
             <Icon size={18} />
           </div>
           <div>
-            <p class="text-sm font-semibold text-slate-900">{props.connector.name}</p>
+            <p class="text-sm font-semibold text-slate-900">
+              {props.connector.name}
+            </p>
             <p class="text-xs text-slate-500">
               {props.connector.subtype} · {props.connector.type}
             </p>
           </div>
         </div>
-        <span class={`mt-1 h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[props.connector.status] ?? "bg-slate-300"}`} />
+        <span
+          class={`mt-1 h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[props.connector.status] ?? "bg-slate-300"}`}
+        />
       </div>
 
       <Show when={props.connector.last_tested}>
@@ -259,13 +445,22 @@ function ConnectorCard(props: {
       </Show>
 
       <div class="flex gap-2">
-        <button onClick={props.onTest} class="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        <button
+          onClick={props.onTest}
+          class="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        >
           <TestTube size={12} /> Test
         </button>
-        <button onClick={props.onFetch} class="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        <button
+          onClick={props.onFetch}
+          class="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        >
           <Download size={12} /> Fetch
         </button>
-        <button onClick={props.onDelete} class="flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-auto">
+        <button
+          onClick={props.onDelete}
+          class="flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-auto"
+        >
           <Trash2 size={12} />
         </button>
       </div>
@@ -286,18 +481,34 @@ export default function Datapoint() {
 
   // Add form — wizard steps
   const [wizardStep, setWizardStep] = createSignal(0);
-  const [selectedCategory, setSelectedCategory] = createSignal<string | null>(null);
-  const [selectedSubtype, setSelectedSubtype] = createSignal<ConnectorSubtype | null>(null);
-  const [selectedGroup, setSelectedGroup] = createSignal<ConnectorTypeGroup | null>(null);
+  const [selectedCategory, setSelectedCategory] = createSignal<string | null>(
+    null,
+  );
+  const [selectedSubtype, setSelectedSubtype] =
+    createSignal<ConnectorSubtype | null>(null);
+  const [selectedGroup, setSelectedGroup] =
+    createSignal<ConnectorTypeGroup | null>(null);
   const [name, setName] = createSignal("");
-  const [configFields, setConfigFields] = createSignal<Record<string, string>>({});
+  const [configFields, setConfigFields] = createSignal<Record<string, string>>(
+    {},
+  );
   const [saving, setSaving] = createSignal(false);
-  const [testResult, setTestResult] = createSignal<"success" | "error" | null>(null);
+  const [testResult, setTestResult] = createSignal<"success" | "error" | null>(
+    null,
+  );
 
   // Column mapping
   const [showMapping, setShowMapping] = createSignal(false);
-  const [mappingColumns, setMappingColumns] = createSignal<string[]>(["date", "fb_spend", "google_spend", "total_revenue", "impressions"]);
-  const [columnMappings, setColumnMappings] = createSignal<Record<string, string>>({});
+  const [mappingColumns, setMappingColumns] = createSignal<string[]>([
+    "date",
+    "fb_spend",
+    "google_spend",
+    "total_revenue",
+    "impressions",
+  ]);
+  const [columnMappings, setColumnMappings] = createSignal<
+    Record<string, string>
+  >({});
 
   // Fetch form
   const [fetchQuery, setFetchQuery] = createSignal("");
@@ -310,7 +521,11 @@ export default function Datapoint() {
   const [uploading, setUploading] = createSignal(false);
 
   const refresh = () => {
-    api.listConnectors().then((r) => setConnectors(r.connectors)).catch(() => {}).finally(() => setLoading(false));
+    api
+      .listConnectors()
+      .then((r) => setConnectors(r.connectors))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
 
   onMount(refresh);
@@ -348,7 +563,12 @@ export default function Datapoint() {
     if (!name().trim() || !selectedGroup() || !selectedSubtype()) return;
     setSaving(true);
     try {
-      await api.createConnector(name(), selectedGroup()!.type, selectedSubtype()!.key, configFields());
+      await api.createConnector(
+        name(),
+        selectedGroup()!.type,
+        selectedSubtype()!.key,
+        configFields(),
+      );
       addToast("success", `Connection "${name()}" saved`);
       setShowAdd(false);
       refresh();
@@ -389,7 +609,11 @@ export default function Datapoint() {
     if (!showFetch() || !fetchQuery().trim()) return;
     setFetching(true);
     try {
-      const res = await api.fetchFromConnector(showFetch()!, fetchQuery(), fetchDataType());
+      const res = await api.fetchFromConnector(
+        showFetch()!,
+        fetchQuery(),
+        fetchDataType(),
+      );
       addToast("success", `Imported ${res.rows} rows as ${res.data_type}`);
       setShowFetch(null);
       setFetchQuery("");
@@ -489,7 +713,9 @@ export default function Datapoint() {
           fallback={
             <div class="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
               <Database size={32} class="mx-auto text-slate-300" />
-              <p class="mt-2 text-sm text-slate-500">No saved connections yet</p>
+              <p class="mt-2 text-sm text-slate-500">
+                No saved connections yet
+              </p>
               <button
                 onClick={openAddWizard}
                 class="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700"
@@ -506,7 +732,10 @@ export default function Datapoint() {
                   connector={c}
                   onTest={() => handleTest(c.id)}
                   onDelete={() => handleDelete(c.id)}
-                  onFetch={() => { setShowFetch(c.id); setFetchQuery(""); }}
+                  onFetch={() => {
+                    setShowFetch(c.id);
+                    setFetchQuery("");
+                  }}
                 />
               )}
             </For>
@@ -519,7 +748,10 @@ export default function Datapoint() {
       {/* ================================================================ */}
       <Show when={showAdd()}>
         <div class="fixed inset-0 z-40 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
+          <div
+            class="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={() => setShowAdd(false)}
+          />
           <div class="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl">
             {/* Header */}
             <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
@@ -527,22 +759,41 @@ export default function Datapoint() {
                 <h3 class="text-base font-semibold text-slate-900">
                   {wizardStep() === 0 && "Choose Source Type"}
                   {wizardStep() === 1 && `Select ${selectedCategory()}`}
-                  {wizardStep() === 2 && `Configure: ${selectedSubtype()?.label}`}
+                  {wizardStep() === 2 &&
+                    `Configure: ${selectedSubtype()?.label}`}
                 </h3>
                 {/* Breadcrumb */}
                 <div class="flex items-center gap-1 mt-1 text-xs text-slate-400">
-                  <button onClick={() => { setWizardStep(0); setSelectedCategory(null); }} class="hover:text-slate-600">Source Type</button>
+                  <button
+                    onClick={() => {
+                      setWizardStep(0);
+                      setSelectedCategory(null);
+                    }}
+                    class="hover:text-slate-600"
+                  >
+                    Source Type
+                  </button>
                   <Show when={wizardStep() >= 1}>
                     <span>›</span>
-                    <button onClick={() => setWizardStep(1)} class="hover:text-slate-600">{selectedCategory()}</button>
+                    <button
+                      onClick={() => setWizardStep(1)}
+                      class="hover:text-slate-600"
+                    >
+                      {selectedCategory()}
+                    </button>
                   </Show>
                   <Show when={wizardStep() >= 2}>
                     <span>›</span>
-                    <span class="text-slate-600">{selectedSubtype()?.label}</span>
+                    <span class="text-slate-600">
+                      {selectedSubtype()?.label}
+                    </span>
                   </Show>
                 </div>
               </div>
-              <button onClick={() => setShowAdd(false)} class="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setShowAdd(false)}
+                class="text-slate-400 hover:text-slate-600"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -553,7 +804,9 @@ export default function Datapoint() {
                 <div class="grid grid-cols-2 gap-3">
                   <For each={CATEGORIES}>
                     {(cat) => {
-                      const group = CONNECTOR_TYPES.find((g) => g.category === cat);
+                      const group = CONNECTOR_TYPES.find(
+                        (g) => g.category === cat,
+                      );
                       const Icon = group?.icon ?? Upload;
                       return (
                         <button
@@ -564,10 +817,13 @@ export default function Datapoint() {
                             <Icon size={20} />
                           </div>
                           <div>
-                            <p class="text-sm font-semibold text-slate-900">{cat}</p>
+                            <p class="text-sm font-semibold text-slate-900">
+                              {cat}
+                            </p>
                             <p class="text-xs text-slate-500">
-                              {cat === "File Upload" ? "CSV, Excel, Parquet" :
-                               `${CONNECTOR_TYPES.filter((g) => g.category === cat).reduce((s, g) => s + g.subtypes.length, 0)} sources`}
+                              {cat === "File Upload"
+                                ? "CSV, Excel, Parquet"
+                                : `${CONNECTOR_TYPES.filter((g) => g.category === cat).reduce((s, g) => s + g.subtypes.length, 0)} sources`}
                             </p>
                           </div>
                         </button>
@@ -578,7 +834,11 @@ export default function Datapoint() {
               </Show>
 
               {/* Step 1: Choose subtype */}
-              <Show when={wizardStep() === 1 && selectedCategory() !== "File Upload"}>
+              <Show
+                when={
+                  wizardStep() === 1 && selectedCategory() !== "File Upload"
+                }
+              >
                 <div class="space-y-2">
                   <For each={filteredSubtypes()}>
                     {(group) => (
@@ -589,8 +849,12 @@ export default function Datapoint() {
                             class="flex w-full items-center gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-indigo-300 hover:bg-indigo-50/30 transition-all"
                           >
                             <div class="flex-1">
-                              <span class="text-sm font-medium text-slate-900">{sub.label}</span>
-                              <span class="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-100 rounded px-1.5 py-0.5">Tier {sub.tier}</span>
+                              <span class="text-sm font-medium text-slate-900">
+                                {sub.label}
+                              </span>
+                              <span class="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-100 rounded px-1.5 py-0.5">
+                                Tier {sub.tier}
+                              </span>
                             </div>
                             <ArrowRight size={14} class="text-slate-300" />
                           </button>
@@ -605,7 +869,9 @@ export default function Datapoint() {
               <Show when={wizardStep() === 2 && selectedSubtype()}>
                 <div class="space-y-4">
                   <div>
-                    <label class="block text-xs font-medium text-slate-600 mb-1">Connection Name</label>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">
+                      Connection Name
+                    </label>
                     <input
                       type="text"
                       value={name()}
@@ -618,13 +884,27 @@ export default function Datapoint() {
                   <div class="grid grid-cols-2 gap-3">
                     <For each={selectedSubtype()!.fields}>
                       {(field) => (
-                        <div class={field.key.includes("json") || field.key.includes("url") ? "col-span-2" : ""}>
-                          <label class="block text-xs font-medium text-slate-600 mb-1">{field.label}</label>
+                        <div
+                          class={
+                            field.key.includes("json") ||
+                            field.key.includes("url")
+                              ? "col-span-2"
+                              : ""
+                          }
+                        >
+                          <label class="block text-xs font-medium text-slate-600 mb-1">
+                            {field.label}
+                          </label>
                           <input
                             type={field.type ?? "text"}
                             value={configFields()[field.key] ?? ""}
                             placeholder={field.placeholder}
-                            onInput={(e) => setConfigFields((p) => ({ ...p, [field.key]: e.target.value }))}
+                            onInput={(e) =>
+                              setConfigFields((p) => ({
+                                ...p,
+                                [field.key]: e.target.value,
+                              }))
+                            }
                             class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
@@ -691,14 +971,24 @@ export default function Datapoint() {
       {/* ================================================================ */}
       <Show when={showMapping()}>
         <div class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowMapping(false)} />
+          <div
+            class="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={() => setShowMapping(false)}
+          />
           <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl p-6 space-y-4">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-base font-semibold text-slate-900">Column Mapping</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Map your source columns to MMM schema fields</p>
+                <h3 class="text-base font-semibold text-slate-900">
+                  Column Mapping
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Map your source columns to MMM schema fields
+                </p>
               </div>
-              <button onClick={() => setShowMapping(false)} class="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setShowMapping(false)}
+                class="text-slate-400 hover:text-slate-600"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -718,7 +1008,12 @@ export default function Datapoint() {
                     <span class="text-slate-300">→</span>
                     <select
                       value={columnMappings()[col] ?? "skip"}
-                      onChange={(e) => setColumnMappings((p) => ({ ...p, [col]: e.currentTarget.value }))}
+                      onChange={(e) =>
+                        setColumnMappings((p) => ({
+                          ...p,
+                          [col]: e.currentTarget.value,
+                        }))
+                      }
                       class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     >
                       <For each={MMM_FIELDS}>
@@ -754,17 +1049,25 @@ export default function Datapoint() {
       {/* Fetch Data Modal */}
       <Show when={showFetch()}>
         <div class="fixed inset-0 z-40 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/20" onClick={() => setShowFetch(null)} />
+          <div
+            class="absolute inset-0 bg-black/20"
+            onClick={() => setShowFetch(null)}
+          />
           <div class="relative w-full max-w-md rounded-xl bg-white shadow-xl p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h3 class="text-base font-semibold text-slate-900">Fetch Data</h3>
-              <button onClick={() => setShowFetch(null)} class="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setShowFetch(null)}
+                class="text-slate-400 hover:text-slate-600"
+              >
                 <X size={18} />
               </button>
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">SQL Query or File Path</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                SQL Query or File Path
+              </label>
               <textarea
                 value={fetchQuery()}
                 onInput={(e) => setFetchQuery(e.target.value)}
@@ -775,7 +1078,9 @@ export default function Datapoint() {
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Import as</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Import as
+              </label>
               <select
                 value={fetchDataType()}
                 onChange={(e) => setFetchDataType(e.target.value)}

@@ -12,10 +12,10 @@ Supported platforms:
   - Amazon Ads  (Amazon Advertising API)
 """
 
+from connectors.ad_platforms.amazon_ads import AmazonAdsConnector
 from connectors.ad_platforms.google_ads import GoogleAdsConnector
 from connectors.ad_platforms.meta_ads import MetaAdsConnector
 from connectors.ad_platforms.tiktok_ads import TikTokAdsConnector
-from connectors.ad_platforms.amazon_ads import AmazonAdsConnector
 
 __all__ = [
     "GoogleAdsConnector",

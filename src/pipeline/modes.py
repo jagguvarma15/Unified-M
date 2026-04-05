@@ -99,8 +99,13 @@ def resolve_run_mode(
             run_reconciliation=True,
             run_optimization=True,
             pipeline_steps=[
-                "ingest", "validate", "transform", "train",
-                "reconcile", "optimize", "export",
+                "ingest",
+                "validate",
+                "transform",
+                "train",
+                "reconcile",
+                "optimize",
+                "export",
             ],
         )
 
@@ -114,8 +119,14 @@ def resolve_run_mode(
             run_reconciliation=True,
             run_optimization=True,
             pipeline_steps=[
-                "ingest", "validate", "transform", "train",
-                "reconcile", "optimize", "evaluate", "export",
+                "ingest",
+                "validate",
+                "transform",
+                "train",
+                "reconcile",
+                "optimize",
+                "evaluate",
+                "export",
             ],
         )
 
@@ -133,8 +144,12 @@ def resolve_run_mode(
             backfill_start=backfill_start,
             backfill_end=backfill_end,
             pipeline_steps=[
-                "ingest", "validate", "transform", "train",
-                "reconcile", "export",
+                "ingest",
+                "validate",
+                "transform",
+                "train",
+                "reconcile",
+                "export",
             ],
         )
 
@@ -165,8 +180,12 @@ def resolve_run_mode(
             update_priors_only=True,
             test_file=test_file,
             pipeline_steps=[
-                "ingest_tests", "validate", "reconcile",
-                "update_priors", "optimize", "export",
+                "ingest_tests",
+                "validate",
+                "reconcile",
+                "update_priors",
+                "optimize",
+                "export",
             ],
         )
 

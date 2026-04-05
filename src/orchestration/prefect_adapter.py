@@ -19,9 +19,10 @@ from typing import Any
 from loguru import logger
 
 try:
-    from prefect import flow, task, get_run_logger
-    from prefect.tasks import task_input_hash
     from datetime import timedelta
+
+    from prefect import flow, get_run_logger, task
+    from prefect.tasks import task_input_hash
 
     _PREFECT_AVAILABLE = True
 except ImportError:
@@ -88,8 +89,8 @@ if _PREFECT_AVAILABLE:
         plogger = get_run_logger()
         plogger.info(f"Training model (backend={model_backend})")
 
-        from pipeline.runner import PipelineRunner
         from config import get_config
+        from pipeline.runner import PipelineRunner
 
         config = get_config()
         runner = PipelineRunner(config)

@@ -4,9 +4,11 @@ Model evaluation utilities for MMM.
 Provides metrics, cross-validation, and diagnostic functions.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pandas as pd
-from typing import Any, Callable
 from loguru import logger
 
 
@@ -150,8 +152,7 @@ def cross_validate(
         test_df = df.iloc[test_start:test_end].copy()
 
         logger.info(
-            f"Fold {fold + 1}/{n_splits}: "
-            f"Train {len(train_df)} rows, Test {len(test_df)} rows"
+            f"Fold {fold + 1}/{n_splits}: Train {len(train_df)} rows, Test {len(test_df)} rows"
         )
 
         # Fit model
@@ -210,7 +211,7 @@ def _kurtosis(x: np.ndarray) -> float:
     mean = np.mean(x)
     std = np.std(x)
     m4 = np.mean((x - mean) ** 4)
-    return float(m4 / (std ** 4) - 3)
+    return float(m4 / (std**4) - 3)
 
 
 def _durbin_watson(residuals: np.ndarray) -> float:
@@ -222,7 +223,7 @@ def _durbin_watson(residuals: np.ndarray) -> float:
     Values > 2 indicate negative autocorrelation.
     """
     diff = np.diff(residuals)
-    return float(np.sum(diff ** 2) / np.sum(residuals ** 2))
+    return float(np.sum(diff**2) / np.sum(residuals**2))
 
 
 def compute_contribution_stability(
@@ -245,8 +246,7 @@ def compute_contribution_stability(
 
     # Get contribution columns (exclude date, actual, predicted)
     contrib_cols = [
-        c for c in contributions.columns
-        if c not in ["date", "actual", "predicted", "baseline"]
+        c for c in contributions.columns if c not in ["date", "actual", "predicted", "baseline"]
     ]
 
     for col in contrib_cols:
@@ -264,6 +264,7 @@ def compute_contribution_stability(
 # ---------------------------------------------------------------------------
 # Stability / whipsaw metrics across runs
 # ---------------------------------------------------------------------------
+
 
 def compute_recommendation_stability(
     current_allocation: dict[str, float],
@@ -348,12 +349,14 @@ def compute_parameter_drift(
         delta_sigma = delta / approx_sd
 
         if delta_sigma > drift_threshold_sigma:
-            drift_alerts.append({
-                "channel": ch,
-                "current": round(c, 4),
-                "previous": round(p, 4),
-                "delta_sigma": round(delta_sigma, 2),
-            })
+            drift_alerts.append(
+                {
+                    "channel": ch,
+                    "current": round(c, 4),
+                    "previous": round(p, 4),
+                    "delta_sigma": round(delta_sigma, 2),
+                }
+            )
 
     return {
         "n_drift_alerts": len(drift_alerts),
@@ -382,9 +385,7 @@ def compute_stability_report(
         )
 
     if current_params and previous_params:
-        report["parameter_drift"] = compute_parameter_drift(
-            current_params, previous_params
-        )
+        report["parameter_drift"] = compute_parameter_drift(current_params, previous_params)
 
     if contributions is not None:
         report["contribution_stability"] = compute_contribution_stability(contributions)

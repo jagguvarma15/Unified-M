@@ -20,14 +20,20 @@ type JsonResponse<T> = T extends {
   ? R
   : never;
 
-type GetResponse<P extends keyof paths> = paths[P] extends { get: infer T } ? JsonResponse<T> : never;
-type PostResponse<P extends keyof paths> = paths[P] extends { post: infer T } ? JsonResponse<T> : never;
+type GetResponse<P extends keyof paths> = paths[P] extends { get: infer T }
+  ? JsonResponse<T>
+  : never;
+type PostResponse<P extends keyof paths> = paths[P] extends { post: infer T }
+  ? JsonResponse<T>
+  : never;
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   if (signal) {
-    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+    signal.addEventListener("abort", () => controller.abort(signal.reason), {
+      once: true,
+    });
   }
   const started = performance.now();
   let status = 0;
@@ -115,7 +121,9 @@ export interface CalibrationPoint {
   [key: string]: unknown;
 }
 
-export type CalibrationData = GetResponse<"/api/v1/calibration"> & { points: CalibrationPoint[] };
+export type CalibrationData = GetResponse<"/api/v1/calibration"> & {
+  points: CalibrationPoint[];
+};
 
 export interface StabilityData {
   allocation_change_pct?: number;
@@ -124,7 +132,12 @@ export interface StabilityData {
   max_change_pct?: number;
   alert_threshold_pct?: number;
   n_drift_alerts?: number;
-  alerts?: Array<{ channel: string; previous: number; current: number; delta_sigma: number }>;
+  alerts?: Array<{
+    channel: string;
+    previous: number;
+    current: number;
+    delta_sigma: number;
+  }>;
   recommendation_stability?: {
     channel_changes: Record<string, { change_pct: number }>;
     is_stable: boolean;
@@ -133,7 +146,12 @@ export interface StabilityData {
   };
   parameter_drift?: {
     n_drift_alerts: number;
-    alerts: Array<{ channel: string; previous: number; current: number; delta_sigma: number }>;
+    alerts: Array<{
+      channel: string;
+      previous: number;
+      current: number;
+      delta_sigma: number;
+    }>;
   };
   contribution_stability?: Record<string, number>;
   [key: string]: unknown;
@@ -148,7 +166,9 @@ export interface GateResult {
   details?: unknown;
 }
 
-export type DataQualityData = GetResponse<"/api/v1/data-quality"> & { gates: GateResult[] };
+export type DataQualityData = GetResponse<"/api/v1/data-quality"> & {
+  gates: GateResult[];
+};
 
 // ---------------------------------------------------------------------------
 // Channel Insights
@@ -165,7 +185,9 @@ export interface ChannelInsight {
   coefficient: number;
 }
 
-export type ChannelInsightsData = GetResponse<"/api/v1/channel-insights"> & { channels: ChannelInsight[] };
+export type ChannelInsightsData = GetResponse<"/api/v1/channel-insights"> & {
+  channels: ChannelInsight[];
+};
 
 // ---------------------------------------------------------------------------
 // Spend Pacing
@@ -180,7 +202,9 @@ export interface PacingChannel {
   status: "on-track" | "over" | "under";
 }
 
-export type SpendPacingData = GetResponse<"/api/v1/spend-pacing"> & { channels: PacingChannel[] };
+export type SpendPacingData = GetResponse<"/api/v1/spend-pacing"> & {
+  channels: PacingChannel[];
+};
 
 // ---------------------------------------------------------------------------
 // Executive Report
@@ -291,14 +315,21 @@ export interface AdaptersData {
 // API
 // ---------------------------------------------------------------------------
 
-function postForm<T>(path: string, data: Record<string, string | number | boolean | undefined>): Promise<T> {
+function postForm<T>(
+  path: string,
+  data: Record<string, string | number | boolean | undefined>,
+): Promise<T> {
   const formData = new FormData();
   for (const [k, v] of Object.entries(data)) {
     if (v != null) formData.append(k, String(v));
   }
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  return fetch(`${BASE}${path}`, { method: "POST", body: formData, signal: controller.signal })
+  return fetch(`${BASE}${path}`, {
+    method: "POST",
+    body: formData,
+    signal: controller.signal,
+  })
     .then((r) => {
       if (!r.ok) throw new Error(r.statusText);
       return r.json() as Promise<T>;
@@ -307,29 +338,44 @@ function postForm<T>(path: string, data: Record<string, string | number | boolea
 }
 
 export const api = {
-  health: ({ signal }: { signal?: AbortSignal } = {}) => get<HealthData>("/health", signal),
+  health: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<HealthData>("/health", signal),
 
-  runs: (limit = 20, signal?: AbortSignal) => get<RunsData>(`/api/v1/runs?limit=${limit}`, signal),
+  runs: (limit = 20, signal?: AbortSignal) =>
+    get<RunsData>(`/api/v1/runs?limit=${limit}`, signal),
 
-  contributions: ({ signal }: { signal?: AbortSignal } = {}) => get<ContributionsData>("/api/v1/contributions", signal),
-  reconciliation: ({ signal }: { signal?: AbortSignal } = {}) => get<ReconciliationData>("/api/v1/reconciliation", signal),
-  optimization: ({ signal }: { signal?: AbortSignal } = {}) => get<OptimizationData>("/api/v1/optimization", signal),
+  contributions: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<ContributionsData>("/api/v1/contributions", signal),
+  reconciliation: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<ReconciliationData>("/api/v1/reconciliation", signal),
+  optimization: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<OptimizationData>("/api/v1/optimization", signal),
   responseCurves: (channel?: string, signal?: AbortSignal) =>
     get<ResponseCurvesData>(
-      channel ? `/api/v1/response-curves?channel=${encodeURIComponent(channel)}` : "/api/v1/response-curves",
+      channel
+        ? `/api/v1/response-curves?channel=${encodeURIComponent(channel)}`
+        : "/api/v1/response-curves",
       signal,
     ),
-  parameters: ({ signal }: { signal?: AbortSignal } = {}) => get<ParametersData>("/api/v1/parameters", signal),
-  diagnostics: ({ signal }: { signal?: AbortSignal } = {}) => get<DiagnosticsData>("/api/v1/diagnostics", signal),
-  roas: ({ signal }: { signal?: AbortSignal } = {}) => get<ROASData>("/api/v1/roas", signal),
-  waterfall: ({ signal }: { signal?: AbortSignal } = {}) => get<WaterfallData>("/api/v1/waterfall", signal),
+  parameters: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<ParametersData>("/api/v1/parameters", signal),
+  diagnostics: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<DiagnosticsData>("/api/v1/diagnostics", signal),
+  roas: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<ROASData>("/api/v1/roas", signal),
+  waterfall: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<WaterfallData>("/api/v1/waterfall", signal),
 
-  dataStatus: ({ signal }: { signal?: AbortSignal } = {}) => get<DataStatus>("/api/v1/data/status", signal),
+  dataStatus: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<DataStatus>("/api/v1/data/status", signal),
   uploadFile: (dataType: string, file: File) => {
     const formData = new FormData();
     formData.append("data_type", dataType);
     formData.append("file", file);
-    return fetch(`${BASE}/api/v1/data/upload`, { method: "POST", body: formData }).then((r) => {
+    return fetch(`${BASE}/api/v1/data/upload`, {
+      method: "POST",
+      body: formData,
+    }).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
       return r.json() as Promise<PostResponse<"/api/v1/data/upload">>;
     });
@@ -348,26 +394,54 @@ export const api = {
       use_sample_data: useSampleData,
       budget,
     }),
-  listJobs: (limit = 20, signal?: AbortSignal) => get<{ jobs: PipelineJob[] }>(`/api/v1/pipeline/jobs?limit=${limit}`, signal),
-  getJob: (jobId: string, signal?: AbortSignal) => get<PipelineJob>(`/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`, signal),
+  listJobs: (limit = 20, signal?: AbortSignal) =>
+    get<{ jobs: PipelineJob[] }>(
+      `/api/v1/pipeline/jobs?limit=${limit}`,
+      signal,
+    ),
+  getJob: (jobId: string, signal?: AbortSignal) =>
+    get<PipelineJob>(
+      `/api/v1/pipeline/jobs/${encodeURIComponent(jobId)}`,
+      signal,
+    ),
 
   // Connectors CRUD
-  listConnectors: ({ signal }: { signal?: AbortSignal } = {}) => get<{ connectors: SavedConnector[] }>("/api/v1/connectors", signal),
-  getConnector: (id: string, signal?: AbortSignal) => get<GetResponse<"/api/v1/connectors/{connector_id}">>(`/api/v1/connectors/${id}`, signal),
-  createConnector: (name: string, type: string, subtype: string, config: Record<string, unknown>) =>
+  listConnectors: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<{ connectors: SavedConnector[] }>("/api/v1/connectors", signal),
+  getConnector: (id: string, signal?: AbortSignal) =>
+    get<GetResponse<"/api/v1/connectors/{connector_id}">>(
+      `/api/v1/connectors/${id}`,
+      signal,
+    ),
+  createConnector: (
+    name: string,
+    type: string,
+    subtype: string,
+    config: Record<string, unknown>,
+  ) =>
     postForm<PostResponse<"/api/v1/connectors">>("/api/v1/connectors", {
       name,
       connector_type: type,
       subtype,
       connector_config: JSON.stringify(config),
     }),
-  updateConnector: (id: string, name?: string, config?: Record<string, unknown>) => {
+  updateConnector: (
+    id: string,
+    name?: string,
+    config?: Record<string, unknown>,
+  ) => {
     const formData = new FormData();
     if (name != null) formData.append("name", name);
-    if (config != null) formData.append("connector_config", JSON.stringify(config));
-    return fetch(`${BASE}/api/v1/connectors/${id}`, { method: "PUT", body: formData }).then((r) => {
+    if (config != null)
+      formData.append("connector_config", JSON.stringify(config));
+    return fetch(`${BASE}/api/v1/connectors/${id}`, {
+      method: "PUT",
+      body: formData,
+    }).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<GetResponse<"/api/v1/connectors/{connector_id}">>;
+      return r.json() as Promise<
+        GetResponse<"/api/v1/connectors/{connector_id}">
+      >;
     });
   },
   deleteConnector: (id: string) =>
@@ -387,14 +461,24 @@ export const api = {
     ),
 
   // Adapters
-  adapters: ({ signal }: { signal?: AbortSignal } = {}) => get<AdaptersData>("/api/v1/adapters", signal),
+  adapters: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<AdaptersData>("/api/v1/adapters", signal),
 
-  calibration: ({ signal }: { signal?: AbortSignal } = {}) => get<CalibrationData>("/api/v1/calibration", signal),
-  stability: ({ signal }: { signal?: AbortSignal } = {}) => get<StabilityData>("/api/v1/stability", signal),
-  dataQuality: ({ signal }: { signal?: AbortSignal } = {}) => get<DataQualityData>("/api/v1/data-quality", signal),
-  channelInsights: ({ signal }: { signal?: AbortSignal } = {}) => get<ChannelInsightsData>("/api/v1/channel-insights", signal),
-  spendPacing: ({ signal }: { signal?: AbortSignal } = {}) => get<SpendPacingData>("/api/v1/spend-pacing", signal),
-  reportSummary: ({ signal }: { signal?: AbortSignal } = {}) => get<ReportSummaryData>("/api/v1/report/summary", signal),
+  calibration: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<CalibrationData>("/api/v1/calibration", signal),
+  stability: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<StabilityData>("/api/v1/stability", signal),
+  dataQuality: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<DataQualityData>("/api/v1/data-quality", signal),
+  channelInsights: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<ChannelInsightsData>("/api/v1/channel-insights", signal),
+  spendPacing: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<SpendPacingData>("/api/v1/spend-pacing", signal),
+  reportSummary: ({ signal }: { signal?: AbortSignal } = {}) =>
+    get<ReportSummaryData>("/api/v1/report/summary", signal),
   compareRuns: (runA: string, runB: string, signal?: AbortSignal) =>
-    get<RunComparisonData>(`/api/v1/compare-runs?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`, signal),
+    get<RunComparisonData>(
+      `/api/v1/compare-runs?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`,
+      signal,
+    ),
 };

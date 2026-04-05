@@ -10,4 +10,3 @@ export function downsampleEvenly<T>(rows: T[], maxPoints: number): T[] {
   }
   return out;
 }
-

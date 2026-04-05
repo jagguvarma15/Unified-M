@@ -49,12 +49,18 @@ interface SelectableTableRowProps {
   onClick?: () => void;
 }
 
-const alignClass = { left: "text-left", right: "text-right", center: "text-center" };
+const alignClass = {
+  left: "text-left",
+  right: "text-right",
+  center: "text-center",
+};
 
 export function Table(props: TableProps) {
   return (
     <div class="overflow-x-auto rounded-lg border border-slate-200">
-      <table class={`w-full text-sm ${props.class ?? ""}`}>{props.children}</table>
+      <table class={`w-full text-sm ${props.class ?? ""}`}>
+        {props.children}
+      </table>
     </div>
   );
 }
@@ -91,7 +97,9 @@ export function TableHeaderCell(props: TableHeaderCellProps) {
   return (
     <th
       class={`font-semibold text-slate-600 ${TH_PAD[density()]} ${alignClass[props.align ?? "left"]} ${
-        props.sortable ? "cursor-pointer select-none hover:text-slate-900 transition-colors" : ""
+        props.sortable
+          ? "cursor-pointer select-none hover:text-slate-900 transition-colors"
+          : ""
       } ${props.class ?? ""}`}
       onClick={props.sortable ? props.onSort : undefined}
     >
@@ -102,8 +110,8 @@ export function TableHeaderCell(props: TableHeaderCellProps) {
             {props.sorted === "asc"
               ? ArrowUp({ size: 12, class: "text-indigo-600" })
               : props.sorted === "desc"
-              ? ArrowDown({ size: 12, class: "text-indigo-600" })
-              : ArrowUpDown({ size: 12, class: "text-slate-300" })}
+                ? ArrowDown({ size: 12, class: "text-indigo-600" })
+                : ArrowUpDown({ size: 12, class: "text-slate-300" })}
           </span>
         </Show>
       </span>
@@ -113,7 +121,11 @@ export function TableHeaderCell(props: TableHeaderCellProps) {
 
 export function TableCell(props: TableCellProps) {
   return (
-    <td class={`${TD_PAD[density()]} ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}>{props.children}</td>
+    <td
+      class={`${TD_PAD[density()]} ${alignClass[props.align ?? "left"]} ${props.class ?? ""}`}
+    >
+      {props.children}
+    </td>
   );
 }
 
@@ -140,7 +152,10 @@ export function SelectableTableRow(props: SelectableTableRowProps) {
 }
 
 /** Helper hook for managing sort state on a table */
-export function createSortState<T extends string>(defaultKey?: T, defaultDir: "asc" | "desc" = "asc") {
+export function createSortState<T extends string>(
+  defaultKey?: T,
+  defaultDir: "asc" | "desc" = "asc",
+) {
   const [sortKey, setSortKey] = createSignal<T | null>(defaultKey ?? null);
   const [sortDir, setSortDir] = createSignal<"asc" | "desc">(defaultDir);
 

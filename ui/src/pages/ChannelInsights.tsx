@@ -1,7 +1,22 @@
 import { createSignal, onMount, Show, For } from "solid-js";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import ReactChart, { h } from "../lib/ReactChart";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, Loader2 } from "../lib/icons";
+import {
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Loader2,
+} from "../lib/icons";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";
@@ -30,7 +45,8 @@ export default function ChannelInsights() {
 
   const channels = () => data()?.channels ?? [];
 
-  const overSaturated = () => channels().filter((c) => c.status === "over-saturated");
+  const overSaturated = () =>
+    channels().filter((c) => c.status === "over-saturated");
 
   const marginalData = () =>
     channels().map((c) => ({
@@ -70,11 +86,14 @@ export default function ChannelInsights() {
             <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div class="flex items-center gap-2 text-amber-700 font-medium text-sm mb-1">
                 <AlertTriangle size={16} />
-                {overSaturated().length} channel{overSaturated().length > 1 ? "s" : ""} over-saturated
+                {overSaturated().length} channel
+                {overSaturated().length > 1 ? "s" : ""} over-saturated
               </div>
               <p class="text-xs text-amber-600">
-                {overSaturated().map((c) => c.channel.replace(/_spend$/, "")).join(", ")} —
-                reallocating budget may improve overall ROI.
+                {overSaturated()
+                  .map((c) => c.channel.replace(/_spend$/, ""))
+                  .join(", ")}{" "}
+                — reallocating budget may improve overall ROI.
               </p>
             </div>
           </Show>
@@ -87,29 +106,64 @@ export default function ChannelInsights() {
             minHeight={320}
           >
             <ReactChart>
-              {() => h(ResponsiveContainer, { width: "100%", height: Math.max(280, marginalData().length * 44) },
-                h(BarChart, { data: marginalData(), layout: "vertical", margin: { left: 100, right: 20, top: 5, bottom: 5 } },
-                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
-                  h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => v.toFixed(3) }),
-                  h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 12 }, width: 90 }),
-                  h(Tooltip, {
-                    contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" },
-                    formatter: (v: number) => [v.toFixed(6), "Marginal ROI"],
-                  }),
-                  h(Bar, { dataKey: "marginal_roi", radius: [0, 4, 4, 0] },
-                    ...marginalData().map((entry, i) =>
-                      h(Cell, {
-                        key: i,
-                        fill: entry.status === "over-saturated"
-                          ? "#f59e0b"
-                          : entry.status === "under-invested"
-                            ? "#6366f1"
-                            : "#10b981",
-                      })
-                    )
-                  )
+              {() =>
+                h(
+                  ResponsiveContainer,
+                  {
+                    width: "100%",
+                    height: Math.max(280, marginalData().length * 44),
+                  },
+                  h(
+                    BarChart,
+                    {
+                      data: marginalData(),
+                      layout: "vertical",
+                      margin: { left: 100, right: 20, top: 5, bottom: 5 },
+                    },
+                    h(CartesianGrid, {
+                      strokeDasharray: "3 3",
+                      stroke: CHART_GRID,
+                      horizontal: false,
+                    }),
+                    h(XAxis, {
+                      type: "number",
+                      tick: { fontSize: 12 },
+                      tickFormatter: (v: number) => v.toFixed(3),
+                    }),
+                    h(YAxis, {
+                      type: "category",
+                      dataKey: "channel",
+                      tick: { fontSize: 12 },
+                      width: 90,
+                    }),
+                    h(Tooltip, {
+                      contentStyle: {
+                        background: CHART_TOOLTIP_BG,
+                        border: "none",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        color: "#e2e8f0",
+                      },
+                      formatter: (v: number) => [v.toFixed(6), "Marginal ROI"],
+                    }),
+                    h(
+                      Bar,
+                      { dataKey: "marginal_roi", radius: [0, 4, 4, 0] },
+                      ...marginalData().map((entry, i) =>
+                        h(Cell, {
+                          key: i,
+                          fill:
+                            entry.status === "over-saturated"
+                              ? "#f59e0b"
+                              : entry.status === "under-invested"
+                                ? "#6366f1"
+                                : "#10b981",
+                        }),
+                      ),
+                    ),
+                  ),
                 )
-              )}
+              }
             </ReactChart>
           </ChartCard>
 
@@ -130,11 +184,12 @@ export default function ChannelInsights() {
 function ChannelCard(props: { insight: ChannelInsight; color: string }) {
   const variant = () => STATUS_VARIANT[props.insight.status] ?? "default";
   const StatusIcon = () => {
-    const Ic = props.insight.status === "over-saturated"
-      ? TrendingDown
-      : props.insight.status === "under-invested"
-        ? TrendingUp
-        : Minus;
+    const Ic =
+      props.insight.status === "over-saturated"
+        ? TrendingDown
+        : props.insight.status === "under-invested"
+          ? TrendingUp
+          : Minus;
     return <Ic size={12} />;
   };
   const name = () => props.insight.channel.replace(/_spend$/, "");
@@ -163,11 +218,15 @@ function ChannelCard(props: { insight: ChannelInsight; color: string }) {
         </div>
         <div>
           <p class="text-slate-500">Marginal ROI</p>
-          <p class="font-semibold text-slate-800 tabular-nums">{props.insight.marginal_roi.toFixed(4)}</p>
+          <p class="font-semibold text-slate-800 tabular-nums">
+            {props.insight.marginal_roi.toFixed(4)}
+          </p>
         </div>
         <div>
           <p class="text-slate-500">Headroom</p>
-          <p class="font-semibold text-slate-800 tabular-nums">{props.insight.headroom_pct}%</p>
+          <p class="font-semibold text-slate-800 tabular-nums">
+            {props.insight.headroom_pct}%
+          </p>
         </div>
       </div>
 
@@ -175,7 +234,9 @@ function ChannelCard(props: { insight: ChannelInsight; color: string }) {
       <div class="mt-3">
         <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1">
           <span>Saturation</span>
-          <span>{Math.min(100, Math.round(100 - props.insight.headroom_pct))}%</span>
+          <span>
+            {Math.min(100, Math.round(100 - props.insight.headroom_pct))}%
+          </span>
         </div>
         <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
           <div

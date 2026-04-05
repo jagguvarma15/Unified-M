@@ -8,7 +8,7 @@ export const qk = {
   diagnostics: ["diagnostics"] as const,
   roas: ["roas"] as const,
   dataStatus: ["data-status"] as const,
-  compareRuns: (runA: string, runB: string) => ["compare-runs", runA, runB] as const,
+  compareRuns: (runA: string, runB: string) =>
+    ["compare-runs", runA, runB] as const,
   pipelineJobs: (limit: number) => ["pipeline-jobs", limit] as const,
 };
-

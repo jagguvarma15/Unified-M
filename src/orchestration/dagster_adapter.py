@@ -20,17 +20,17 @@ from loguru import logger
 try:
     from dagster import (
         AssetExecutionContext,
+        Config,
         Definitions,
+        In,
+        Out,
         ScheduleDefinition,
         asset,
         define_asset_job,
-        op,
-        job,
-        schedule,
-        Config,
-        In,
-        Out,
         graph,
+        job,
+        op,
+        schedule,
     )
 
     _DAGSTER_AVAILABLE = True
@@ -93,8 +93,8 @@ if _DAGSTER_AVAILABLE:
     )
     def mmm_results(context: AssetExecutionContext) -> dict[str, Any]:
         """Train the MMM model."""
-        from pipeline.runner import PipelineRunner
         from config import get_config
+        from pipeline.runner import PipelineRunner
 
         config = get_config()
         runner = PipelineRunner(config)

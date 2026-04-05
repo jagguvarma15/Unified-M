@@ -18,7 +18,7 @@ class WeatherConnector:
 
     def __init__(
         self,
-        latitude: float = 39.8283,   # US centroid default
+        latitude: float = 39.8283,  # US centroid default
         longitude: float = -98.5795,
     ):
         self.latitude = latitude
@@ -55,11 +55,13 @@ class WeatherConnector:
         data = resp.json()
 
         daily = data.get("daily", {})
-        df = pd.DataFrame({
-            "date": pd.to_datetime(daily.get("time", [])),
-            "ctrl_temperature_f": daily.get("temperature_2m_mean", []),
-            "ctrl_precipitation_in": daily.get("precipitation_sum", []),
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(daily.get("time", [])),
+                "ctrl_temperature_f": daily.get("temperature_2m_mean", []),
+                "ctrl_precipitation_in": daily.get("precipitation_sum", []),
+            }
+        )
 
         logger.info(f"Fetched {len(df)} days of weather data")
         return df
@@ -68,8 +70,12 @@ class WeatherConnector:
         """Fetch and aggregate to ISO weeks."""
         df = self.fetch(start_date, end_date)
         df["week_start"] = df["date"].dt.to_period("W").dt.start_time
-        weekly = df.groupby("week_start").agg(
-            ctrl_temperature_f=("ctrl_temperature_f", "mean"),
-            ctrl_precipitation_in=("ctrl_precipitation_in", "sum"),
-        ).reset_index()
+        weekly = (
+            df.groupby("week_start")
+            .agg(
+                ctrl_temperature_f=("ctrl_temperature_f", "mean"),
+                ctrl_precipitation_in=("ctrl_precipitation_in", "sum"),
+            )
+            .reset_index()
+        )
         return weekly

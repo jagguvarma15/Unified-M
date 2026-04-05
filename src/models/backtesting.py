@@ -9,8 +9,9 @@ Extends the basic cross-validation in evaluation.py with:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -55,7 +56,11 @@ def compute_all_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, flo
     y_pred = np.asarray(y_pred, dtype=float)
 
     mask = y_true != 0
-    mape = float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100) if mask.any() else 0.0
+    mape = (
+        float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100)
+        if mask.any()
+        else 0.0
+    )
     wmape = compute_wmape(y_true, y_pred)
     rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
     mae = float(np.mean(np.abs(y_true - y_pred)))

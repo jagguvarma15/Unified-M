@@ -51,10 +51,7 @@ class MeridianAdapter(BaseMMM):
         **kwargs: Any,
     ):
         if not _MERIDIAN_AVAILABLE:
-            raise ImportError(
-                "google-meridian is not installed. "
-                "Run: pip install google-meridian"
-            )
+            raise ImportError("google-meridian is not installed. Run: pip install google-meridian")
 
         self._n_samples = n_samples
         self._n_chains = n_chains
@@ -126,8 +123,7 @@ class MeridianAdapter(BaseMMM):
         metrics = self.get_metrics(y_true, y_pred)
 
         logger.info(
-            f"Meridian fit complete. R2={metrics['r_squared']:.3f} "
-            f"MAPE={metrics['mape']:.2f}%"
+            f"Meridian fit complete. R2={metrics['r_squared']:.3f} MAPE={metrics['mape']:.2f}%"
         )
 
         return {"metrics": metrics}
@@ -136,7 +132,7 @@ class MeridianAdapter(BaseMMM):
         self._check_fitted()
         # For Meridian, prediction uses the fitted model's posterior
         pred = self._model.predict()
-        return pred.mean(axis=0).flatten()[:len(df)]
+        return pred.mean(axis=0).flatten()[: len(df)]
 
     def get_channel_contributions(self) -> dict[str, np.ndarray]:
         self._check_fitted()
@@ -168,11 +164,13 @@ class MeridianAdapter(BaseMMM):
             response = self._model.get_response_curve(channel_idx=i, spend_values=grid)
             marginal = np.gradient(response, grid)
 
-            curves[ch] = pd.DataFrame({
-                "spend": grid,
-                "response": response,
-                "marginal_response": marginal,
-            })
+            curves[ch] = pd.DataFrame(
+                {
+                    "spend": grid,
+                    "response": response,
+                    "marginal_response": marginal,
+                }
+            )
 
         return curves
 
@@ -195,13 +193,16 @@ class MeridianAdapter(BaseMMM):
     def save_state(self, directory: Path) -> None:
         self._check_fitted()
         with open(directory / "meridian_model.pkl", "wb") as f:
-            pickle.dump({
-                "model": self._model,
-                "media_cols": self._media_cols,
-                "control_cols": self._control_cols,
-                "target_col": self._target_col,
-                "date_col": self._date_col,
-            }, f)
+            pickle.dump(
+                {
+                    "model": self._model,
+                    "media_cols": self._media_cols,
+                    "control_cols": self._control_cols,
+                    "target_col": self._target_col,
+                    "date_col": self._date_col,
+                },
+                f,
+            )
         params = self.get_parameters()
         with open(directory / "parameters.json", "w") as f:
             json.dump(params, f, indent=2)
@@ -222,10 +223,12 @@ class MeridianAdapter(BaseMMM):
     def _check_fitted(self) -> None:
         if self._model is None:
             from core.exceptions import ModelNotFittedError
+
             raise ModelNotFittedError("MeridianAdapter")
 
 
 # Self-register only if Meridian is available
 if _MERIDIAN_AVAILABLE:
     from models.registry import register_backend
+
     register_backend("meridian", MeridianAdapter)

@@ -12,8 +12,7 @@ class _FakeRedis:
 
     def scan_iter(self, match: str, count: int = 1000):
         del match, count
-        for k in self._keys:
-            yield k
+        yield from self._keys
 
     def delete(self, *keys: str):
         self.deleted_calls.append(tuple(keys))

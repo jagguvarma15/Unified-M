@@ -45,7 +45,7 @@ def compute_required_sample_size(
 
     z_beta = stats.norm.ppf(power)
 
-    n = ((z_alpha + z_beta) ** 2 * 2 * baseline_std ** 2) / (mde ** 2)
+    n = ((z_alpha + z_beta) ** 2 * 2 * baseline_std**2) / (mde**2)
     n = int(np.ceil(n))
 
     logger.info(
@@ -86,7 +86,7 @@ def compute_mde(
 
     z_beta = stats.norm.ppf(power)
 
-    mde_absolute = (z_alpha + z_beta) * np.sqrt(2 * baseline_std ** 2 / n_per_group)
+    mde_absolute = (z_alpha + z_beta) * np.sqrt(2 * baseline_std**2 / n_per_group)
     mde_pct = mde_absolute / baseline_mean if baseline_mean > 0 else 0.0
 
     logger.info(

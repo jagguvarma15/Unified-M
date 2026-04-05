@@ -2,17 +2,17 @@
 Reconciliation module -- fuses measurement signals into unified estimates.
 """
 
-from .engine import (
-    ReconciliationEngine,
-    ReconciliationResult,
-    ChannelEstimate,
-)
 from .calibration import (
-    compute_calibration_factors,
     calibrate_mmm_with_tests,
     compute_blended_estimates,
-    estimate_test_coverage,
+    compute_calibration_factors,
     create_calibration_report,
+    estimate_test_coverage,
+)
+from .engine import (
+    ChannelEstimate,
+    ReconciliationEngine,
+    ReconciliationResult,
 )
 
 __all__ = [
