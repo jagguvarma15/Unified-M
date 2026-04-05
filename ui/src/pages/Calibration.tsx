@@ -13,6 +13,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type CalibrationData } from "../lib/api";
@@ -118,52 +119,52 @@ export default function Calibration() {
                     Points near the diagonal mean the MMM prediction matched the
                     experiment result. Green = within CI, Red = outside CI.
                   </p>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        type="number"
-                        dataKey="x"
-                        name="Measured Lift"
-                        label={{ value: "Measured Lift", position: "insideBottom", offset: -10 }}
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="y"
-                        name="Predicted Lift"
-                        label={{ value: "Predicted Lift", angle: -90, position: "insideLeft" }}
-                      />
-                      <Tooltip
-                        content={({ payload }) => {
-                          if (!payload?.length) return null;
-                          const p = payload[0].payload;
-                          return (
-                            <div class="bg-white border border-gray-200 rounded shadow-lg p-3 text-sm">
-                              <p class="font-semibold">{p.channel}</p>
-                              <p>Measured: {toFinite(p.measured_lift).toFixed(4)}</p>
-                              <p>Predicted: {toFinite(p.predicted_lift).toFixed(4)}</p>
-                              <p>Error: {toFinite(p.error_pct).toFixed(1)}%</p>
-                              <p>Within CI: <span class={p.within_ci ? "text-green-600" : "text-red-600"}>{p.within_ci ? "Yes" : "No"}</span></p>
-                            </div>
-                          );
-                        }}
-                      />
-                      <ReferenceLine
-                        segment={[
-                          { x: minX() * 0.8, y: minX() * 0.8 },
-                          { x: maxX() * 1.2, y: maxX() * 1.2 },
-                        ]}
-                        stroke="#9ca3af"
-                        strokeDasharray="6 4"
-                        label="Perfect"
-                      />
-                      <Scatter data={scatterData()}>
-                        {scatterData().map((entry, i) => (
-                          <Cell key={i} fill={entry.within_ci ? "#16a34a" : "#dc2626"} r={8} />
-                        ))}
-                      </Scatter>
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() =>
+                      h(ResponsiveContainer, { width: "100%", height: 400 },
+                        h(ScatterChart, { margin: { top: 10, right: 30, bottom: 20, left: 20 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3" }),
+                          h(XAxis, {
+                            type: "number",
+                            dataKey: "x",
+                            name: "Measured Lift",
+                            label: { value: "Measured Lift", position: "insideBottom", offset: -10 },
+                          }),
+                          h(YAxis, {
+                            type: "number",
+                            dataKey: "y",
+                            name: "Predicted Lift",
+                            label: { value: "Predicted Lift", angle: -90, position: "insideLeft" },
+                          }),
+                          h(Tooltip, {
+                            content: ({ payload }: any) => {
+                              if (!payload?.length) return null;
+                              const p = payload[0].payload;
+                              return h("div", { className: "bg-white border border-gray-200 rounded shadow-lg p-3 text-sm" },
+                                h("p", { className: "font-semibold" }, p.channel),
+                                h("p", null, `Measured: ${toFinite(p.measured_lift).toFixed(4)}`),
+                                h("p", null, `Predicted: ${toFinite(p.predicted_lift).toFixed(4)}`),
+                                h("p", null, `Error: ${toFinite(p.error_pct).toFixed(1)}%`),
+                                h("p", null, "Within CI: ", h("span", { className: p.within_ci ? "text-green-600" : "text-red-600" }, p.within_ci ? "Yes" : "No"))
+                              );
+                            },
+                          }),
+                          h(ReferenceLine, {
+                            segment: [
+                              { x: minX() * 0.8, y: minX() * 0.8 },
+                              { x: maxX() * 1.2, y: maxX() * 1.2 },
+                            ],
+                            stroke: "#9ca3af",
+                            strokeDasharray: "6 4",
+                            label: "Perfect",
+                          }),
+                          h(Scatter, { data: scatterData() },
+                            ...scatterData().map((entry, i) => h(Cell, { key: i, fill: entry.within_ci ? "#16a34a" : "#dc2626", r: 8 }))
+                          )
+                        )
+                      )
+                    }
+                  </ReactChart>
                 </div>
 
                 {/* Error by channel bar chart */}
@@ -171,19 +172,21 @@ export default function Calibration() {
                   <h2 class="text-lg font-semibold text-gray-900 mb-4">
                     Lift Error by Channel
                   </h2>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={barData()} margin={{ top: 5, right: 30, bottom: 5, left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="channel" />
-                      <YAxis label={{ value: "Error %", angle: -90, position: "insideLeft" }} />
-                      <Tooltip />
-                      <Bar dataKey="error_pct" name="Error %">
-                        {barData().map((entry, i) => (
-                          <Cell key={i} fill={entry.within_ci ? "#16a34a" : "#dc2626"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() =>
+                      h(ResponsiveContainer, { width: "100%", height: 300 },
+                        h(BarChart, { data: barData(), margin: { top: 5, right: 30, bottom: 5, left: 20 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3" }),
+                          h(XAxis, { dataKey: "channel" }),
+                          h(YAxis, { label: { value: "Error %", angle: -90, position: "insideLeft" } }),
+                          h(Tooltip, null),
+                          h(Bar, { dataKey: "error_pct", name: "Error %" },
+                            ...barData().map((entry, i) => h(Cell, { key: i, fill: entry.within_ci ? "#16a34a" : "#dc2626" }))
+                          )
+                        )
+                      )
+                    }
+                  </ReactChart>
                 </div>
 
                 {/* Detail table */}

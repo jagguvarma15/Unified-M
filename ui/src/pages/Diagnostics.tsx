@@ -16,6 +16,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Activity, AlertTriangle, CheckCircle2 } from "../lib/icons";
+import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type DiagnosticsData } from "../lib/api";
@@ -103,37 +104,22 @@ export default function Diagnostics() {
                 <h2 class="text-sm font-semibold text-slate-700 mb-4">
                   Actual vs Predicted Over Time
                 </h2>
-                <ResponsiveContainer width="100%" height={350}>
-                  <LineChart
-                    data={d.chart}
-                    onClick={() => trackEvent("chart_interaction", { chart_id: "diagnostics_timeseries", interaction: "click" })}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="date" {...getDateAxisProps(d.chart.length)} />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                    <Tooltip
-                      formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="actual"
-                      stroke="#334155"
-                      strokeWidth={2}
-                      dot={false}
-                      name="Actual"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="predicted"
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      dot={false}
-                      strokeDasharray="6 3"
-                      name="Predicted"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: 350 },
+                    h(LineChart, {
+                      data: d.chart,
+                      onClick: () => trackEvent("chart_interaction", { chart_id: "diagnostics_timeseries", interaction: "click" }),
+                    },
+                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                      h(XAxis, { dataKey: "date", ...getDateAxisProps(d.chart.length) }),
+                      h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                      h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
+                      h(Legend),
+                      h(Line, { type: "monotone", dataKey: "actual", stroke: "#334155", strokeWidth: 2, dot: false, name: "Actual" }),
+                      h(Line, { type: "monotone", dataKey: "predicted", stroke: "#6366f1", strokeWidth: 2, dot: false, strokeDasharray: "6 3", name: "Predicted" }),
+                    )
+                  )}
+                </ReactChart>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
@@ -142,40 +128,18 @@ export default function Diagnostics() {
                   <h2 class="text-sm font-semibold text-slate-700 mb-4">
                     Actual vs Predicted (Scatter)
                   </h2>
-                  <ResponsiveContainer width="100%" height={320}>
-                    <ScatterChart margin={{ bottom: 20, left: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis
-                        type="number"
-                        dataKey="actual"
-                        name="Actual"
-                        tick={{ fontSize: 11 }}
-                        domain={[minVal * 0.95, maxVal * 1.05]}
-                        label={{ value: "Actual", position: "insideBottom", offset: -10, fontSize: 12 }}
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="predicted"
-                        name="Predicted"
-                        tick={{ fontSize: 11 }}
-                        domain={[minVal * 0.95, maxVal * 1.05]}
-                        label={{ value: "Predicted", angle: -90, position: "insideLeft", fontSize: 12 }}
-                      />
-                      <Tooltip
-                        formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      />
-                      <ReferenceLine
-                        segment={[
-                          { x: minVal, y: minVal },
-                          { x: maxVal, y: maxVal },
-                        ]}
-                        stroke="#94a3b8"
-                        strokeDasharray="4 4"
-                        strokeWidth={1.5}
-                      />
-                      <Scatter data={scatterData} fill="#6366f1" fillOpacity={0.6} r={3} />
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() => h(ResponsiveContainer, { width: "100%", height: 320 },
+                      h(ScatterChart, { margin: { bottom: 20, left: 10 } },
+                        h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                        h(XAxis, { type: "number", dataKey: "actual", name: "Actual", tick: { fontSize: 11 }, domain: [minVal * 0.95, maxVal * 1.05], label: { value: "Actual", position: "insideBottom", offset: -10, fontSize: 12 } }),
+                        h(YAxis, { type: "number", dataKey: "predicted", name: "Predicted", tick: { fontSize: 11 }, domain: [minVal * 0.95, maxVal * 1.05], label: { value: "Predicted", angle: -90, position: "insideLeft", fontSize: 12 } }),
+                        h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
+                        h(ReferenceLine, { segment: [{ x: minVal, y: minVal }, { x: maxVal, y: maxVal }], stroke: "#94a3b8", strokeDasharray: "4 4", strokeWidth: 1.5 }),
+                        h(Scatter, { data: scatterData, fill: "#6366f1", fillOpacity: 0.6, r: 3 }),
+                      )
+                    )}
+                  </ReactChart>
                   <p class="text-xs text-slate-400 text-center mt-2">
                     Points close to the diagonal line indicate good fit
                   </p>
@@ -186,22 +150,20 @@ export default function Diagnostics() {
                   <h2 class="text-sm font-semibold text-slate-700 mb-4">
                     Residuals Over Time
                   </h2>
-                  <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={d.chart}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" {...getDateAxisProps(d.chart.length)} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                      <Tooltip
-                        formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      />
-                      <ReferenceLine y={0} stroke="#64748b" strokeWidth={1.5} />
-                      <Bar dataKey="residual" name="Residual">
-                        {d.chart.map((row, i) => (
-                          <Cell key={i} fill={(row.residual ?? 0) >= 0 ? "#10b981" : "#ef4444"} fillOpacity={0.7} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() => h(ResponsiveContainer, { width: "100%", height: 320 },
+                      h(BarChart, { data: d.chart },
+                        h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                        h(XAxis, { dataKey: "date", ...getDateAxisProps(d.chart.length) }),
+                        h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                        h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
+                        h(ReferenceLine, { y: 0, stroke: "#64748b", strokeWidth: 1.5 }),
+                        h(Bar, { dataKey: "residual", name: "Residual" },
+                          ...d.chart.map((row, i) => h(Cell, { key: i, fill: (row.residual ?? 0) >= 0 ? "#10b981" : "#ef4444", fillOpacity: 0.7 }))
+                        ),
+                      )
+                    )}
+                  </ReactChart>
                   <p class="text-xs text-slate-400 text-center mt-2">
                     Randomly distributed residuals suggest a well-specified model
                   </p>

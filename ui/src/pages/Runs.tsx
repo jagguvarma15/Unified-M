@@ -18,6 +18,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import EmptyState from "../components/EmptyState";
 import { type RunManifest, type RunComparisonData } from "../lib/api";
 import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
@@ -352,22 +353,19 @@ function ComparisonPanel(props: { data: RunComparisonData; onClose: () => void }
         <Show when={coeffDiff.length > 0}>
           <div>
             <h3 class="text-sm font-semibold text-slate-700 mb-3">Coefficient Change (B - A)</h3>
-            <ResponsiveContainer width="100%" height={Math.max(200, coeffDiff.length * 36)}>
-              <BarChart data={coeffDiff} layout="vertical" margin={{ left: 90, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="channel" tick={{ fontSize: 11 }} width={80} />
-                <Tooltip
-                  contentStyle={{ background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }}
-                  formatter={(v: number) => v.toFixed(6)}
-                />
-                <Bar dataKey="diff" radius={[0, 4, 4, 0]}>
-                  {coeffDiff.map((entry, i) => (
-                    <Cell key={i} fill={entry.diff >= 0 ? "#10b981" : "#ef4444"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ReactChart>
+              {() => h(ResponsiveContainer, { width: "100%", height: Math.max(200, coeffDiff.length * 36) },
+                h(BarChart, { data: coeffDiff, layout: "vertical", margin: { left: 90, right: 20 } },
+                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: CHART_GRID, horizontal: false }),
+                  h(XAxis, { type: "number", tick: { fontSize: 11 } }),
+                  h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 11 }, width: 80 }),
+                  h(Tooltip, { contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }, formatter: (v: number) => v.toFixed(6) }),
+                  h(Bar, { dataKey: "diff", radius: [0, 4, 4, 0] },
+                    ...coeffDiff.map((entry, i) => h(Cell, { key: i, fill: entry.diff >= 0 ? "#10b981" : "#ef4444" }))
+                  )
+                )
+              )}
+            </ReactChart>
           </div>
         </Show>
 

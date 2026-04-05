@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import EmptyState from "../components/EmptyState";
 import { api, type ResponseCurvesData } from "../lib/api";
 import { COLORS } from "../lib/colors";
@@ -105,41 +106,20 @@ export default function ResponseCurves() {
             <h2 class="text-sm font-semibold text-slate-700 mb-4">
               Response vs Spend (all channels)
             </h2>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart
-                data={responseRows()}
-                onClick={() => trackEvent("chart_interaction", { chart_id: "response_curves", interaction: "click" })}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis
-                  dataKey="spend"
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v) => (typeof v === "number" ? formatSpendTick(v) : String(v))}
-                  label={{ value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 12 }}
-                />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v: number) => formatCompactNumber(v)}
-                  label={{ value: "Response", angle: -90, position: "insideLeft", fontSize: 12 }}
-                />
-                <Tooltip
-                  formatter={(v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  labelFormatter={(v) => `Spend: $${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                />
-                <Legend />
-                {channels().map((ch, i) => (
-                  <Line
-                    key={ch}
-                    type="monotone"
-                    dataKey={ch}
-                    stroke={COLORS[i % COLORS.length]}
-                    strokeWidth={2.5}
-                    dot={false}
-                    name={ch}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+            <ReactChart>
+              {() => h(ResponsiveContainer, { width: "100%", height: 400 },
+                h(LineChart, { data: responseRows(), onClick: () => trackEvent("chart_interaction", { chart_id: "response_curves", interaction: "click" }) },
+                  h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                  h(XAxis, { dataKey: "spend", tick: { fontSize: 12 }, tickFormatter: (v: any) => typeof v === "number" ? formatSpendTick(v) : String(v), label: { value: "Spend", position: "insideBottomRight", offset: -5, fontSize: 12 } }),
+                  h(YAxis, { tick: { fontSize: 12 }, tickFormatter: (v: number) => formatCompactNumber(v), label: { value: "Response", angle: -90, position: "insideLeft", fontSize: 12 } }),
+                  h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 }), labelFormatter: (v: any) => `Spend: $${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}` }),
+                  h(Legend),
+                  ...channels().map((ch, i) =>
+                    h(Line, { key: ch, type: "monotone", dataKey: ch, stroke: COLORS[i % COLORS.length], strokeWidth: 2.5, dot: false, name: ch })
+                  )
+                )
+              )}
+            </ReactChart>
           </div>
 
           {/* ---- Marginal response ---- */}
@@ -148,30 +128,20 @@ export default function ResponseCurves() {
               <h2 class="text-sm font-semibold text-slate-700 mb-4">
                 Marginal Response (per additional dollar)
               </h2>
-              <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={marginalRows()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="spend"
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v) => (typeof v === "number" ? formatSpendTick(v) : String(v))}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => formatCompactNumber(v)} />
-                  <Tooltip />
-                  <Legend />
-                  {channels().map((ch, i) => (
-                    <Line
-                      key={ch}
-                      type="monotone"
-                      dataKey={ch}
-                      stroke={COLORS[i % COLORS.length]}
-                      strokeWidth={2}
-                      dot={false}
-                      name={ch}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
+              <ReactChart>
+                {() => h(ResponsiveContainer, { width: "100%", height: 350 },
+                  h(LineChart, { data: marginalRows() },
+                    h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                    h(XAxis, { dataKey: "spend", tick: { fontSize: 12 }, tickFormatter: (v: any) => typeof v === "number" ? formatSpendTick(v) : String(v) }),
+                    h(YAxis, { tick: { fontSize: 12 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
+                    h(Tooltip),
+                    h(Legend),
+                    ...channels().map((ch, i) =>
+                      h(Line, { key: ch, type: "monotone", dataKey: ch, stroke: COLORS[i % COLORS.length], strokeWidth: 2, dot: false, name: ch })
+                    )
+                  )
+                )}
+              </ReactChart>
             </div>
           </Show>
         </div>

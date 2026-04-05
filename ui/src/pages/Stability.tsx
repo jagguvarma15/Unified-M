@@ -11,6 +11,7 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type StabilityData } from "../lib/api";
@@ -134,41 +135,23 @@ export default function Stability() {
                       Large swings ("whipsaw") erode stakeholder trust. Red bars exceed
                       the {recStability()?.alert_threshold_pct}% threshold.
                     </p>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={recChanges()} margin={{ top: 5, right: 30, bottom: 5, left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="channel" />
-                        <YAxis label={{ value: "% Change", angle: -90, position: "insideLeft" }} />
-                        <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                        <Show when={recStability()}>
-                          <>
-                            <ReferenceLine
-                              y={recStability()!.alert_threshold_pct}
-                              stroke="#dc2626"
-                              strokeDasharray="4 4"
-                              label="Threshold"
-                            />
-                            <ReferenceLine
-                              y={-recStability()!.alert_threshold_pct}
-                              stroke="#dc2626"
-                              strokeDasharray="4 4"
-                            />
-                          </>
-                        </Show>
-                        <Bar dataKey="change_pct" name="Change %">
-                          {recChanges().map((entry, i) => (
-                            <Cell
-                              key={i}
-                              fill={
-                                Math.abs(entry.change_pct) > (recStability()?.alert_threshold_pct ?? 20)
-                                  ? "#dc2626"
-                                  : "#4f46e5"
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 300 },
+                        h(BarChart, { data: recChanges(), margin: { top: 5, right: 30, bottom: 5, left: 20 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3" }),
+                          h(XAxis, { dataKey: "channel" }),
+                          h(YAxis, { label: { value: "% Change", angle: -90, position: "insideLeft" } }),
+                          h(Tooltip, { formatter: (v: number) => `${v.toFixed(1)}%` }),
+                          ...(recStability() ? [
+                            h(ReferenceLine, { y: recStability()!.alert_threshold_pct, stroke: "#dc2626", strokeDasharray: "4 4", label: "Threshold" }),
+                            h(ReferenceLine, { y: -recStability()!.alert_threshold_pct, stroke: "#dc2626", strokeDasharray: "4 4" }),
+                          ] : []),
+                          h(Bar, { dataKey: "change_pct", name: "Change %" },
+                            ...recChanges().map((entry, i) => h(Cell, { key: i, fill: Math.abs(entry.change_pct) > (recStability()?.alert_threshold_pct ?? 20) ? "#dc2626" : "#4f46e5" }))
+                          )
+                        )
+                      )}
+                    </ReactChart>
                   </div>
                 </Show>
 
@@ -181,19 +164,19 @@ export default function Stability() {
                     <p class="text-sm text-gray-500 mb-4">
                       Coefficient of Variation of rolling contributions. Lower is more stable.
                     </p>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={contribData()} margin={{ top: 5, right: 30, bottom: 5, left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="channel" />
-                        <YAxis label={{ value: "CV %", angle: -90, position: "insideLeft" }} />
-                        <Tooltip formatter={(v: number) => `${v}%`} />
-                        <Bar dataKey="cv" name="CV %" fill="#6366f1">
-                          {contribData().map((_, i) => (
-                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReactChart>
+                      {() => h(ResponsiveContainer, { width: "100%", height: 300 },
+                        h(BarChart, { data: contribData(), margin: { top: 5, right: 30, bottom: 5, left: 20 } },
+                          h(CartesianGrid, { strokeDasharray: "3 3" }),
+                          h(XAxis, { dataKey: "channel" }),
+                          h(YAxis, { label: { value: "CV %", angle: -90, position: "insideLeft" } }),
+                          h(Tooltip, { formatter: (v: number) => `${v}%` }),
+                          h(Bar, { dataKey: "cv", name: "CV %", fill: "#6366f1" },
+                            ...contribData().map((_, i) => h(Cell, { key: i, fill: COLORS[i % COLORS.length] }))
+                          )
+                        )
+                      )}
+                    </ReactChart>
                   </div>
                 </Show>
 

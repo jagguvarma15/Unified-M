@@ -13,6 +13,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { COLORS } from "../lib/colors";
@@ -132,36 +133,38 @@ export default function Optimization() {
             <Show when={view() === "grouped"}>
               <>
                 <h2 class="text-sm font-semibold text-slate-700 mb-4">Current vs Optimal Allocation</h2>
-                <ResponsiveContainer width="100%" height={360}>
-                  <BarChart data={chartData()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="channel" tick={{ fontSize: 13 }} />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
-                    <Legend />
-                    <Bar dataKey="Current" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Optimal" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: 360 },
+                    h(BarChart, { data: chartData() },
+                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0" }),
+                      h(XAxis, { dataKey: "channel", tick: { fontSize: 13 } }),
+                      h(YAxis, { tick: { fontSize: 12 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
+                      h(Tooltip, { formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}` }),
+                      h(Legend, null),
+                      h(Bar, { dataKey: "Current", fill: "#94a3b8", radius: [4, 4, 0, 0] }),
+                      h(Bar, { dataKey: "Optimal", fill: "#6366f1", radius: [4, 4, 0, 0] }),
+                    )
+                  )}
+                </ReactChart>
               </>
             </Show>
 
             <Show when={view() === "change"}>
               <>
                 <h2 class="text-sm font-semibold text-slate-700 mb-4">Budget Change by Channel</h2>
-                <ResponsiveContainer width="100%" height={360}>
-                  <BarChart data={changeSorted()} layout="vertical" margin={{ left: 80 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                    <YAxis type="category" dataKey="channel" tick={{ fontSize: 13 }} width={75} />
-                    <Tooltip formatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
-                    <Bar dataKey="Change" radius={[0, 4, 4, 0]} name="Change ($)">
-                      {changeSorted().map((d, i) => (
-                        <Cell key={i} fill={d.Change >= 0 ? "#10b981" : "#ef4444"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ReactChart>
+                  {() => h(ResponsiveContainer, { width: "100%", height: 360 },
+                    h(BarChart, { data: changeSorted(), layout: "vertical", margin: { left: 80 } },
+                      h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0", horizontal: false }),
+                      h(XAxis, { type: "number", tick: { fontSize: 12 }, tickFormatter: (v: number) => `$${(v / 1000).toFixed(0)}k` }),
+                      h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 13 }, width: 75 }),
+                      h(Tooltip, { formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}` }),
+                      h(Bar, { dataKey: "Change", radius: [0, 4, 4, 0], name: "Change ($)" },
+                        ...changeSorted().map((d, i) => h(Cell, { key: i, fill: d.Change >= 0 ? "#10b981" : "#ef4444" }))
+                      ),
+                    )
+                  )}
+                </ReactChart>
               </>
             </Show>
 
@@ -169,27 +172,27 @@ export default function Optimization() {
               <>
                 <h2 class="text-sm font-semibold text-slate-700 mb-4">Optimal Budget Allocation</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <ResponsiveContainer width="100%" height={320}>
-                    <PieChart>
-                      <Pie
-                        data={optimalPie()}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius="45%"
-                        outerRadius="80%"
-                        paddingAngle={2}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {optimalPie().map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <ReactChart>
+                    {() => h(ResponsiveContainer, { width: "100%", height: 320 },
+                      h(PieChart, null,
+                        h(Pie, {
+                          data: optimalPie(),
+                          dataKey: "value",
+                          nameKey: "name",
+                          cx: "50%",
+                          cy: "50%",
+                          innerRadius: "45%",
+                          outerRadius: "80%",
+                          paddingAngle: 2,
+                          label: ({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`,
+                          labelLine: false,
+                        },
+                          ...optimalPie().map((_, i) => h(Cell, { key: i, fill: COLORS[i % COLORS.length] }))
+                        ),
+                        h(Tooltip, { formatter: (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}` }),
+                      )
+                    )}
+                  </ReactChart>
                   <div class="flex flex-col justify-center space-y-2">
                     <For each={[...optimalPie()].sort((a, b) => b.value - a.value)}>
                       {(ch, i) => (

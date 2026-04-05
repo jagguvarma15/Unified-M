@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import ReactChart, { h } from "../lib/ReactChart";
 import EmptyState from "../components/EmptyState";
 import { api, type ParametersData, type HealthData, type AdaptersData } from "../lib/api";
 import { COLORS } from "../lib/colors";
@@ -177,19 +178,19 @@ function CoefficientsTab({ params }: { params: ParametersData | null }) {
     <div class="space-y-6">
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
         <h2 class="text-sm font-semibold text-slate-700 mb-4">Channel Coefficients</h2>
-        <ResponsiveContainer width="100%" height={Math.max(200, coefs.length * 48)}>
-          <BarChart data={coefs} layout="vertical" margin={{ left: 80, right: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 12 }} />
-            <YAxis type="category" dataKey="channel" tick={{ fontSize: 13 }} width={75} />
-            <Tooltip formatter={(v: unknown) => toFinite(v).toFixed(4)} />
-            <Bar dataKey="value" radius={[0, 6, 6, 0]} name="Coefficient">
-              {coefs.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        <ReactChart>
+          {() => h(ResponsiveContainer, { width: "100%", height: Math.max(200, coefs.length * 48) },
+            h(BarChart, { data: coefs, layout: "vertical", margin: { left: 80, right: 20 } },
+              h(CartesianGrid, { strokeDasharray: "3 3", stroke: "#e2e8f0", horizontal: false }),
+              h(XAxis, { type: "number", tick: { fontSize: 12 } }),
+              h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 13 }, width: 75 }),
+              h(Tooltip, { formatter: (v: unknown) => toFinite(v).toFixed(4) }),
+              h(Bar, { dataKey: "value", radius: [0, 6, 6, 0], name: "Coefficient" },
+                ...coefs.map((_, i) => h(Cell, { key: i, fill: COLORS[i % COLORS.length] }))
+              )
+            )
+          )}
+        </ReactChart>
       </div>
 
       {typeof params.intercept === "number" && Number.isFinite(params.intercept) && (
