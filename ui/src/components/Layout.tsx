@@ -102,6 +102,7 @@ export default function Layout(props: { children?: JSX.Element }) {
   const { analyticsEnabled, setAnalyticsEnabled } = useAnalyticsMode();
   const queryClient = useQueryClient();
   let didClear = false;
+  let prevLatestRun: string | null = null;
   const location = useLocation();
 
   createEffect(() => {
@@ -113,9 +114,15 @@ export default function Layout(props: { children?: JSX.Element }) {
       }
     } else {
       didClear = false;
-      // Enable analytics when API is up and at least one run exists
-      if (health.data?.latest_run) {
+      const latestRun = health.data?.latest_run ?? null;
+      if (latestRun) {
         setAnalyticsEnabled(true);
+        // When the health poll detects a new run, refresh all cached queries
+        // so Runs history and Data status update even if the pipeline panel was closed
+        if (latestRun !== prevLatestRun) {
+          prevLatestRun = latestRun;
+          queryClient.invalidateQueries();
+        }
       }
     }
   });

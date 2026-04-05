@@ -159,12 +159,6 @@ export default function PipelineRunner(props: Props) {
     });
   });
 
-  createEffect(() => {
-    if (!props.open) {
-      clearInterval(pollInterval);
-    }
-  });
-
   const currentIdx = () => {
     const j = job();
     return j ? STEPS.findIndex((s) => s.key === j.current_step) : -1;

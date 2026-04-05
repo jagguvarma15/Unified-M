@@ -14,6 +14,7 @@ export function useRunsQuery(limit = 20) {
   return createQuery(() => ({
     queryKey: qk.runs(limit),
     queryFn: ({ signal }) => api.runs(limit, signal),
+    refetchInterval: 15_000,
   }));
 }
 
@@ -63,6 +64,7 @@ export function useDataStatusQuery() {
   return createQuery(() => ({
     queryKey: qk.dataStatus,
     queryFn: api.dataStatus,
+    refetchInterval: 15_000,
   }));
 }
 
