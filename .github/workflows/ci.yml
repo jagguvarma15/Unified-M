@@ -8,17 +8,21 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ---------------------------------------------------------------------------
+# Backend checks: lint, format, type-check, full test suite, import health
+# ---------------------------------------------------------------------------
 jobs:
-  backend-checks:
-    name: Backend Format + Unit Tests
+  backend-lint:
+    name: "Backend · Lint & Format"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
 
       - name: Setup Python
         run: uv python install 3.11
@@ -32,22 +36,110 @@ jobs:
       - name: Ruff lint
         run: uv run ruff check src tests
 
-      - name: Unit tests
-        run: uv run pytest tests/test_transforms.py tests/test_optimization.py -q
-
-      - name: Docs sync check
-        run: uv run python scripts/check_docs_sync.py
-
-  frontend-checks:
-    name: Frontend Format
+  backend-typecheck:
+    name: "Backend · Type Check"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Mypy
+        run: uv run mypy src --ignore-missing-imports --no-error-summary || true
+        # Non-blocking for now; tracks regressions in PR diffs
+
+  backend-tests:
+    name: "Backend · Tests"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run all tests
+        run: uv run pytest tests/ -v --tb=short -q
+
+  backend-import-health:
+    name: "Backend · Import Health"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Verify core modules import cleanly
+        run: |
+          uv run python -c "
+          import sys; sys.path.insert(0, 'src')
+          from config import load_config
+          from core.contracts import MediaSpendRow, OutcomeRow
+          from core.base_model import BaseMMM
+          from core.artifacts import RunArtifact
+          from models.registry import get_model_backend
+          from pipeline.runner import PipelineRunner
+          from transforms.adstock import geometric_adstock
+          from transforms.saturation import hill_saturation
+          from reconciliation.engine import ReconciliationEngine
+          from optimization.allocator import BudgetAllocator
+          from server.app import create_app
+          from connectors.registry import ConnectorStore
+          print('All core imports OK')
+          "
+
+  # ---------------------------------------------------------------------------
+  # Frontend checks: build, bundle budget, format
+  # ---------------------------------------------------------------------------
+  frontend-build:
+    name: "Frontend · Build & Bundle Budget"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Install dependencies
+        working-directory: ui
+        run: bun install --frozen-lockfile
+
+      - name: Vite production build
+        working-directory: ui
+        run: bun run build
+
+      - name: Bundle budget check
+        working-directory: ui
+        run: node scripts/check-budgets.mjs
+
+  frontend-format:
+    name: "Frontend · Format Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.10"
 
@@ -59,16 +151,71 @@ jobs:
         working-directory: ui
         run: bunx prettier --check "src/**/*.{ts,tsx,css}" "index.html"
 
-  link-check:
-    name: Markdown Link Check
+  # ---------------------------------------------------------------------------
+  # Config & docs health
+  # ---------------------------------------------------------------------------
+  config-check:
+    name: "Config & Lockfile Health"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Run Lychee
-        uses: lycheeverse/lychee-action@v2
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        run: uv python install 3.11
+
+      - name: Verify uv.lock is in sync with pyproject.toml
+        run: uv lock --check
+
+      - name: Verify config.yaml is valid YAML
+        run: uv run python -c "import yaml; yaml.safe_load(open('config.yaml'))"
+
+      - name: Docs sync check
+        run: |
+          uv sync --frozen
+          uv run python scripts/check_docs_sync.py
+
+      - name: No secrets committed
+        run: |
+          # Fail if .env (not .env.example) is tracked
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "ERROR: .env is tracked in git. Remove it and add to .gitignore."
+            exit 1
+          fi
+          echo "No .env committed — OK"
+
+  # ---------------------------------------------------------------------------
+  # Docker build smoke test (ensures Dockerfile is valid)
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: "Docker · Build Smoke Test"
+    runs-on: ubuntu-latest
+    # Only run on main pushes or when Docker/config files change
+    if: github.event_name == 'push' || contains(github.event.pull_request.title, 'docker') || contains(github.event.pull_request.title, 'Docker')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build base image (Python API)
+        run: docker build --target base -t unified-m-api-test .
+
+      - name: Verify API starts
+        run: |
+          docker run --rm -d --name api-smoke -p 8000:8000 unified-m-api-test
+          sleep 5
+          curl -sf http://localhost:8000/health || (docker logs api-smoke && exit 1)
+          docker stop api-smoke
+
+  # ---------------------------------------------------------------------------
+  # Markdown link check
+  # ---------------------------------------------------------------------------
+  link-check:
+    name: "Docs · Link Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: lycheeverse/lychee-action@v2
         with:
           args: --no-progress --accept 200,429 README.md docs/**/*.md
           fail: true
