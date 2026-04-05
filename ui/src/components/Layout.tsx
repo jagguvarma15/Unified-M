@@ -113,7 +113,7 @@ const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
 export default function Layout(props: { children?: JSX.Element }) {
   const [sectionCollapsed, setSectionCollapsed] = createSignal<Record<string, boolean>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = createSignal(
-    () => { try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true"; } catch { return false; } }()
+    (() => { try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true"; } catch (_e) { return false; } })()
   );
   const [pipelineOpen, setPipelineOpen] = createSignal(false);
   const health = useHealthQuery();

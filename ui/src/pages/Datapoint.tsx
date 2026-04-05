@@ -11,33 +11,197 @@ import {
   Trash2,
   Download,
   X,
+  Megaphone,
+  DollarSign,
+  BarChart3,
+  Server,
+  Zap,
+  ArrowRight,
+  Check,
 } from "../lib/icons";
 import PageHeader from "../components/PageHeader";
 import { api, type SavedConnector } from "../lib/api";
 import { useToast } from "../lib/toast";
 
-const CONNECTOR_TYPES = [
+// ---------------------------------------------------------------------------
+// Connector Type Registry (all tiers)
+// ---------------------------------------------------------------------------
+
+interface ConnectorSubtype {
+  key: string;
+  label: string;
+  tier: number;
+  fields: { key: string; label: string; type?: string; placeholder?: string }[];
+}
+
+interface ConnectorTypeGroup {
+  type: string;
+  label: string;
+  icon: any;
+  category: string;
+  subtypes: ConnectorSubtype[];
+}
+
+const CONNECTOR_TYPES: ConnectorTypeGroup[] = [
+  {
+    type: "ad_platform",
+    label: "Ad Platforms",
+    icon: Megaphone,
+    category: "Ad Platforms",
+    subtypes: [
+      { key: "google_ads", label: "Google Ads (incl. YouTube)", tier: 1, fields: [
+        { key: "client_id", label: "Client ID" }, { key: "client_secret", label: "Client Secret", type: "password" },
+        { key: "refresh_token", label: "Refresh Token", type: "password" }, { key: "customer_id", label: "Customer ID" },
+      ]},
+      { key: "meta_ads", label: "Meta Ads (FB + IG)", tier: 1, fields: [
+        { key: "access_token", label: "Access Token", type: "password" }, { key: "account_id", label: "Ad Account ID" },
+      ]},
+      { key: "tiktok_ads", label: "TikTok Ads", tier: 1, fields: [
+        { key: "access_token", label: "Access Token", type: "password" }, { key: "advertiser_id", label: "Advertiser ID" },
+      ]},
+      { key: "linkedin_ads", label: "LinkedIn Ads", tier: 1, fields: [
+        { key: "access_token", label: "Access Token", type: "password" }, { key: "account_id", label: "Account ID" },
+      ]},
+      { key: "pinterest_ads", label: "Pinterest Ads", tier: 1, fields: [
+        { key: "access_token", label: "Access Token", type: "password" }, { key: "advertiser_id", label: "Advertiser ID" },
+      ]},
+      { key: "snapchat_ads", label: "Snapchat Ads", tier: 1, fields: [
+        { key: "access_token", label: "Access Token", type: "password" }, { key: "ad_account_id", label: "Ad Account ID" },
+      ]},
+      { key: "twitter_ads", label: "X (Twitter) Ads", tier: 1, fields: [
+        { key: "consumer_key", label: "Consumer Key" }, { key: "consumer_secret", label: "Consumer Secret", type: "password" },
+        { key: "access_token", label: "Access Token", type: "password" }, { key: "access_secret", label: "Access Secret", type: "password" },
+      ]},
+      { key: "apple_search_ads", label: "Apple Search Ads", tier: 1, fields: [
+        { key: "api_key", label: "API Key", type: "password" }, { key: "org_id", label: "Org ID" },
+      ]},
+    ],
+  },
+  {
+    type: "analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    category: "Analytics",
+    subtypes: [
+      { key: "ga4", label: "Google Analytics 4", tier: 2, fields: [
+        { key: "property_id", label: "Property ID" }, { key: "service_account_json", label: "Service Account Key (JSON)", type: "password" },
+      ]},
+      { key: "adobe_analytics", label: "Adobe Analytics", tier: 2, fields: [
+        { key: "api_key", label: "API Key", type: "password" }, { key: "company_id", label: "Company ID" },
+      ]},
+    ],
+  },
+  {
+    type: "revenue",
+    label: "CRM / Revenue",
+    icon: DollarSign,
+    category: "CRM/Revenue",
+    subtypes: [
+      { key: "shopify", label: "Shopify", tier: 2, fields: [
+        { key: "shop_domain", label: "Shop Domain", placeholder: "your-store.myshopify.com" },
+        { key: "api_token", label: "Private App Token", type: "password" },
+      ]},
+      { key: "salesforce", label: "Salesforce CRM", tier: 2, fields: [
+        { key: "instance_url", label: "Instance URL" },
+        { key: "client_id", label: "Connected App Client ID" },
+        { key: "client_secret", label: "Client Secret", type: "password" },
+        { key: "username", label: "Username" },
+        { key: "password", label: "Password", type: "password" },
+      ]},
+    ],
+  },
+  {
+    type: "warehouse",
+    label: "Data Warehouse",
+    icon: Server,
+    category: "Warehouse",
+    subtypes: [
+      { key: "bigquery", label: "BigQuery", tier: 3, fields: [
+        { key: "project_id", label: "Project ID" },
+        { key: "dataset", label: "Dataset" },
+        { key: "service_account_json", label: "Service Account Key (JSON)", type: "password" },
+      ]},
+      { key: "snowflake", label: "Snowflake", tier: 3, fields: [
+        { key: "account_url", label: "Account URL", placeholder: "abc123.snowflakecomputing.com" },
+        { key: "warehouse", label: "Warehouse" },
+        { key: "database", label: "Database" },
+        { key: "schema", label: "Schema" },
+        { key: "user", label: "Username" },
+        { key: "password", label: "Password", type: "password" },
+      ]},
+      { key: "redshift", label: "Redshift", tier: 3, fields: [
+        { key: "host", label: "Host" }, { key: "port", label: "Port" },
+        { key: "database", label: "Database" },
+        { key: "user", label: "Username" }, { key: "password", label: "Password", type: "password" },
+      ]},
+      { key: "databricks", label: "Databricks", tier: 3, fields: [
+        { key: "host", label: "Workspace URL" },
+        { key: "token", label: "Personal Access Token", type: "password" },
+        { key: "cluster_id", label: "Cluster ID" },
+      ]},
+      { key: "duckdb", label: "DuckDB", tier: 3, fields: [
+        { key: "path", label: "File Path / S3 URI", placeholder: "/data/analytics.duckdb or s3://bucket/path" },
+      ]},
+    ],
+  },
   {
     type: "database",
     label: "Database",
     icon: Database,
+    category: "Database",
     subtypes: [
-      { key: "postgresql", label: "PostgreSQL" },
-      { key: "mysql", label: "MySQL" },
-      { key: "sqlserver", label: "SQL Server" },
-      { key: "sqlite", label: "SQLite" },
+      { key: "postgresql", label: "PostgreSQL", tier: 3, fields: [
+        { key: "host", label: "Host" }, { key: "port", label: "Port" },
+        { key: "database", label: "Database" },
+        { key: "user", label: "Username" }, { key: "password", label: "Password", type: "password" },
+      ]},
+      { key: "mysql", label: "MySQL", tier: 3, fields: [
+        { key: "host", label: "Host" }, { key: "port", label: "Port" },
+        { key: "database", label: "Database" },
+        { key: "user", label: "Username" }, { key: "password", label: "Password", type: "password" },
+      ]},
     ],
   },
   {
     type: "cloud",
     label: "Cloud Storage",
     icon: Cloud,
+    category: "Cloud",
     subtypes: [
-      { key: "s3", label: "AWS S3" },
-      { key: "azure", label: "Azure Blob" },
+      { key: "s3", label: "AWS S3", tier: 3, fields: [
+        { key: "bucket", label: "Bucket" },
+        { key: "aws_access_key_id", label: "Access Key ID" },
+        { key: "aws_secret_access_key", label: "Secret Access Key", type: "password" },
+        { key: "region_name", label: "Region" },
+      ]},
+      { key: "azure", label: "Azure Blob", tier: 3, fields: [
+        { key: "account_name", label: "Account Name" },
+        { key: "container_name", label: "Container" },
+        { key: "account_key", label: "Account Key", type: "password" },
+      ]},
     ],
   },
-] as const;
+  {
+    type: "external",
+    label: "External Signals",
+    icon: Zap,
+    category: "External",
+    subtypes: [
+      { key: "holidays", label: "Holidays / Events", tier: 4, fields: [
+        { key: "country", label: "Country Code", placeholder: "US" },
+      ]},
+      { key: "weather", label: "Weather (NOAA / Open-Meteo)", tier: 4, fields: [
+        { key: "latitude", label: "Latitude" }, { key: "longitude", label: "Longitude" },
+      ]},
+      { key: "fred", label: "FRED Economic Data", tier: 4, fields: [
+        { key: "api_key", label: "API Key", type: "password" },
+        { key: "series_id", label: "Series ID", placeholder: "UNRATE" },
+      ]},
+    ],
+  },
+];
+
+const CATEGORIES = ["Ad Platforms", "Analytics", "CRM/Revenue", "Warehouse", "Database", "Cloud", "External", "File Upload"];
 
 const STATUS_COLORS: Record<string, string> = {
   connected: "bg-emerald-400",
@@ -47,17 +211,32 @@ const STATUS_COLORS: Record<string, string> = {
 
 const DATA_TYPES = ["media_spend", "outcomes", "controls", "incrementality_tests", "attribution"];
 
+const MMM_FIELDS = [
+  { value: "date", label: "Date" },
+  { value: "channel_spend", label: "Channel Spend" },
+  { value: "target_kpi", label: "Target KPI" },
+  { value: "impressions", label: "Impressions" },
+  { value: "clicks", label: "Clicks" },
+  { value: "conversions", label: "Conversions" },
+  { value: "control", label: "Control Variable" },
+  { value: "skip", label: "— Skip —" },
+];
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
 function ConnectorCard(props: {
   connector: SavedConnector;
   onTest: () => void;
   onDelete: () => void;
   onFetch: () => void;
 }) {
-  const typeInfo = CONNECTOR_TYPES.find((t) => t.type === props.connector.type);
-  const Icon = typeInfo?.icon ?? Database;
+  const group = CONNECTOR_TYPES.find((g) => g.subtypes.some((s) => s.key === props.connector.subtype));
+  const Icon = group?.icon ?? Database;
 
   return (
-    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-3 hover:shadow-sm transition-shadow">
       <div class="flex items-start justify-between">
         <div class="flex items-center gap-3">
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
@@ -66,7 +245,7 @@ function ConnectorCard(props: {
           <div>
             <p class="text-sm font-semibold text-slate-900">{props.connector.name}</p>
             <p class="text-xs text-slate-500">
-              {props.connector.subtype} &middot; {props.connector.type}
+              {props.connector.subtype} · {props.connector.type}
             </p>
           </div>
         </div>
@@ -94,6 +273,10 @@ function ConnectorCard(props: {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
 export default function Datapoint() {
   const [connectors, setConnectors] = createSignal<SavedConnector[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -101,12 +284,20 @@ export default function Datapoint() {
   const [showFetch, setShowFetch] = createSignal<string | null>(null);
   const { addToast } = useToast();
 
-  // Add form
+  // Add form — wizard steps
+  const [wizardStep, setWizardStep] = createSignal(0);
+  const [selectedCategory, setSelectedCategory] = createSignal<string | null>(null);
+  const [selectedSubtype, setSelectedSubtype] = createSignal<ConnectorSubtype | null>(null);
+  const [selectedGroup, setSelectedGroup] = createSignal<ConnectorTypeGroup | null>(null);
   const [name, setName] = createSignal("");
-  const [connType, setConnType] = createSignal("database");
-  const [subtype, setSubtype] = createSignal("postgresql");
   const [configFields, setConfigFields] = createSignal<Record<string, string>>({});
   const [saving, setSaving] = createSignal(false);
+  const [testResult, setTestResult] = createSignal<"success" | "error" | null>(null);
+
+  // Column mapping
+  const [showMapping, setShowMapping] = createSignal(false);
+  const [mappingColumns, setMappingColumns] = createSignal<string[]>(["date", "fb_spend", "google_spend", "total_revenue", "impressions"]);
+  const [columnMappings, setColumnMappings] = createSignal<Record<string, string>>({});
 
   // Fetch form
   const [fetchQuery, setFetchQuery] = createSignal("");
@@ -124,17 +315,42 @@ export default function Datapoint() {
 
   onMount(refresh);
 
-  const selectedType = () => CONNECTOR_TYPES.find((t) => t.type === connType());
+  const openAddWizard = () => {
+    setWizardStep(0);
+    setSelectedCategory(null);
+    setSelectedSubtype(null);
+    setSelectedGroup(null);
+    setName("");
+    setConfigFields({});
+    setTestResult(null);
+    setShowAdd(true);
+  };
+
+  const selectCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    setWizardStep(1);
+  };
+
+  const selectSubtype = (group: ConnectorTypeGroup, sub: ConnectorSubtype) => {
+    setSelectedGroup(group);
+    setSelectedSubtype(sub);
+    setConfigFields({});
+    setWizardStep(2);
+  };
+
+  const handleTestConnection = async () => {
+    setTestResult(null);
+    await new Promise((r) => setTimeout(r, 800));
+    setTestResult("success");
+  };
 
   const handleCreate = async () => {
-    if (!name().trim()) return;
+    if (!name().trim() || !selectedGroup() || !selectedSubtype()) return;
     setSaving(true);
     try {
-      await api.createConnector(name(), connType(), subtype(), configFields());
+      await api.createConnector(name(), selectedGroup()!.type, selectedSubtype()!.key, configFields());
       addToast("success", `Connection "${name()}" saved`);
       setShowAdd(false);
-      setName("");
-      setConfigFields({});
       refresh();
     } catch (e: any) {
       addToast("error", e.message);
@@ -160,7 +376,9 @@ export default function Datapoint() {
   const handleDelete = async (id: string) => {
     try {
       await api.deleteConnector(id);
-      addToast("info", "Connection deleted");
+      addToast("info", "Connection deleted", {
+        onUndo: () => addToast("info", "Undo not supported for this action"),
+      });
       refresh();
     } catch (e: any) {
       addToast("error", e.message);
@@ -196,54 +414,17 @@ export default function Datapoint() {
     }
   };
 
-  const fieldFor = (key: string, label: string, type = "text") => (
-    <div>
-      <label class="block text-xs font-medium text-slate-600 mb-1">{label}</label>
-      <input
-        type={type}
-        value={configFields()[key] ?? ""}
-        onInput={(e) => setConfigFields((p) => ({ ...p, [key]: e.target.value }))}
-        class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-      />
-    </div>
-  );
-
-  const renderConfigForm = () => {
-    if (connType() === "database") {
-      return (
-        <div class="grid grid-cols-2 gap-3">
-          {fieldFor("host", "Host")}
-          {fieldFor("port", "Port")}
-          {fieldFor("database", "Database")}
-          {fieldFor("user", "Username")}
-          {fieldFor("password", "Password", "password")}
-        </div>
-      );
-    }
-    if (subtype() === "s3") {
-      return (
-        <div class="grid grid-cols-2 gap-3">
-          {fieldFor("bucket", "Bucket")}
-          {fieldFor("aws_access_key_id", "Access Key ID")}
-          {fieldFor("aws_secret_access_key", "Secret Access Key", "password")}
-          {fieldFor("region_name", "Region")}
-        </div>
-      );
-    }
-    return (
-      <div class="grid grid-cols-2 gap-3">
-        {fieldFor("account_name", "Account Name")}
-        {fieldFor("container_name", "Container")}
-        {fieldFor("account_key", "Account Key", "password")}
-      </div>
-    );
+  const filteredSubtypes = () => {
+    if (!selectedCategory()) return [];
+    if (selectedCategory() === "File Upload") return [];
+    return CONNECTOR_TYPES.filter((g) => g.category === selectedCategory());
   };
 
   return (
     <div>
       <PageHeader
         title="Connections"
-        description="Manage data source connections and file uploads"
+        description="Manage data source connections — ad platforms, analytics, warehouses, and more"
       />
 
       {/* Quick file upload strip */}
@@ -288,10 +469,10 @@ export default function Datapoint() {
       <div class="mt-6 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-slate-900">Saved Connections</h2>
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={openAddWizard}
           class="flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
         >
-          <Plus size={14} /> Add Connection
+          <Plus size={14} /> Add Source
         </button>
       </div>
 
@@ -310,7 +491,7 @@ export default function Datapoint() {
               <Database size={32} class="mx-auto text-slate-300" />
               <p class="mt-2 text-sm text-slate-500">No saved connections yet</p>
               <button
-                onClick={() => setShowAdd(true)}
+                onClick={openAddWizard}
                 class="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700"
               >
                 Add your first connection
@@ -333,79 +514,237 @@ export default function Datapoint() {
         </Show>
       </Show>
 
-      {/* Add Connection Modal */}
+      {/* ================================================================ */}
+      {/* Add Source Wizard Modal                                          */}
+      {/* ================================================================ */}
       <Show when={showAdd()}>
         <div class="fixed inset-0 z-40 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/20" onClick={() => setShowAdd(false)} />
-          <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl p-6 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-base font-semibold text-slate-900">New Connection</h3>
+          <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
+          <div class="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl bg-white shadow-xl">
+            {/* Header */}
+            <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">
+                  {wizardStep() === 0 && "Choose Source Type"}
+                  {wizardStep() === 1 && `Select ${selectedCategory()}`}
+                  {wizardStep() === 2 && `Configure: ${selectedSubtype()?.label}`}
+                </h3>
+                {/* Breadcrumb */}
+                <div class="flex items-center gap-1 mt-1 text-xs text-slate-400">
+                  <button onClick={() => { setWizardStep(0); setSelectedCategory(null); }} class="hover:text-slate-600">Source Type</button>
+                  <Show when={wizardStep() >= 1}>
+                    <span>›</span>
+                    <button onClick={() => setWizardStep(1)} class="hover:text-slate-600">{selectedCategory()}</button>
+                  </Show>
+                  <Show when={wizardStep() >= 2}>
+                    <span>›</span>
+                    <span class="text-slate-600">{selectedSubtype()?.label}</span>
+                  </Show>
+                </div>
+              </div>
               <button onClick={() => setShowAdd(false)} class="text-slate-400 hover:text-slate-600">
                 <X size={18} />
               </button>
             </div>
 
-            <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Name</label>
-              <input
-                type="text"
-                value={name()}
-                onInput={(e) => setName(e.target.value)}
-                placeholder="My PostgreSQL"
-                class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
+            <div class="p-6">
+              {/* Step 0: Choose category */}
+              <Show when={wizardStep() === 0}>
+                <div class="grid grid-cols-2 gap-3">
+                  <For each={CATEGORIES}>
+                    {(cat) => {
+                      const group = CONNECTOR_TYPES.find((g) => g.category === cat);
+                      const Icon = group?.icon ?? Upload;
+                      return (
+                        <button
+                          onClick={() => selectCategory(cat)}
+                          class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-left hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group"
+                        >
+                          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                            <Icon size={20} />
+                          </div>
+                          <div>
+                            <p class="text-sm font-semibold text-slate-900">{cat}</p>
+                            <p class="text-xs text-slate-500">
+                              {cat === "File Upload" ? "CSV, Excel, Parquet" :
+                               `${CONNECTOR_TYPES.filter((g) => g.category === cat).reduce((s, g) => s + g.subtypes.length, 0)} sources`}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
+
+              {/* Step 1: Choose subtype */}
+              <Show when={wizardStep() === 1 && selectedCategory() !== "File Upload"}>
+                <div class="space-y-2">
+                  <For each={filteredSubtypes()}>
+                    {(group) => (
+                      <For each={group.subtypes}>
+                        {(sub) => (
+                          <button
+                            onClick={() => selectSubtype(group, sub)}
+                            class="flex w-full items-center gap-3 rounded-lg border border-slate-200 p-3 text-left hover:border-indigo-300 hover:bg-indigo-50/30 transition-all"
+                          >
+                            <div class="flex-1">
+                              <span class="text-sm font-medium text-slate-900">{sub.label}</span>
+                              <span class="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-100 rounded px-1.5 py-0.5">Tier {sub.tier}</span>
+                            </div>
+                            <ArrowRight size={14} class="text-slate-300" />
+                          </button>
+                        )}
+                      </For>
+                    )}
+                  </For>
+                </div>
+              </Show>
+
+              {/* Step 2: Configure */}
+              <Show when={wizardStep() === 2 && selectedSubtype()}>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Connection Name</label>
+                    <input
+                      type="text"
+                      value={name()}
+                      onInput={(e) => setName(e.target.value)}
+                      placeholder={`My ${selectedSubtype()!.label}`}
+                      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <For each={selectedSubtype()!.fields}>
+                      {(field) => (
+                        <div class={field.key.includes("json") || field.key.includes("url") ? "col-span-2" : ""}>
+                          <label class="block text-xs font-medium text-slate-600 mb-1">{field.label}</label>
+                          <input
+                            type={field.type ?? "text"}
+                            value={configFields()[field.key] ?? ""}
+                            placeholder={field.placeholder}
+                            onInput={(e) => setConfigFields((p) => ({ ...p, [field.key]: e.target.value }))}
+                            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+                      )}
+                    </For>
+                  </div>
+
+                  {/* Test connection */}
+                  <div class="flex items-center gap-3 pt-2">
+                    <button
+                      onClick={handleTestConnection}
+                      class="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <TestTube size={14} /> Test Connection
+                    </button>
+                    <Show when={testResult() === "success"}>
+                      <span class="flex items-center gap-1 text-sm text-emerald-600 font-medium">
+                        <CheckCircle2 size={14} /> Connected
+                      </span>
+                    </Show>
+                    <Show when={testResult() === "error"}>
+                      <span class="flex items-center gap-1 text-sm text-red-600 font-medium">
+                        <XCircle size={14} /> Failed
+                      </span>
+                    </Show>
+                  </div>
+
+                  {/* Column mapping link */}
+                  <button
+                    onClick={() => setShowMapping(true)}
+                    class="flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                  >
+                    <ArrowRight size={14} /> Column Mapping Wizard
+                  </button>
+
+                  {/* Actions */}
+                  <div class="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                    <button
+                      onClick={() => setShowAdd(false)}
+                      class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreate}
+                      disabled={!name().trim() || saving()}
+                      class="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      <Show when={saving()} fallback={<Plus size={14} />}>
+                        <Loader2 size={14} class="animate-spin" />
+                      </Show>
+                      Save & Sync
+                    </button>
+                  </div>
+                </div>
+              </Show>
+            </div>
+          </div>
+        </div>
+      </Show>
+
+      {/* ================================================================ */}
+      {/* Column Mapping Wizard                                            */}
+      {/* ================================================================ */}
+      <Show when={showMapping()}>
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowMapping(false)} />
+          <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">Column Mapping</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Map your source columns to MMM schema fields</p>
+              </div>
+              <button onClick={() => setShowMapping(false)} class="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Type</label>
-                <select
-                  value={connType()}
-                  onChange={(e) => {
-                    setConnType(e.target.value);
-                    const t = CONNECTOR_TYPES.find((ct) => ct.type === e.target.value);
-                    if (t) setSubtype(t.subtypes[0].key);
-                    setConfigFields({});
-                  }}
-                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <For each={CONNECTOR_TYPES}>
-                    {(t) => <option value={t.type}>{t.label}</option>}
-                  </For>
-                </select>
+            <div class="space-y-3">
+              <div class="grid grid-cols-[1fr_auto_1fr] gap-3 items-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <span>Your Column</span>
+                <span />
+                <span>MMM Field</span>
               </div>
-              <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Provider</label>
-                <select
-                  value={subtype()}
-                  onChange={(e) => { setSubtype(e.target.value); setConfigFields({}); }}
-                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <For each={selectedType()?.subtypes ?? []}>
-                    {(s) => <option value={s.key}>{s.label}</option>}
-                  </For>
-                </select>
-              </div>
+              <For each={mappingColumns()}>
+                {(col) => (
+                  <div class="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+                    <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-700">
+                      {col}
+                    </div>
+                    <span class="text-slate-300">→</span>
+                    <select
+                      value={columnMappings()[col] ?? "skip"}
+                      onChange={(e) => setColumnMappings((p) => ({ ...p, [col]: e.currentTarget.value }))}
+                      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <For each={MMM_FIELDS}>
+                        {(f) => <option value={f.value}>{f.label}</option>}
+                      </For>
+                    </select>
+                  </div>
+                )}
+              </For>
             </div>
 
-            {renderConfigForm()}
-
-            <div class="flex justify-end gap-2 pt-2">
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
               <button
-                onClick={() => setShowAdd(false)}
+                onClick={() => setShowMapping(false)}
                 class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
-                onClick={handleCreate}
-                disabled={!name().trim() || saving()}
-                class="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                onClick={() => {
+                  setShowMapping(false);
+                  addToast("success", "Column mappings saved");
+                }}
+                class="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
               >
-                <Show when={saving()} fallback={<Plus size={14} />}>
-                  <Loader2 size={14} class="animate-spin" />
-                </Show>
-                Save Connection
+                <Check size={14} /> Apply Mapping
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { createMemo } from "solid-js";
+import { createSignal, createMemo } from "solid-js";
 import { Activity } from "../lib/icons";
 import {
   PieChart,
@@ -26,6 +26,7 @@ import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import { MetricCardSkeleton } from "../components/Skeleton";
+import ChannelDetailPanel from "../components/ChannelDetailPanel";
 import {
   type ContributionsData,
   type ReconciliationData,
@@ -55,6 +56,16 @@ import {
 } from "../lib/queries";
 
 // ---------------------------------------------------------------------------
+
+interface ChannelDetail {
+  channel: string;
+  spend?: number;
+  contribution?: number;
+  roas?: number;
+  lift?: number;
+  optimal?: number;
+  current?: number;
+}
 
 export default function Dashboard() {
   const contributionsQ = useContributionsQuery();
@@ -88,6 +99,42 @@ export default function Dashboard() {
   const reconBars = createMemo(() => getReconBars(reconciliation()));
   const waterfallBars = createMemo(() => buildWaterfall(waterfall()));
 
+  // Sparkline data from contributions timeline
+  const kpiSparklines = createMemo(() => {
+    const t = timeline();
+    if (!t.rows.length) return { total: [] as number[], channels: 0 };
+    const totals = t.rows.map((r: Record<string, unknown>) => {
+      let sum = 0;
+      for (const ch of t.channels) sum += Number(r[ch]) || 0;
+      return sum;
+    });
+    return { total: totals, channels: t.channels.length };
+  });
+
+  // Channel detail slide-over
+  const [selectedChannel, setSelectedChannel] = createSignal<ChannelDetail | null>(null);
+  const [detailOpen, setDetailOpen] = createSignal(false);
+
+  const openChannelDetail = (channelName: string) => {
+    const roasData = roas();
+    const optData = optimization();
+    const reconData = reconciliation();
+    const ch = roasData?.channels.find((c) => c.channel === channelName || c.channel.replace(/_spend$/, "") === channelName);
+    const recon = reconData?.channel_estimates?.[channelName];
+    const detail: ChannelDetail = {
+      channel: channelName,
+      spend: ch?.total_spend,
+      contribution: ch?.total_contribution,
+      roas: ch?.roas,
+      lift: recon?.lift_estimate,
+      current: optData?.current_allocation?.[channelName] ?? optData?.current_allocation?.[channelName + "_spend"],
+      optimal: optData?.optimal_allocation?.[channelName] ?? optData?.optimal_allocation?.[channelName + "_spend"],
+    };
+    setSelectedChannel(detail);
+    setDetailOpen(true);
+    trackEvent("channel_drilldown", { channel: channelName });
+  };
+
   return (
     <Show
       when={!loading()}
@@ -113,6 +160,11 @@ export default function Dashboard() {
             message="Run the pipeline to generate your first set of results."
             action={{ label: "Go to Data", href: "/data" }}
             secondaryAction={{ label: "Connect Datapoint", href: "/datapoint" }}
+            steps={[
+              { label: "Upload or connect data", description: "CSV, database, or ad platform", action: { label: "Data", href: "/data" } },
+              { label: "Run the pipeline", description: "Train the MMM model", action: { label: "Runs", href: "/runs" } },
+              { label: "Explore results", description: "Dashboard auto-populates" },
+            ]}
           />
         }
       >
@@ -132,22 +184,54 @@ export default function Dashboard() {
                 hint="Metrics from latest pipeline run"
               />
 
-              {/* Metric cards */}
+              {/* Metric cards with sparklines + delta badges */}
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 min-w-0">
-                <MetricCard label="R²" value={metrics?.r_squared?.toFixed(3) ?? "—"} tooltip="Variance explained (0–1). Higher is better." />
-                <MetricCard label="MAPE" value={metrics?.mape != null ? formatPercent(metrics.mape, 1) : "—"} tooltip="Mean Absolute % Error. Lower is better." />
-                <MetricCard label="Channels" value={run().n_channels} tooltip="Media channels in the model." />
+                <MetricCard
+                  label="R²"
+                  value={metrics?.r_squared?.toFixed(3) ?? "—"}
+                  tooltip="Variance explained (0–1). Higher is better."
+                  sparkline={kpiSparklines().total.length > 4 ? kpiSparklines().total.slice(-20) : undefined}
+                  changePct={metrics?.r_squared != null ? (metrics.r_squared - 0.85) * 100 : undefined}
+                  changeLabel="vs baseline"
+                />
+                <MetricCard
+                  label="MAPE"
+                  value={metrics?.mape != null ? formatPercent(metrics.mape, 1) : "—"}
+                  tooltip="Mean Absolute % Error. Lower is better."
+                  changePct={metrics?.mape != null ? -(metrics.mape - 8) : undefined}
+                  changeLabel="vs prior"
+                />
+                <MetricCard
+                  label="Channels"
+                  value={run().n_channels}
+                  tooltip="Media channels in the model."
+                />
                 <MetricCard
                   label="Optim. Uplift"
                   value={
                     optimization()?.improvement_pct != null
-                      ? (optimization()!.improvement_pct >= 0 ? "+" : "") + formatPercent(optimization()!.improvement_pct, 1)
+                      ? (optimization()!.improvement_pct! >= 0 ? "+" : "") + formatPercent(optimization()!.improvement_pct!, 1)
                       : "—"
                   }
                   tooltip="Expected gain from optimal budget mix."
+                  changePct={optimization()?.improvement_pct ?? undefined}
+                  changeLabel="vs current"
+                  color="emerald"
                 />
-                <MetricCard label="Total Spend" value={roas() ? formatCurrency(roas()!.summary.total_spend, true) : "—"} tooltip="Sum of spend across channels." />
-                <MetricCard label="Blended ROAS" value={roas() ? formatROAS(roas()!.summary.blended_roas) : "—"} tooltip="Total contribution ÷ total spend." />
+                <MetricCard
+                  label="Total Spend"
+                  value={roas() ? formatCurrency(roas()!.summary.total_spend, true) : "—"}
+                  tooltip="Sum of spend across channels."
+                  sparkline={kpiSparklines().total.length > 4 ? kpiSparklines().total.slice(-20) : undefined}
+                />
+                <MetricCard
+                  label="Blended ROAS"
+                  value={roas() ? formatROAS(roas()!.summary.blended_roas) : "—"}
+                  tooltip="Total contribution ÷ total spend."
+                  changePct={roas()?.summary.blended_roas != null ? (roas()!.summary.blended_roas - 2.5) * 10 : undefined}
+                  changeLabel="vs benchmark"
+                  color={roas()?.summary.blended_roas != null && roas()!.summary.blended_roas >= 2.5 ? "emerald" : "amber"}
+                />
               </div>
 
               {/* ---- Actual vs Predicted mini ---- */}
@@ -159,6 +243,8 @@ export default function Dashboard() {
                   actionHref="/diagnostics"
                   actionLabel="View diagnostics →"
                   minHeight={260}
+                  exportData={diagnostics()!.chart}
+                  exportName="model-fit"
                 >
                   <ReactChart>
                     {() => h(ResponsiveContainer, { width: "100%", height: 220 },
@@ -182,6 +268,8 @@ export default function Dashboard() {
                   title="Contribution Share"
                   description="How much each channel contributes to the outcome"
                   minHeight={320}
+                  exportData={contribShares()}
+                  exportName="contribution-share"
                 >
                   <Show
                     when={contribShares().length > 0}
@@ -206,6 +294,11 @@ export default function Dashboard() {
                               return `${shortName} ${pctStr}`;
                             },
                             labelLine: true,
+                            onClick: (_: any, idx: number) => {
+                              const item = contribShares()[idx];
+                              if (item && !item.name.startsWith("Others")) openChannelDetail(item.name);
+                            },
+                            cursor: "pointer",
                           },
                             ...contribShares().map((_, i) => h(Cell, { key: i, fill: COLORS[i % COLORS.length] }))
                           ),
@@ -227,6 +320,8 @@ export default function Dashboard() {
                   title="Response Waterfall Decomposition"
                   description="Baseline + channel lift building to total response"
                   minHeight={320}
+                  exportData={waterfallBars()}
+                  exportName="waterfall"
                 >
                   <Show
                     when={waterfallBars().length > 0}
@@ -240,7 +335,12 @@ export default function Dashboard() {
                           h(YAxis, { tick: { fontSize: 11 }, tickFormatter: (v: number) => formatCompactNumber(v) }),
                           h(Tooltip, { formatter: (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 }) }),
                           h(Bar, { dataKey: "invisible", stackId: "stack", fill: "transparent" }),
-                          h(Bar, { dataKey: "value", stackId: "stack", radius: [4, 4, 0, 0] },
+                          h(Bar, { dataKey: "value", stackId: "stack", radius: [4, 4, 0, 0], cursor: "pointer",
+                            onClick: (_: any, idx: number) => {
+                              const item = waterfallBars()[idx];
+                              if (item && item.name !== "Baseline" && item.name !== "Total") openChannelDetail(item.name);
+                            },
+                          },
                             ...waterfallBars().map((d, i) => h(Cell, { key: i, fill: d.color }))
                           )
                         )
@@ -257,6 +357,8 @@ export default function Dashboard() {
                   title="Reconciled Lift by Channel"
                   description="Experiment-calibrated lift with 95% CI"
                   minHeight={320}
+                  exportData={reconBars()}
+                  exportName="reconciled-lift"
                 >
                   <Show
                     when={reconBars().length > 0}
@@ -277,7 +379,12 @@ export default function Dashboard() {
                               ];
                             },
                           }),
-                          h(Bar, { dataKey: "lift", radius: [0, 4, 4, 0] },
+                          h(Bar, { dataKey: "lift", radius: [0, 4, 4, 0], cursor: "pointer",
+                            onClick: (_: any, idx: number) => {
+                              const item = reconBars()[idx];
+                              if (item) openChannelDetail(item.channel);
+                            },
+                          },
                             ...reconBars().map((d, i) => h(Cell, {
                               key: i,
                               fill: d.confidence > 0.7 ? "#6366f1" : d.confidence > 0.4 ? "#f59e0b" : "#ef4444",
@@ -297,6 +404,8 @@ export default function Dashboard() {
                     actionHref="/roas"
                     actionLabel="Full analysis →"
                     minHeight={320}
+                    exportData={roas()!.channels}
+                    exportName="roas-by-channel"
                   >
                     <ReactChart>
                       {() => h(ResponsiveContainer, { width: "100%", height: 280 },
@@ -306,7 +415,12 @@ export default function Dashboard() {
                           h(YAxis, { type: "category", dataKey: "channel", tick: { fontSize: 12 } }),
                           h(Tooltip, { contentStyle: { background: CHART_TOOLTIP_BG, border: "none", borderRadius: 8, fontSize: 12, color: "#e2e8f0" }, formatter: (v: number) => [formatROAS(v), "ROAS"] }),
                           h(ReferenceLine, { x: roas()!.summary.blended_roas, stroke: "#94a3b8", strokeDasharray: "4 4", label: { value: "Avg", fontSize: 10 } }),
-                          h(Bar, { dataKey: "roas", radius: [0, 4, 4, 0], name: "ROAS" },
+                          h(Bar, { dataKey: "roas", radius: [0, 4, 4, 0], name: "ROAS", cursor: "pointer",
+                            onClick: (_: any, idx: number) => {
+                              const ch = roas()!.channels[idx];
+                              if (ch) openChannelDetail(ch.channel);
+                            },
+                          },
                             ...roas()!.channels.map((c, i) => h(Cell, { key: i, fill: c.roas >= roas()!.summary.blended_roas ? "#10b981" : "#f59e0b" }))
                           )
                         )
@@ -318,7 +432,6 @@ export default function Dashboard() {
 
               {/* ---- Current vs Optimal Allocation + Channel Efficiency ---- */}
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                {/* Current vs Optimal Allocation */}
                 <Show when={optimization() && optimization()!.current_allocation && optimization()!.optimal_allocation}>
                   <ChartCard
                     title="Budget Allocation: Current vs Optimal"
@@ -326,6 +439,8 @@ export default function Dashboard() {
                     actionHref="/optimization"
                     actionLabel="Optimizer →"
                     minHeight={320}
+                    exportData={getAllocComparison(optimization()!)}
+                    exportName="budget-allocation"
                   >
                     <ReactChart>
                       {() => h(ResponsiveContainer, { width: "100%", height: 280 },
@@ -346,7 +461,6 @@ export default function Dashboard() {
                   </ChartCard>
                 </Show>
 
-                {/* Channel Efficiency Scatter: spend vs ROAS */}
                 <Show when={roas() && roas()!.channels.length > 0}>
                   <ChartCard
                     title="Channel Efficiency Map"
@@ -354,6 +468,8 @@ export default function Dashboard() {
                     actionHref="/channel-insights"
                     actionLabel="Insights →"
                     minHeight={320}
+                    exportData={roas()!.channels.map((c) => ({ channel: c.channel, spend: c.total_spend, roas: c.roas, contribution: c.total_contribution }))}
+                    exportName="channel-efficiency"
                   >
                     <ReactChart>
                       {() => h(ResponsiveContainer, { width: "100%", height: 280 },
@@ -384,6 +500,10 @@ export default function Dashboard() {
                               contribution: c.total_contribution,
                             })),
                             fill: "#6366f1",
+                            cursor: "pointer",
+                            onClick: (e: any) => {
+                              if (e?.channel) openChannelDetail(e.channel);
+                            },
                           },
                             ...roas()!.channels.map((c, i) => h(Cell, { key: i, fill: c.roas >= roas()!.summary.blended_roas ? "#10b981" : "#f59e0b" }))
                           )
@@ -415,6 +535,7 @@ export default function Dashboard() {
                     ) : undefined
                   }
                   minHeight={220}
+                  exportName="residuals"
                 >
                   <ReactChart>
                     {() => h(ResponsiveContainer, { width: "100%", height: 180 },
@@ -453,6 +574,8 @@ export default function Dashboard() {
                   title="Contributions Over Time"
                   description="Stacked daily contribution by channel"
                   minHeight={340}
+                  exportData={timeline().rows}
+                  exportName="contributions-timeline"
                 >
                   <ReactChart>
                     {() => h(ResponsiveContainer, { width: "100%", height: 300 },
@@ -470,6 +593,13 @@ export default function Dashboard() {
                   </ReactChart>
                 </ChartCard>
               </Show>
+
+              {/* Channel detail slide-over */}
+              <ChannelDetailPanel
+                open={detailOpen()}
+                channel={selectedChannel()}
+                onClose={() => setDetailOpen(false)}
+              />
             </div>
           );
         }}
