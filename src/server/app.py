@@ -1676,7 +1676,7 @@ def create_app(runs_dir: str | Path | None = None) -> FastAPI:
                 success = connector.test_connection()
             else:
                 message = f"Unknown connector type: {conn_type}"
-        except Exception as e:
+        except Exception:
             logger.exception("Connector test failed for connector_id=%s", connector_id)
             message = "Connection test failed due to an internal error"
 
