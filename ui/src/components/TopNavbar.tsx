@@ -107,7 +107,9 @@ export default function TopNavbar(props: Props) {
       {/* API health dot */}
       <div
         class="hidden lg:flex items-center gap-1.5 text-[11px] shrink-0"
-        title={health.data ? `API online · v${health.data.version}` : "API offline"}
+        title={
+          health.data ? `API online · v${health.data.version}` : "API offline"
+        }
       >
         <span
           aria-hidden
@@ -140,11 +142,7 @@ export default function TopNavbar(props: Props) {
 
         <Show when={userMenuOpen()}>
           {/* Backdrop to close on outside click */}
-          <div
-            class="fixed inset-0 z-40"
-            onClick={closeUserMenu}
-            aria-hidden
-          />
+          <div class="fixed inset-0 z-40" onClick={closeUserMenu} aria-hidden />
 
           <div class="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-slate-200 bg-white shadow-xl z-50 overflow-hidden">
             {/* Identity */}

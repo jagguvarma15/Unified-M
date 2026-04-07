@@ -283,7 +283,10 @@ export default function Layout(props: { children?: JSX.Element }) {
                                       inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
                                       class="flex items-center justify-center rounded-md p-2 transition-colors"
                                     >
-                                      {item.icon({ size: 16, class: "shrink-0" })}
+                                      {item.icon({
+                                        size: 16,
+                                        class: "shrink-0",
+                                      })}
                                     </A>
                                   </Tooltip>
                                 }
@@ -338,8 +341,16 @@ export default function Layout(props: { children?: JSX.Element }) {
                 >
                   {(
                     [
-                      { key: "compact" as Density, label: "S", title: "Compact" },
-                      { key: "default" as Density, label: "M", title: "Default" },
+                      {
+                        key: "compact" as Density,
+                        label: "S",
+                        title: "Compact",
+                      },
+                      {
+                        key: "default" as Density,
+                        label: "M",
+                        title: "Default",
+                      },
                       {
                         key: "comfortable" as Density,
                         label: "L",

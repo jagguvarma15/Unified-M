@@ -403,8 +403,18 @@ function WorkspaceTab() {
     { value: "installs", label: "App Installs" },
   ];
   const MONTHS = [
-    "january", "february", "march", "april", "may", "june",
-    "july", "august", "september", "october", "november", "december",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
   ];
 
   const save = () => addToast("success", "Workspace settings saved");
@@ -508,7 +518,15 @@ function WorkspaceTab() {
               onChange={(e) => setReportingTz(e.currentTarget.value)}
               class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
             >
-              {["America/New_York","America/Los_Angeles","Europe/London","Europe/Paris","Asia/Singapore","Asia/Tokyo","Australia/Sydney"].map((tz) => (
+              {[
+                "America/New_York",
+                "America/Los_Angeles",
+                "Europe/London",
+                "Europe/Paris",
+                "Asia/Singapore",
+                "Asia/Tokyo",
+                "Australia/Sydney",
+              ].map((tz) => (
                 <option value={tz}>{tz}</option>
               ))}
             </select>
@@ -665,7 +683,8 @@ function NotificationsTab() {
           Slack Integration
         </h2>
         <p class="text-xs text-slate-500 mb-5">
-          Post alerts and digests to a Slack channel via an Incoming Webhook URL.
+          Post alerts and digests to a Slack channel via an Incoming Webhook
+          URL.
         </p>
         <div>
           <label class="block text-xs font-medium text-slate-600 mb-1.5">
@@ -744,12 +763,17 @@ function AdaptersTab({ adapters }: { adapters: AdaptersData | null }) {
             >
               <div class="flex items-center gap-3">
                 {b.available
-                  ? CheckCircle2({ size: 18, class: "text-emerald-500 shrink-0" })
+                  ? CheckCircle2({
+                      size: 18,
+                      class: "text-emerald-500 shrink-0",
+                    })
                   : XCircle({ size: 18, class: "text-slate-400 shrink-0" })}
                 <div>
                   <p class="text-sm font-semibold text-slate-900">{b.name}</p>
                   <p class="text-xs text-slate-500">
-                    {b.available ? "Installed & ready" : b.install_hint || "Not installed"}
+                    {b.available
+                      ? "Installed & ready"
+                      : b.install_hint || "Not installed"}
                   </p>
                 </div>
               </div>
@@ -918,17 +942,57 @@ function SystemTab({ health }: { health: HealthData | null }) {
           {[
             { method: "GET", path: "/health", desc: "Health check" },
             { method: "GET", path: "/api/v1/runs", desc: "List pipeline runs" },
-            { method: "GET", path: "/api/v1/contributions", desc: "Channel contributions" },
-            { method: "GET", path: "/api/v1/reconciliation", desc: "Reconciled estimates" },
-            { method: "GET", path: "/api/v1/optimization", desc: "Budget optimization" },
-            { method: "GET", path: "/api/v1/response-curves", desc: "Response curves" },
-            { method: "GET", path: "/api/v1/parameters", desc: "Model parameters" },
-            { method: "GET", path: "/api/v1/diagnostics", desc: "Model diagnostics" },
+            {
+              method: "GET",
+              path: "/api/v1/contributions",
+              desc: "Channel contributions",
+            },
+            {
+              method: "GET",
+              path: "/api/v1/reconciliation",
+              desc: "Reconciled estimates",
+            },
+            {
+              method: "GET",
+              path: "/api/v1/optimization",
+              desc: "Budget optimization",
+            },
+            {
+              method: "GET",
+              path: "/api/v1/response-curves",
+              desc: "Response curves",
+            },
+            {
+              method: "GET",
+              path: "/api/v1/parameters",
+              desc: "Model parameters",
+            },
+            {
+              method: "GET",
+              path: "/api/v1/diagnostics",
+              desc: "Model diagnostics",
+            },
             { method: "GET", path: "/api/v1/roas", desc: "ROAS analysis" },
-            { method: "GET", path: "/api/v1/waterfall", desc: "Waterfall decomposition" },
-            { method: "GET", path: "/api/v1/data/status", desc: "Data source status" },
-            { method: "POST", path: "/api/v1/data/upload", desc: "Upload data file" },
-            { method: "POST", path: "/api/v1/pipeline/run", desc: "Trigger pipeline" },
+            {
+              method: "GET",
+              path: "/api/v1/waterfall",
+              desc: "Waterfall decomposition",
+            },
+            {
+              method: "GET",
+              path: "/api/v1/data/status",
+              desc: "Data source status",
+            },
+            {
+              method: "POST",
+              path: "/api/v1/data/upload",
+              desc: "Upload data file",
+            },
+            {
+              method: "POST",
+              path: "/api/v1/pipeline/run",
+              desc: "Trigger pipeline",
+            },
             { method: "POST", path: "/api/cache/clear", desc: "Clear cache" },
           ].map((ep) => (
             <div class="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors">
@@ -944,7 +1008,9 @@ function SystemTab({ health }: { health: HealthData | null }) {
               <code class="text-xs font-mono text-slate-700 flex-1">
                 {ep.path}
               </code>
-              <span class="text-xs text-slate-500 hidden sm:block">{ep.desc}</span>
+              <span class="text-xs text-slate-500 hidden sm:block">
+                {ep.desc}
+              </span>
             </div>
           ))}
         </div>
