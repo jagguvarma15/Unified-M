@@ -1,4 +1,4 @@
-import { createSignal, Show, For } from "solid-js";
+import { createSignal, createEffect, Show, For } from "solid-js";
 import PageHeader from "../components/PageHeader";
 import MetricCard from "../components/MetricCard";
 import {
@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from "../lib/icons";
 import { useToast } from "../lib/toast";
+import { setAlertCount } from "../lib/alertStore";
 
 interface AlertRule {
   id: string;
@@ -133,6 +134,11 @@ export default function AlertsCenter() {
   const [rules, setRules] = createSignal<AlertRule[]>(DEMO_RULES);
   const [events, setEvents] = createSignal<AlertEvent[]>(DEMO_EVENTS);
   const [showAdd, setShowAdd] = createSignal(false);
+
+  // Keep global alert badge in sync
+  createEffect(() => {
+    setAlertCount(events().filter((e) => !e.acknowledged).length);
+  });
   const [tab, setTab] = createSignal<"events" | "rules">("events");
   const { addToast } = useToast();
 
