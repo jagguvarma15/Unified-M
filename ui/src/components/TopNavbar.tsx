@@ -44,9 +44,11 @@ export default function TopNavbar(props: Props) {
         class="flex items-center gap-2 min-w-0 shrink-0"
         aria-label="Unified-M home"
       >
-        <div class="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
-          <span class="text-[11px] font-bold text-white tracking-tight">M</span>
-        </div>
+        <img
+          src="/favicon.png"
+          alt="Unified-M"
+          class="h-7 w-7 rounded-lg object-contain shrink-0"
+        />
         <span class="hidden sm:block text-sm font-semibold text-slate-900 tracking-tight">
           Unified&#8209;M
         </span>

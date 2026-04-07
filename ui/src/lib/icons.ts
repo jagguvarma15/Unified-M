@@ -57,7 +57,13 @@ import {
   Activity as _Activity,
   AlertCircle as _AlertCircle,
   Building2 as _Building2,
+  Camera as _Camera,
+  Globe as _Globe,
+  Key as _Key,
+  Lock as _Lock,
   LogOut as _LogOut,
+  Mail as _Mail,
+  Save as _Save,
   User as _User,
   AlertTriangle as _AlertTriangle,
   ArrowDown as _ArrowDown,
@@ -136,7 +142,13 @@ import {
 export const Activity = wrap(_Activity);
 export const AlertCircle = wrap(_AlertCircle);
 export const Building2 = wrap(_Building2);
+export const Camera = wrap(_Camera);
+export const Globe = wrap(_Globe);
+export const Key = wrap(_Key);
+export const Lock = wrap(_Lock);
 export const LogOut = wrap(_LogOut);
+export const Mail = wrap(_Mail);
+export const Save = wrap(_Save);
 export const User = wrap(_User);
 export const AlertTriangle = wrap(_AlertTriangle);
 export const ArrowDown = wrap(_ArrowDown);
