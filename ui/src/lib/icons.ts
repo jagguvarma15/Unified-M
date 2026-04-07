@@ -135,6 +135,9 @@ import {
 
 export const Activity = wrap(_Activity);
 export const AlertCircle = wrap(_AlertCircle);
+export const Building2 = wrap(_Building2);
+export const LogOut = wrap(_LogOut);
+export const User = wrap(_User);
 export const AlertTriangle = wrap(_AlertTriangle);
 export const ArrowDown = wrap(_ArrowDown);
 export const ArrowRight = wrap(_ArrowRight);
