@@ -56,6 +56,9 @@ function wrap(reactIcon: any): SolidIcon {
 import {
   Activity as _Activity,
   AlertCircle as _AlertCircle,
+  Building2 as _Building2,
+  LogOut as _LogOut,
+  User as _User,
   AlertTriangle as _AlertTriangle,
   ArrowDown as _ArrowDown,
   ArrowRight as _ArrowRight,
