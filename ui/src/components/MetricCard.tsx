@@ -122,9 +122,8 @@ export default function MetricCard(props: Props) {
         <p class="mt-0.5 text-xs text-slate-500 truncate">{props.delta}</p>
       </Show>
 
-      <Show when={props.rangeBar}>
-        {() => {
-          const rb = props.rangeBar!;
+      <Show when={props.rangeBar} keyed>
+        {(rb) => {
           const span = rb.hi - rb.lo;
           if (span <= 0) return null;
           const pct = Math.max(2, Math.min(98, ((rb.current - rb.lo) / span) * 100));

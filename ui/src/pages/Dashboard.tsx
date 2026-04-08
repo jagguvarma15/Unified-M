@@ -533,49 +533,42 @@ export default function Dashboard() {
                       </p>
                     }
                   >
-                    {() => {
-                      const score = budgetEfficiencyIndex()!;
-                      const isGood = score >= 80;
-                      const isMid = score >= 60;
-                      const scoreColor = isGood
-                        ? "text-emerald-600"
-                        : isMid
-                          ? "text-amber-600"
-                          : "text-red-600";
-                      const barColor = isGood
-                        ? "bg-emerald-500"
-                        : isMid
-                          ? "bg-amber-500"
-                          : "bg-red-500";
-                      return (
-                        <>
-                          <div class="mt-2 flex items-end gap-1.5">
-                            <span
-                              class={`text-4xl font-bold tabular-nums ${scoreColor}`}
-                            >
-                              {score}
-                            </span>
-                            <span class="mb-1 text-sm text-slate-400">/ 100</span>
-                          </div>
-                          <div class="mt-3 h-2 rounded-full bg-slate-100">
-                            <div
-                              class={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                              style={{ width: `${score}%` }}
-                            />
-                          </div>
-                          <p class="mt-2 text-xs text-slate-500">
-                            {isGood
-                              ? "Allocation is near-optimal."
-                              : isMid
-                                ? "Moderate room to improve allocation."
-                                : "Significant optimization opportunity."}
-                          </p>
-                          <p class="mt-1 text-[11px] text-slate-400">
-                            Inspired by Measured's True ROAS benchmark
-                          </p>
-                        </>
-                      );
-                    }}
+                    <div class="mt-2 flex items-end gap-1.5">
+                      <span
+                        class={`text-4xl font-bold tabular-nums ${
+                          budgetEfficiencyIndex()! >= 80
+                            ? "text-emerald-600"
+                            : budgetEfficiencyIndex()! >= 60
+                              ? "text-amber-600"
+                              : "text-red-600"
+                        }`}
+                      >
+                        {budgetEfficiencyIndex()}
+                      </span>
+                      <span class="mb-1 text-sm text-slate-400">/ 100</span>
+                    </div>
+                    <div class="mt-3 h-2 rounded-full bg-slate-100">
+                      <div
+                        class={`h-full rounded-full transition-all duration-500 ${
+                          budgetEfficiencyIndex()! >= 80
+                            ? "bg-emerald-500"
+                            : budgetEfficiencyIndex()! >= 60
+                              ? "bg-amber-500"
+                              : "bg-red-500"
+                        }`}
+                        style={{ width: `${budgetEfficiencyIndex()}%` }}
+                      />
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">
+                      {budgetEfficiencyIndex()! >= 80
+                        ? "Allocation is near-optimal."
+                        : budgetEfficiencyIndex()! >= 60
+                          ? "Moderate room to improve allocation."
+                          : "Significant optimization opportunity."}
+                    </p>
+                    <p class="mt-1 text-[11px] text-slate-400">
+                      Inspired by Measured's True ROAS benchmark
+                    </p>
                   </Show>
                 </div>
               </div>
