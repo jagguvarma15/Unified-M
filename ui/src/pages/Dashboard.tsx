@@ -1,5 +1,6 @@
 import { createSignal, createMemo } from "solid-js";
-import { Activity } from "../lib/icons";
+import { useNavigate } from "@solidjs/router";
+import { Activity, Sparkles } from "../lib/icons";
 import {
   PieChart,
   Pie,
@@ -72,6 +73,7 @@ interface ChannelDetail {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const contributionsQ = useContributionsQuery();
   const reconciliationQ = useReconciliationQuery();
   const optimizationQ = useOptimizationQuery();
@@ -117,6 +119,77 @@ export default function Dashboard() {
       return sum;
     });
     return { total: totals, channels: t.channels.length };
+  });
+
+  // Period toggle for KPI rail
+  const [period, setPeriod] = createSignal<"MTD" | "QTD" | "YTD">("MTD");
+
+  // Budget Efficiency Index — how close current allocation is to optimal (0–100)
+  const budgetEfficiencyIndex = createMemo(() => {
+    const opt = optimization();
+    if (!opt?.current_allocation || !opt?.optimal_allocation) return null;
+    const channels = Object.keys(opt.optimal_allocation);
+    let totalOptimal = 0;
+    let totalDrift = 0;
+    for (const ch of channels) {
+      const current = opt.current_allocation[ch] ?? 0;
+      const optimal = opt.optimal_allocation[ch] ?? 0;
+      totalOptimal += optimal;
+      totalDrift += Math.abs(current - optimal);
+    }
+    if (totalOptimal <= 0) return null;
+    return Math.round(Math.max(0, Math.min(100, (1 - totalDrift / totalOptimal) * 100)));
+  });
+
+  // AI Insights — top recommendations derived from optimizer + ROAS data
+  const aiInsights = createMemo(() => {
+    const opt = optimization();
+    const roasData = roas();
+    const insights: string[] = [];
+
+    if (opt?.current_allocation && opt?.optimal_allocation) {
+      const changes = Object.keys(opt.optimal_allocation).map((ch) => ({
+        channel: ch.replace(/_spend$/, ""),
+        current: opt.current_allocation![ch] ?? 0,
+        optimal: opt.optimal_allocation![ch] ?? 0,
+        delta: (opt.optimal_allocation![ch] ?? 0) - (opt.current_allocation![ch] ?? 0),
+      }));
+      const sorted = [...changes].sort((a, b) => b.delta - a.delta);
+      const topIncrease = sorted[0];
+      const topDecrease = sorted[sorted.length - 1];
+      if (topIncrease?.delta > 0 && topDecrease?.delta < 0) {
+        const shift = Math.min(topIncrease.delta, Math.abs(topDecrease.delta));
+        const improvPct = opt.improvement_pct ?? 0;
+        insights.push(
+          `Shifting ${formatCurrency(shift, true)} from ${topDecrease.channel} → ${topIncrease.channel} could yield +${improvPct.toFixed(1)}% revenue at same budget.`,
+        );
+      }
+    }
+
+    if (roasData) {
+      const avgRoas = roasData.summary.blended_roas;
+      const lowRoas = roasData.channels
+        .filter((c) => c.roas < avgRoas * 0.7)
+        .sort((a, b) => a.roas - b.roas)[0];
+      if (lowRoas) {
+        const name = lowRoas.channel.replace(/_spend$/, "");
+        insights.push(
+          `${name} ROAS (${formatROAS(lowRoas.roas)}) is ${Math.round((1 - lowRoas.roas / avgRoas) * 100)}% below blended average — review creative or targeting.`,
+        );
+      }
+    }
+
+    const recon = reconBars();
+    if (recon.length > 0) {
+      const lowConf = recon.filter((r) => r.confidence < 0.4);
+      if (lowConf.length > 0) {
+        insights.push(
+          `${lowConf.length} channel${lowConf.length > 1 ? "s" : ""} (${lowConf.map((r) => r.channel).join(", ")}) have low calibration confidence — consider running geo experiments.`,
+        );
+      }
+    }
+
+    return insights.slice(0, 3);
   });
 
   // Channel detail slide-over
@@ -199,24 +272,102 @@ export default function Dashboard() {
       >
         {(run) => {
           const metrics = run().metrics;
+
+          // Model health thresholds
+          const modelHealth = () => {
+            const r2 = metrics?.r_squared;
+            const mape = metrics?.mape;
+            if (r2 == null) return { label: "Unknown", dot: "bg-slate-400", ring: "shadow-slate-100" };
+            if (r2 >= 0.8 && (mape == null || mape <= 10))
+              return { label: "Healthy", dot: "bg-emerald-400", ring: "shadow-emerald-100" };
+            if (r2 >= 0.65)
+              return { label: "Fair", dot: "bg-amber-400", ring: "shadow-amber-100" };
+            return { label: "Check Model", dot: "bg-red-400", ring: "shadow-red-100" };
+          };
+
           return (
             <div>
+              {/* ── Zone 1: Model Status Banner ──────────────────────────── */}
+              <div class="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200/80 bg-white px-4 py-3 text-sm shadow-sm">
+                <span class="flex items-center gap-2 font-semibold text-slate-700">
+                  <span
+                    class={`h-2 w-2 rounded-full shadow-[0_0_0_3px] ${modelHealth().dot} ${modelHealth().ring}`}
+                    aria-hidden
+                  />
+                  {modelHealth().label}
+                </span>
+                <span class="hidden text-slate-200 sm:block">|</span>
+                <span class="text-slate-500">
+                  Model:{" "}
+                  <span class="font-mono font-medium text-slate-700">
+                    {run().model_backend ?? "mmm"}
+                  </span>
+                </span>
+                <span class="hidden text-slate-200 sm:block">|</span>
+                <span class="text-slate-500">
+                  Run:{" "}
+                  <code class="font-mono text-slate-600">
+                    {run().run_id.slice(0, 12)}…
+                  </code>
+                </span>
+                <Show when={metrics?.r_squared != null}>
+                  <span class="hidden text-slate-200 sm:block">|</span>
+                  <span class="text-slate-500">
+                    R²:{" "}
+                    <span class="font-medium text-slate-700">
+                      {metrics!.r_squared!.toFixed(3)}
+                    </span>
+                  </span>
+                </Show>
+                <Show when={metrics?.mape != null}>
+                  <span class="hidden text-slate-200 sm:block">|</span>
+                  <span class="text-slate-500">
+                    MAPE:{" "}
+                    <span class="font-medium text-slate-700">
+                      {formatPercent(metrics!.mape!, 1)}
+                    </span>
+                  </span>
+                </Show>
+                <Show when={metrics?.rmse != null}>
+                  <span class="hidden text-slate-200 lg:block">|</span>
+                  <span class="hidden text-slate-500 lg:inline">
+                    RMSE:{" "}
+                    <span class="font-medium text-slate-700">
+                      {formatCompactNumber(metrics!.rmse!)}
+                    </span>
+                  </span>
+                </Show>
+              </div>
+
               <PageHeader
                 title="Dashboard"
                 description="Unified Marketing Measurement overview"
-                detail={
-                  <span class="inline-flex items-center gap-1.5">
-                    <Activity size={12} class="text-emerald-500" aria-hidden />
-                    Run:{" "}
-                    <code class="font-mono text-slate-500">
-                      {run().run_id.slice(0, 12)}…
-                    </code>
-                  </span>
-                }
                 hint="Metrics from latest pipeline run"
               />
 
-              {/* Metric cards with sparklines + delta badges */}
+              {/* ── Zone 2: KPI Rail ─────────────────────────────────────── */}
+              <div class="mb-3 flex items-center justify-between">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Performance Metrics
+                </p>
+                <div class="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                  <For each={["MTD", "QTD", "YTD"] as const}>
+                    {(p) => (
+                      <button
+                        class={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                          period() === p
+                            ? "bg-white text-indigo-700 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                        onClick={() => setPeriod(p)}
+                      >
+                        {p}
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </div>
+
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 min-w-0">
                 <MetricCard
                   label="R²"
@@ -232,7 +383,13 @@ export default function Dashboard() {
                       ? (metrics.r_squared - 0.85) * 100
                       : undefined
                   }
-                  changeLabel="vs baseline"
+                  changeLabel={`vs ${period()} baseline`}
+                  rangeBar={
+                    metrics?.r_squared != null
+                      ? { lo: 0.6, hi: 1.0, current: metrics.r_squared }
+                      : undefined
+                  }
+                  onClick={() => navigate("/diagnostics")}
                 />
                 <MetricCard
                   label="MAPE"
@@ -243,12 +400,19 @@ export default function Dashboard() {
                   changePct={
                     metrics?.mape != null ? -(metrics.mape - 8) : undefined
                   }
-                  changeLabel="vs prior"
+                  changeLabel={`vs ${period()} target`}
+                  rangeBar={
+                    metrics?.mape != null
+                      ? { lo: 0, hi: 20, current: 20 - metrics.mape }
+                      : undefined
+                  }
+                  onClick={() => navigate("/diagnostics")}
                 />
                 <MetricCard
                   label="Channels"
                   value={run().n_channels}
                   tooltip="Media channels in the model."
+                  onClick={() => navigate("/contributions")}
                 />
                 <MetricCard
                   label="Optim. Uplift"
@@ -260,8 +424,14 @@ export default function Dashboard() {
                   }
                   tooltip="Expected gain from optimal budget mix."
                   changePct={optimization()?.improvement_pct ?? undefined}
-                  changeLabel="vs current"
+                  changeLabel={`vs ${period()} current`}
                   color="emerald"
+                  rangeBar={
+                    optimization()?.improvement_pct != null
+                      ? { lo: 0, hi: 30, current: optimization()!.improvement_pct! }
+                      : undefined
+                  }
+                  onClick={() => navigate("/optimization")}
                 />
                 <MetricCard
                   label="Total Spend"
@@ -276,6 +446,8 @@ export default function Dashboard() {
                       ? kpiSparklines().total.slice(-20)
                       : undefined
                   }
+                  changeLabel={period()}
+                  onClick={() => navigate("/roas")}
                 />
                 <MetricCard
                   label="Blended ROAS"
@@ -295,7 +467,117 @@ export default function Dashboard() {
                       ? "emerald"
                       : "amber"
                   }
+                  rangeBar={
+                    roas()?.summary.blended_roas != null
+                      ? { lo: 0, hi: Math.max(5, roas()!.summary.blended_roas * 1.5), current: roas()!.summary.blended_roas }
+                      : undefined
+                  }
+                  onClick={() => navigate("/roas")}
                 />
+              </div>
+
+              {/* ── Zone 3: AI Insights + Budget Efficiency Index ────────── */}
+              <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* AI Insight card */}
+                <div class="lg:col-span-2 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white p-4">
+                  <div class="mb-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100 text-indigo-600">
+                        <Sparkles size={13} aria-hidden />
+                      </span>
+                      <h3 class="text-sm font-semibold text-slate-800">
+                        AI Recommendations
+                      </h3>
+                    </div>
+                    <a
+                      href="/optimization"
+                      class="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                    >
+                      View optimizer →
+                    </a>
+                  </div>
+                  <Show
+                    when={aiInsights().length > 0}
+                    fallback={
+                      <p class="text-sm text-slate-400 py-2">
+                        Run the optimizer to generate budget recommendations.
+                      </p>
+                    }
+                  >
+                    <ul class="space-y-2.5">
+                      <For each={aiInsights()}>
+                        {(insight) => (
+                          <li class="flex items-start gap-2.5 text-sm text-slate-700">
+                            <span
+                              class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400"
+                              aria-hidden
+                            />
+                            {insight}
+                          </li>
+                        )}
+                      </For>
+                    </ul>
+                  </Show>
+                </div>
+
+                {/* Budget Efficiency Index */}
+                <div class="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                  <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Budget Efficiency Index
+                  </p>
+                  <Show
+                    when={budgetEfficiencyIndex() != null}
+                    fallback={
+                      <p class="mt-3 text-sm text-slate-400">
+                        No optimizer data yet.
+                      </p>
+                    }
+                  >
+                    {() => {
+                      const score = budgetEfficiencyIndex()!;
+                      const isGood = score >= 80;
+                      const isMid = score >= 60;
+                      const scoreColor = isGood
+                        ? "text-emerald-600"
+                        : isMid
+                          ? "text-amber-600"
+                          : "text-red-600";
+                      const barColor = isGood
+                        ? "bg-emerald-500"
+                        : isMid
+                          ? "bg-amber-500"
+                          : "bg-red-500";
+                      return (
+                        <>
+                          <div class="mt-2 flex items-end gap-1.5">
+                            <span
+                              class={`text-4xl font-bold tabular-nums ${scoreColor}`}
+                            >
+                              {score}
+                            </span>
+                            <span class="mb-1 text-sm text-slate-400">/ 100</span>
+                          </div>
+                          <div class="mt-3 h-2 rounded-full bg-slate-100">
+                            <div
+                              class={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                              style={{ width: `${score}%` }}
+                            />
+                          </div>
+                          <p class="mt-2 text-xs text-slate-500">
+                            {isGood
+                              ? "Allocation is near-optimal."
+                              : isMid
+                                ? "Moderate room to improve allocation."
+                                : "Significant optimization opportunity."}
+                          </p>
+                          <p class="mt-1 text-[11px] text-slate-400">
+                            Inspired by Measured's True ROAS benchmark
+                          </p>
+                        </>
+                      );
+                    }}
+                  </Show>
+                </div>
               </div>
 
               {/* ---- Actual vs Predicted mini ---- */}
