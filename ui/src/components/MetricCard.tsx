@@ -121,6 +121,35 @@ export default function MetricCard(props: Props) {
       <Show when={props.delta}>
         <p class="mt-0.5 text-xs text-slate-500 truncate">{props.delta}</p>
       </Show>
+
+      <Show when={props.rangeBar}>
+        {() => {
+          const rb = props.rangeBar!;
+          const span = rb.hi - rb.lo;
+          if (span <= 0) return null;
+          const pct = Math.max(2, Math.min(98, ((rb.current - rb.lo) / span) * 100));
+          const trackColor =
+            color() === "emerald"
+              ? "bg-emerald-100"
+              : color() === "amber"
+                ? "bg-amber-100"
+                : "bg-indigo-100";
+          const fillColor =
+            color() === "emerald"
+              ? "bg-emerald-400"
+              : color() === "amber"
+                ? "bg-amber-400"
+                : "bg-indigo-400";
+          return (
+            <div class={`mt-2 h-1 rounded-full ${trackColor} relative overflow-visible`}>
+              <div
+                class={`absolute top-[-2px] h-[8px] w-[3px] rounded-full ${fillColor}`}
+                style={{ left: `calc(${pct}% - 1px)` }}
+              />
+            </div>
+          );
+        }}
+      </Show>
     </div>
   );
 }
