@@ -17,6 +17,8 @@ interface Props {
   tooltip?: string;
   sparkline?: number[];
   onClick?: () => void;
+  /** Haus-style confidence range bar: lo/hi define the scale, current is the marker */
+  rangeBar?: { lo: number; hi: number; current: number };
 }
 
 const iconBg: Record<string, string> = {
