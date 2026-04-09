@@ -339,7 +339,7 @@ export default function Calibration() {
                 const barData = () =>
                   points().map((p) => ({
                     channel: p.channel ?? "",
-                    error_pct: Math.round(p.error_pct ?? 0),
+                    error_pct: Math.round((p.error_pct as number | undefined) ?? 0),
                     within_ci: p.within_ci ?? false,
                   }));
                 const qualityColor = () =>
@@ -486,7 +486,7 @@ export default function Calibration() {
                                 ...scatterData().map((entry, i) =>
                                   h(Cell, {
                                     key: i,
-                                    fill: entry.within_ci
+                                    fill: (entry as any).within_ci
                                       ? "#16a34a"
                                       : "#dc2626",
                                     r: 8,
@@ -624,7 +624,6 @@ export default function Calibration() {
             <MetricCard
               label="Planned"
               value={plannedCount()}
-              color="slate"
             />
             <MetricCard
               label="Running"
