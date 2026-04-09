@@ -56,6 +56,12 @@ function wrap(reactIcon: any): SolidIcon {
 import {
   Activity as _Activity,
   AlertCircle as _AlertCircle,
+  Award as _Award,
+  BellOff as _BellOff,
+  ChevronUp as _ChevronUp,
+  FlaskConical as _FlaskConical,
+  MessageSquare as _MessageSquare,
+  Milestone as _Milestone,
   Building2 as _Building2,
   Camera as _Camera,
   Globe as _Globe,
@@ -141,6 +147,12 @@ import {
 
 export const Activity = wrap(_Activity);
 export const AlertCircle = wrap(_AlertCircle);
+export const Award = wrap(_Award);
+export const BellOff = wrap(_BellOff);
+export const ChevronUp = wrap(_ChevronUp);
+export const FlaskConical = wrap(_FlaskConical);
+export const MessageSquare = wrap(_MessageSquare);
+export const Milestone = wrap(_Milestone);
 export const Building2 = wrap(_Building2);
 export const Camera = wrap(_Camera);
 export const Globe = wrap(_Globe);

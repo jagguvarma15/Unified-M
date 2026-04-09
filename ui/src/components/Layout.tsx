@@ -28,6 +28,8 @@ import {
   MapIcon,
   SlidersHorizontal,
   GripVertical,
+  Award,
+  Milestone,
   type LucideIcon,
 } from "../lib/icons";
 import {
@@ -68,6 +70,7 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
       { to: "/contributions", label: "Contributions", icon: BarChart3 },
       { to: "/roas", label: "ROAS Analysis", icon: DollarSign },
+      { to: "/benchmarks", label: "Benchmarks", icon: Award },
       { to: "/diagnostics", label: "Diagnostics", icon: Stethoscope },
     ],
   },
@@ -98,6 +101,7 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/channel-insights", label: "Channel Insights", icon: Zap },
       { to: "/attribution", label: "Attribution Explorer", icon: MapIcon },
       { to: "/data-quality", label: "Data Quality", icon: ClipboardCheck },
+      { to: "/annotations", label: "Annotations", icon: Milestone },
       { to: "/alerts", label: "Alerts Center", icon: Bell },
     ],
   },
