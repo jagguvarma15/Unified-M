@@ -9,6 +9,11 @@ import {
   AlertTriangle,
   X,
   AlertCircle,
+  Clock,
+  Mail,
+  MessageSquare,
+  History,
+  BellOff,
 } from "../lib/icons";
 import { useToast } from "../lib/toast";
 import { setAlertCount } from "../lib/alertStore";
@@ -35,7 +40,10 @@ interface AlertEvent {
   severity: "warning" | "critical";
   timestamp: string;
   acknowledged: boolean;
+  snoozedUntil?: string; // ISO timestamp
 }
+
+type AlertTab = "events" | "rules" | "digest";
 
 const METRICS = [
   { value: "roas", label: "ROAS" },
@@ -128,19 +136,57 @@ const DEMO_EVENTS: AlertEvent[] = [
     timestamp: "2026-03-28T09:15:00Z",
     acknowledged: true,
   },
+  {
+    id: "e4",
+    ruleId: "r2",
+    ruleName: "High CPA Warning",
+    channel: "meta_ads",
+    metric: "cpa",
+    value: 67,
+    threshold: 50,
+    severity: "warning",
+    timestamp: "2026-03-21T08:00:00Z",
+    acknowledged: true,
+  },
+  {
+    id: "e5",
+    ruleId: "r1",
+    ruleName: "Low ROAS Alert",
+    channel: "pinterest_ads",
+    metric: "roas",
+    value: 1.1,
+    threshold: 1.5,
+    severity: "critical",
+    timestamp: "2026-03-15T16:30:00Z",
+    acknowledged: true,
+  },
 ];
+
+function isSnoozed(event: AlertEvent): boolean {
+  if (!event.snoozedUntil) return false;
+  return new Date(event.snoozedUntil) > new Date();
+}
 
 export default function AlertsCenter() {
   const [rules, setRules] = createSignal<AlertRule[]>(DEMO_RULES);
   const [events, setEvents] = createSignal<AlertEvent[]>(DEMO_EVENTS);
   const [showAdd, setShowAdd] = createSignal(false);
-
-  // Keep global alert badge in sync
-  createEffect(() => {
-    setAlertCount(events().filter((e) => !e.acknowledged).length);
-  });
-  const [tab, setTab] = createSignal<"events" | "rules">("events");
+  const [tab, setTab] = createSignal<AlertTab>("events");
   const { addToast } = useToast();
+
+  // Digest settings
+  const [digestEmail, setDigestEmail] = createSignal(true);
+  const [digestSlack, setDigestSlack] = createSignal(false);
+  const [digestFrequency, setDigestFrequency] = createSignal<
+    "daily" | "weekly"
+  >("weekly");
+
+  // Keep global alert badge in sync (active = unacknowledged and not snoozed)
+  createEffect(() => {
+    setAlertCount(
+      events().filter((e) => !e.acknowledged && !isSnoozed(e)).length,
+    );
+  });
 
   // Add rule form
   const [newName, setNewName] = createSignal("");
@@ -150,7 +196,8 @@ export default function AlertsCenter() {
     createSignal<AlertRule["operator"]>("<");
   const [newThreshold, setNewThreshold] = createSignal(0);
 
-  const activeAlerts = () => events().filter((e) => !e.acknowledged).length;
+  const activeAlerts = () =>
+    events().filter((e) => !e.acknowledged && !isSnoozed(e)).length;
   const totalRules = () => rules().length;
   const enabledRules = () => rules().filter((r) => r.enabled).length;
 
@@ -197,6 +244,14 @@ export default function AlertsCenter() {
     );
   };
 
+  const snoozeEvent = (id: string, hours: number) => {
+    const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+    setEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, snoozedUntil: until } : e)),
+    );
+    addToast("info", `Alert snoozed for ${hours}h`);
+  };
+
   const acknowledgeAll = () => {
     setEvents((prev) => prev.map((e) => ({ ...e, acknowledged: true })));
     addToast("success", "All alerts acknowledged");
@@ -209,6 +264,13 @@ export default function AlertsCenter() {
 
   const severityIcon = (severity: string) =>
     severity === "critical" ? AlertCircle : AlertTriangle;
+
+  // Sort history descending by timestamp
+  const historyEvents = () =>
+    [...events()].sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 
   return (
     <div>
@@ -277,9 +339,19 @@ export default function AlertsCenter() {
         >
           Alert Rules ({totalRules()})
         </button>
+        <button
+          onClick={() => setTab("digest")}
+          class={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab() === "digest"
+              ? "bg-indigo-600 text-white"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <History size={13} /> Digest & History
+        </button>
       </div>
 
-      {/* Events list */}
+      {/* ── Events tab ── */}
       <Show when={tab() === "events"}>
         <Show
           when={events().length > 0}
@@ -294,26 +366,37 @@ export default function AlertsCenter() {
           }
         >
           <div class="space-y-2">
-            <For each={events()}>
+            <For each={events().filter((e) => !e.acknowledged)}>
               {(event) => {
                 const SevIcon = severityIcon(event.severity);
+                const snoozed = () => isSnoozed(event);
                 return (
                   <div
                     class={`rounded-lg border p-4 transition-all ${
-                      event.acknowledged
+                      snoozed()
                         ? "bg-white border-slate-200 opacity-60"
                         : `${severityColor(event.severity)} shadow-sm`
                     }`}
                   >
                     <div class="flex items-start gap-3">
-                      <SevIcon
-                        size={18}
-                        class={
-                          event.severity === "critical"
-                            ? "text-red-500 mt-0.5"
-                            : "text-amber-500 mt-0.5"
+                      <Show
+                        when={!snoozed()}
+                        fallback={
+                          <BellOff
+                            size={18}
+                            class="text-slate-400 mt-0.5"
+                          />
                         }
-                      />
+                      >
+                        <SevIcon
+                          size={18}
+                          class={
+                            event.severity === "critical"
+                              ? "text-red-500 mt-0.5"
+                              : "text-amber-500 mt-0.5"
+                          }
+                        />
+                      </Show>
                       <div class="flex-1">
                         <div class="flex items-center gap-2">
                           <span class="font-semibold text-sm">
@@ -328,6 +411,11 @@ export default function AlertsCenter() {
                           >
                             {event.severity}
                           </span>
+                          <Show when={snoozed()}>
+                            <span class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-100 text-slate-500">
+                              Snoozed
+                            </span>
+                          </Show>
                         </div>
                         <p class="text-sm mt-0.5">
                           <span class="font-medium">{event.channel}</span>{" "}
@@ -340,25 +428,91 @@ export default function AlertsCenter() {
                         <p class="text-xs text-slate-500 mt-1">
                           {new Date(event.timestamp).toLocaleString()}
                         </p>
+                        <Show when={event.snoozedUntil && snoozed()}>
+                          <p class="text-xs text-slate-400 mt-0.5">
+                            Snoozed until{" "}
+                            {new Date(event.snoozedUntil!).toLocaleString()}
+                          </p>
+                        </Show>
                       </div>
-                      <Show when={!event.acknowledged}>
-                        <button
-                          onClick={() => acknowledgeEvent(event.id)}
-                          class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                        >
-                          <CheckCircle2 size={12} /> Ack
-                        </button>
+                      <Show when={!snoozed()}>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          {/* Snooze menu */}
+                          <div class="relative group">
+                            <button class="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                              <Clock size={11} /> Snooze
+                            </button>
+                            <div class="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col z-10 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden text-xs min-w-[100px]">
+                              {[
+                                { label: "1 hour", hours: 1 },
+                                { label: "4 hours", hours: 4 },
+                                { label: "24 hours", hours: 24 },
+                                { label: "48 hours", hours: 48 },
+                              ].map(({ label, hours }) => (
+                                <button
+                                  onClick={() => snoozeEvent(event.id, hours)}
+                                  class="px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => acknowledgeEvent(event.id)}
+                            class="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                          >
+                            <CheckCircle2 size={11} /> Ack
+                          </button>
+                        </div>
                       </Show>
                     </div>
                   </div>
                 );
               }}
             </For>
+
+            {/* Acknowledged events */}
+            <Show when={events().filter((e) => e.acknowledged).length > 0}>
+              <p class="text-xs text-slate-400 mt-4 mb-2 uppercase tracking-wider font-semibold">
+                Acknowledged
+              </p>
+              <For each={events().filter((e) => e.acknowledged)}>
+                {(event) => {
+                  const SevIcon = severityIcon(event.severity);
+                  return (
+                    <div class="rounded-lg border border-slate-200 bg-white p-4 opacity-50">
+                      <div class="flex items-start gap-3">
+                        <SevIcon
+                          size={16}
+                          class="text-slate-400 mt-0.5 shrink-0"
+                        />
+                        <div class="flex-1">
+                          <div class="flex items-center gap-2">
+                            <span class="font-medium text-sm text-slate-700">
+                              {event.ruleName}
+                            </span>
+                            <CheckCircle2
+                              size={13}
+                              class="text-emerald-500"
+                            />
+                          </div>
+                          <p class="text-xs text-slate-500 mt-0.5">
+                            {event.channel} · {event.metric} = {event.value} ·{" "}
+                            {new Date(event.timestamp).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
+              </For>
+            </Show>
           </div>
         </Show>
       </Show>
 
-      {/* Rules list */}
+      {/* ── Rules tab ── */}
       <Show when={tab() === "rules"}>
         <div class="space-y-2">
           <For each={rules()}>
@@ -401,6 +555,180 @@ export default function AlertsCenter() {
               </div>
             )}
           </For>
+        </div>
+      </Show>
+
+      {/* ── Digest & History tab ── */}
+      <Show when={tab() === "digest"}>
+        <div class="space-y-5">
+          {/* Weekly Digest config */}
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <h2 class="text-base font-semibold text-slate-900 mb-1">
+              Weekly Digest
+            </h2>
+            <p class="text-xs text-slate-500 mb-4">
+              Automatically send a summary of alert activity and model health
+              to your team.
+            </p>
+
+            <div class="space-y-3">
+              {/* Frequency */}
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-700">Digest Frequency</span>
+                <div class="flex rounded-lg overflow-hidden border border-slate-200">
+                  {(["daily", "weekly"] as const).map((f) => (
+                    <button
+                      onClick={() => setDigestFrequency(f)}
+                      class={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                        digestFrequency() === f
+                          ? "bg-indigo-600 text-white"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Email toggle */}
+              <div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+                <div class="flex items-center gap-2">
+                  <Mail size={14} class="text-slate-500" />
+                  <span class="text-sm text-slate-700">Email digest</span>
+                </div>
+                <button
+                  onClick={() => setDigestEmail((v) => !v)}
+                  class={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
+                    digestEmail() ? "bg-indigo-600" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    class={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
+                      digestEmail()
+                        ? "translate-x-4 ml-0.5"
+                        : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Slack toggle */}
+              <div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+                <div class="flex items-center gap-2">
+                  <MessageSquare size={14} class="text-slate-500" />
+                  <span class="text-sm text-slate-700">Slack push</span>
+                  <span class="text-[10px] text-slate-400 rounded-full bg-slate-200 px-1.5 py-0.5">
+                    Connect Slack in Settings
+                  </span>
+                </div>
+                <button
+                  onClick={() => setDigestSlack((v) => !v)}
+                  class={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
+                    digestSlack() ? "bg-indigo-600" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    class={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
+                      digestSlack()
+                        ? "translate-x-4 ml-0.5"
+                        : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <Show when={digestEmail() || digestSlack()}>
+                <div class="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+                  {digestFrequency() === "weekly" ? "Every Monday morning" : "Every morning at 8:00 AM"} you'll receive a digest of all
+                  alert activity, model health, and spend anomalies.
+                </div>
+              </Show>
+            </div>
+          </div>
+
+          {/* Alert History Timeline */}
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-base font-semibold text-slate-900">
+                Alert History
+              </h2>
+              <span class="text-xs text-slate-400">
+                {events().length} total events
+              </span>
+            </div>
+
+            <div class="relative">
+              {/* Timeline line */}
+              <div class="absolute left-[7px] top-0 bottom-0 w-px bg-slate-200" />
+
+              <div class="space-y-3">
+                <For each={historyEvents()}>
+                  {(event) => {
+                    const SevIcon = severityIcon(event.severity);
+                    return (
+                      <div class="flex gap-4 pl-7 relative">
+                        {/* Timeline dot */}
+                        <div
+                          class={`absolute left-0 top-1 h-3.5 w-3.5 rounded-full border-2 border-white ring-1 ${
+                            event.severity === "critical"
+                              ? "bg-red-500 ring-red-300"
+                              : "bg-amber-400 ring-amber-200"
+                          } ${event.acknowledged ? "opacity-40" : ""}`}
+                        />
+                        <div
+                          class={`flex-1 rounded-lg border px-3 py-2.5 ${
+                            event.acknowledged
+                              ? "border-slate-100 bg-slate-50"
+                              : event.severity === "critical"
+                                ? "border-red-200 bg-red-50"
+                                : "border-amber-200 bg-amber-50"
+                          }`}
+                        >
+                          <div class="flex items-start justify-between gap-2">
+                            <div>
+                              <span class="text-xs font-semibold text-slate-800">
+                                {event.ruleName}
+                              </span>
+                              <span
+                                class={`ml-2 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                                  event.severity === "critical"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {event.severity}
+                              </span>
+                              <Show when={event.acknowledged}>
+                                <span class="ml-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase bg-emerald-100 text-emerald-700">
+                                  acked
+                                </span>
+                              </Show>
+                            </div>
+                            <span class="text-[10px] text-slate-400 shrink-0 tabular-nums">
+                              {new Date(event.timestamp).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </span>
+                          </div>
+                          <p class="text-xs text-slate-500 mt-0.5">
+                            {event.channel.replace(/_/g, " ")} · {event.metric}{" "}
+                            = {event.value} (threshold: {event.threshold})
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }}
+                </For>
+              </div>
+            </div>
+          </div>
         </div>
       </Show>
 
