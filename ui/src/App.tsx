@@ -31,6 +31,8 @@ const AttributionExplorer = lazy(() => import("./pages/AttributionExplorer"));
 const BudgetSimulator = lazy(() => import("./pages/BudgetSimulator"));
 const ReportBuilder = lazy(() => import("./pages/ReportBuilder"));
 const AlertsCenter = lazy(() => import("./pages/AlertsCenter"));
+const Benchmarks = lazy(() => import("./pages/Benchmarks"));
+const Annotations = lazy(() => import("./pages/Annotations"));
 
 function AnalyticsGate(props: { children: JSX.Element }) {
   const { analyticsEnabled } = useAnalyticsMode();
@@ -191,6 +193,22 @@ export default function App() {
             )}
           />
           <Route path="/alerts" component={AlertsCenter} />
+          <Route
+            path="/benchmarks"
+            component={() => (
+              <AnalyticsGate>
+                <Benchmarks />
+              </AnalyticsGate>
+            )}
+          />
+          <Route
+            path="/annotations"
+            component={() => (
+              <AnalyticsGate>
+                <Annotations />
+              </AnalyticsGate>
+            )}
+          />
         </Router>
         <ToastContainer />
       </DateRangeProvider>
