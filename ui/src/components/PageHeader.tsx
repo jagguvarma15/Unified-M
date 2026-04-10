@@ -13,11 +13,13 @@ export default function PageHeader(props: PageHeaderProps) {
     <header class={PAGE_HEADER_MB[density()]}>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900 leading-tight">
             {props.title}
           </h1>
           <Show when={props.description}>
-            <p class="mt-1 text-sm text-slate-500">{props.description}</p>
+            <p class="mt-1.5 text-sm font-normal text-slate-500 leading-relaxed">
+              {props.description}
+            </p>
           </Show>
           <Show when={props.detail}>
             <p class="mt-1.5 text-xs text-slate-400">{props.detail}</p>
