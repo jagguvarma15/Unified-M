@@ -2,30 +2,73 @@ import { createSignal, onMount, Show } from "solid-js";
 import {
   LineChart,
   Line,
+  ScatterChart,
+  Scatter,
+  Cell,
+  ZAxis,
   XAxis,
   YAxis,
   Tooltip,
   Legend,
   CartesianGrid,
+  ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
 import ReactChart, { h } from "../lib/ReactChart";
 import EmptyState from "../components/EmptyState";
-import { api, type ResponseCurvesData } from "../lib/api";
+import {
+  api,
+  type ResponseCurvesData,
+  type ChannelInsightsData,
+} from "../lib/api";
 import { COLORS } from "../lib/colors";
 import { formatCompactNumber, formatSpendTick } from "../lib/chartFormat";
 import { trackEvent } from "../lib/telemetry";
 
+interface BubblePoint {
+  channel: string;
+  currentSpend: number;
+  marginalRoi: number;
+  contribution: number;
+  color: string;
+  quadrant: string;
+}
+
+function classifyQuadrant(
+  spend: number,
+  mRoi: number,
+  medianSpend: number,
+  medianRoi: number,
+): string {
+  if (mRoi >= medianRoi && spend < medianSpend) return "Grow";
+  if (mRoi >= medianRoi && spend >= medianSpend) return "Maintain";
+  if (mRoi < medianRoi && spend >= medianSpend) return "Reduce";
+  return "Review";
+}
+
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 export default function ResponseCurves() {
   const [data, setData] = createSignal<ResponseCurvesData | null>(null);
+  const [insights, setInsights] = createSignal<ChannelInsightsData | null>(
+    null,
+  );
   const [loading, setLoading] = createSignal(true);
 
   onMount(() => {
-    api
-      .responseCurves()
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.responseCurves().catch(() => null),
+      api.channelInsights().catch(() => null),
+    ]).then(([curves, ins]) => {
+      if (curves) setData(curves);
+      if (ins) setInsights(ins);
+      setLoading(false);
+    });
   });
 
   const channels = () => (data() ? Object.keys(data()!) : []);
@@ -55,6 +98,38 @@ export default function ResponseCurves() {
       if (hasSpend) rows.push(row);
     }
     return rows;
+  };
+
+  const bubbleData = (): BubblePoint[] => {
+    const ins = insights();
+    if (!ins?.channels?.length) return [];
+    const spends = ins.channels.map((c) => c.current_spend);
+    const rois = ins.channels.map((c) => c.marginal_roi);
+    const medSpend = median(spends);
+    const medRoi = median(rois);
+    // Use current_spend * marginal_roi as a contribution proxy
+    return ins.channels.map((c, i) => ({
+      channel: c.channel,
+      currentSpend: c.current_spend,
+      marginalRoi: c.marginal_roi,
+      contribution: c.current_spend * Math.max(c.marginal_roi, 0),
+      color: COLORS[i % COLORS.length],
+      quadrant: classifyQuadrant(
+        c.current_spend,
+        c.marginal_roi,
+        medSpend,
+        medRoi,
+      ),
+    }));
+  };
+
+  const bubbleMedians = () => {
+    const pts = bubbleData();
+    if (!pts.length) return { spend: 0, roi: 0 };
+    return {
+      spend: median(pts.map((p) => p.currentSpend)),
+      roi: median(pts.map((p) => p.marginalRoi)),
+    };
   };
 
   const hasMarginal = () =>
@@ -106,6 +181,172 @@ export default function ResponseCurves() {
           <p class="text-sm text-slate-500 mt-1">
             Saturation curves showing diminishing returns per channel
           </p>
+
+          {/* ---- Investment Efficiency Bubble Chart ---- */}
+          <Show when={bubbleData().length > 0}>
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
+              <h2 class="text-sm font-semibold text-slate-700 mb-1">
+                Investment Efficiency
+              </h2>
+              <p class="text-xs text-slate-500 mb-4">
+                Bubble size = estimated contribution. Quadrants show
+                under/over-investment.
+              </p>
+              <ReactChart>
+                {() => {
+                  const pts = bubbleData();
+                  const med = bubbleMedians();
+                  return h(
+                    ResponsiveContainer,
+                    { width: "100%", height: 420 },
+                    h(
+                      ScatterChart,
+                      {
+                        margin: {
+                          top: 30,
+                          right: 40,
+                          bottom: 20,
+                          left: 20,
+                        },
+                        onClick: () =>
+                          trackEvent("chart_interaction", {
+                            chart_id: "investment_efficiency_bubble",
+                            interaction: "click",
+                          }),
+                      },
+                      h(CartesianGrid, {
+                        strokeDasharray: "3 3",
+                        stroke: "#e2e8f0",
+                      }),
+                      h(XAxis, {
+                        type: "number",
+                        dataKey: "currentSpend",
+                        name: "Current Spend",
+                        tick: { fontSize: 12 },
+                        tickFormatter: (v: number) => formatSpendTick(v),
+                        label: {
+                          value: "Current Spend",
+                          position: "insideBottomRight",
+                          offset: -5,
+                          fontSize: 12,
+                        },
+                      }),
+                      h(YAxis, {
+                        type: "number",
+                        dataKey: "marginalRoi",
+                        name: "Marginal ROI",
+                        tick: { fontSize: 12 },
+                        tickFormatter: (v: number) => formatCompactNumber(v),
+                        label: {
+                          value: "Marginal ROI",
+                          angle: -90,
+                          position: "insideLeft",
+                          fontSize: 12,
+                        },
+                      }),
+                      h(ZAxis, {
+                        type: "number",
+                        dataKey: "contribution",
+                        range: [120, 900],
+                        name: "Contribution",
+                      }),
+                      h(Tooltip, {
+                        content: ({ payload }: any) => {
+                          if (!payload?.length) return null;
+                          const p = payload[0].payload as BubblePoint;
+                          return h(
+                            "div",
+                            {
+                              className:
+                                "bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-sm",
+                            },
+                            h(
+                              "p",
+                              { className: "font-semibold text-slate-900" },
+                              p.channel,
+                            ),
+                            h(
+                              "p",
+                              { className: "text-slate-600" },
+                              `Spend: $${p.currentSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                            ),
+                            h(
+                              "p",
+                              { className: "text-slate-600" },
+                              `Marginal ROI: ${p.marginalRoi.toFixed(2)}`,
+                            ),
+                            h(
+                              "p",
+                              { className: "text-slate-600" },
+                              `Contribution: $${p.contribution.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                            ),
+                            h(
+                              "p",
+                              {
+                                className: `font-medium mt-1 ${
+                                  p.quadrant === "Grow"
+                                    ? "text-emerald-600"
+                                    : p.quadrant === "Maintain"
+                                      ? "text-indigo-600"
+                                      : p.quadrant === "Reduce"
+                                        ? "text-amber-600"
+                                        : "text-slate-500"
+                                }`,
+                              },
+                              p.quadrant,
+                            ),
+                          );
+                        },
+                      }),
+                      // Quadrant dividers
+                      h(ReferenceLine, {
+                        x: med.spend,
+                        stroke: "#94a3b8",
+                        strokeDasharray: "4 4",
+                      }),
+                      h(ReferenceLine, {
+                        y: med.roi,
+                        stroke: "#94a3b8",
+                        strokeDasharray: "4 4",
+                      }),
+                      h(
+                        Scatter,
+                        { data: pts, name: "Channels" },
+                        ...pts.map((pt, i) =>
+                          h(Cell, {
+                            key: pt.channel,
+                            fill: pt.color,
+                            fillOpacity: 0.75,
+                            stroke: pt.color,
+                            strokeWidth: 1.5,
+                          }),
+                        ),
+                      ),
+                    ),
+                  );
+                }}
+              </ReactChart>
+              {/* Quadrant legend */}
+              <div class="flex flex-wrap gap-4 mt-3 text-xs text-slate-600 justify-center">
+                <span class="flex items-center gap-1">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  Top-left: Grow (high mROI, low spend)
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                  Top-right: Maintain
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  Bottom-right: Reduce (saturated)
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-400" />
+                  Bottom-left: Review
+                </span>
+              </div>
+            </div>
+          </Show>
 
           {/* ---- Response curves ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
