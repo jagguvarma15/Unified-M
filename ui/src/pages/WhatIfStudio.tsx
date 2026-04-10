@@ -344,7 +344,13 @@ export default function WhatIfStudio() {
     >
       <Show
         when={optData()}
-        fallback={<EmptyState title="No optimization data" hideQuickStart />}
+        fallback={
+          <EmptyState
+            title="No optimization data"
+            message="Run the pipeline and optimizer to start building what-if scenarios for your budget."
+            hideQuickStart
+          />
+        }
       >
         <div>
           {/* Header */}

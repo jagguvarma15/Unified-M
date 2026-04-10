@@ -87,7 +87,7 @@ export default function ChartCard(props: Props) {
         class={`flex flex-wrap items-start justify-between gap-3 ${CHART_HEADER_MB[density()]}`}
       >
         <div>
-          <h2 class="text-sm font-semibold tracking-tight text-slate-700">
+          <h2 class="text-sm font-medium tracking-tight text-slate-700">
             {props.title}
           </h2>
           <Show when={props.description}>
