@@ -16,6 +16,7 @@ import {
 import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
+import { OptimizationSkeleton } from "../components/Skeleton";
 import { COLORS } from "../lib/colors";
 import { useOptimizationQuery } from "../lib/queries";
 
@@ -64,11 +65,7 @@ export default function Optimization() {
   return (
     <Show
       when={!query.isLoading}
-      fallback={
-        <div class="flex items-center justify-center h-64">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-        </div>
-      }
+      fallback={<OptimizationSkeleton />}
     >
       <Show
         when={data()}

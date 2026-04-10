@@ -16,12 +16,13 @@ import {
 } from "recharts";
 import ReactChart, { h } from "../lib/ReactChart";
 import EmptyState from "../components/EmptyState";
+import { ResponseCurvesSkeleton } from "../components/Skeleton";
 import {
   api,
   type ResponseCurvesData,
   type ChannelInsightsData,
 } from "../lib/api";
-import { COLORS } from "../lib/colors";
+import { COLORS, channelColor } from "../lib/colors";
 import { formatCompactNumber, formatSpendTick } from "../lib/chartFormat";
 import { trackEvent } from "../lib/telemetry";
 
@@ -166,11 +167,7 @@ export default function ResponseCurves() {
   return (
     <Show
       when={!loading()}
-      fallback={
-        <div class="flex items-center justify-center h-64">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-        </div>
-      }
+      fallback={<ResponseCurvesSkeleton />}
     >
       <Show
         when={data() && Object.keys(data()!).length > 0}
@@ -414,7 +411,7 @@ export default function ResponseCurves() {
                         key: ch,
                         type: "monotone",
                         dataKey: ch,
-                        stroke: COLORS[i % COLORS.length],
+                        stroke: channelColor(ch, i),
                         strokeWidth: 2.5,
                         dot: false,
                         name: ch,
@@ -463,7 +460,7 @@ export default function ResponseCurves() {
                           key: ch,
                           type: "monotone",
                           dataKey: ch,
-                          stroke: COLORS[i % COLORS.length],
+                          stroke: channelColor(ch, i),
                           strokeWidth: 2,
                           dot: false,
                           name: ch,

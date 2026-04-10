@@ -197,7 +197,16 @@ export default function ScenarioPlanner() {
         </div>
       }
     >
-      <Show when={optData()} fallback={<EmptyState />}>
+      <Show
+        when={optData()}
+        fallback={
+          <EmptyState
+            title="No scenario data"
+            message="Run the pipeline first to start exploring budget allocation scenarios."
+            hideQuickStart
+          />
+        }
+      >
         {() => (
           <div>
             <div class="flex items-center justify-between">
