@@ -18,9 +18,16 @@ import {
   Zap,
   ArrowRight,
   Check,
+  Clock,
+  Target,
+  Sparkles,
+  AlertTriangle,
+  Globe,
+  Activity,
+  Building2,
 } from "../lib/icons";
 import PageHeader from "../components/PageHeader";
-import { api, type SavedConnector } from "../lib/api";
+import { api, type SavedConnector, type DataSourceStatus } from "../lib/api";
 import { useToast } from "../lib/toast";
 
 // ---------------------------------------------------------------------------
@@ -383,6 +390,95 @@ const STATUS_COLORS: Record<string, string> = {
   untested: "bg-slate-300",
 };
 
+// ---------------------------------------------------------------------------
+// Use-case Templates
+// ---------------------------------------------------------------------------
+
+interface UseCaseTemplate {
+  key: string;
+  label: string;
+  icon: any;
+  color: string;
+  description: string;
+  connectors: string[];
+  kpis: string[];
+  recommended: string[];
+}
+
+const USE_CASE_TEMPLATES: UseCaseTemplate[] = [
+  {
+    key: "dtc_ecommerce",
+    label: "DTC E-commerce",
+    icon: Globe,
+    color: "indigo",
+    description: "Online-first brands selling direct to consumer",
+    connectors: ["google_ads", "meta_ads", "shopify", "ga4"],
+    kpis: ["Revenue", "ROAS", "CAC"],
+    recommended: [
+      "media_spend",
+      "outcomes",
+      "controls",
+      "incrementality_tests",
+    ],
+  },
+  {
+    key: "b2b_saas",
+    label: "B2B SaaS",
+    icon: Target,
+    color: "violet",
+    description: "Software companies with longer sales cycles",
+    connectors: ["google_ads", "linkedin_ads", "salesforce", "ga4"],
+    kpis: ["Pipeline", "MQLs", "CAC"],
+    recommended: ["media_spend", "outcomes", "controls"],
+  },
+  {
+    key: "retail",
+    label: "Retail / Omnichannel",
+    icon: Building2,
+    color: "emerald",
+    description: "Physical + digital retail with multiple channels",
+    connectors: ["google_ads", "meta_ads", "ga4", "bigquery"],
+    kpis: ["Revenue", "Foot Traffic", "ROAS"],
+    recommended: [
+      "media_spend",
+      "outcomes",
+      "controls",
+      "attribution",
+      "incrementality_tests",
+    ],
+  },
+  {
+    key: "cpg",
+    label: "CPG / FMCG",
+    icon: Activity,
+    color: "amber",
+    description: "Consumer packaged goods with retail distribution",
+    connectors: ["meta_ads", "google_ads", "bigquery", "fred"],
+    kpis: ["Sales Volume", "Share of Voice", "Brand Lift"],
+    recommended: ["media_spend", "outcomes", "controls", "attribution"],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Recommended data inputs for completeness scoring
+// ---------------------------------------------------------------------------
+
+const RECOMMENDED_INPUTS: {
+  key: string;
+  label: string;
+  required: boolean;
+}[] = [
+  { key: "media_spend", label: "Media Spend", required: true },
+  { key: "outcomes", label: "Outcomes / KPI", required: true },
+  { key: "controls", label: "Control Variables", required: false },
+  {
+    key: "incrementality_tests",
+    label: "Incrementality Tests",
+    required: false,
+  },
+  { key: "attribution", label: "Attribution Data", required: false },
+];
+
 const DATA_TYPES = [
   "media_spend",
   "outcomes",
@@ -406,6 +502,37 @@ const MMM_FIELDS = [
 // Sub-components
 // ---------------------------------------------------------------------------
 
+function healthBadge(connector: SavedConnector) {
+  if (connector.status === "failed")
+    return {
+      label: "Error",
+      dotClass: "bg-red-500",
+      badgeClass: "bg-red-50 text-red-700 border-red-200",
+    };
+  if (connector.status === "connected") {
+    if (connector.last_tested) {
+      const age = Date.now() - new Date(connector.last_tested).getTime();
+      const STALE_MS = 24 * 60 * 60 * 1000; // 24 h
+      if (age > STALE_MS)
+        return {
+          label: "Stale",
+          dotClass: "bg-amber-500",
+          badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+    }
+    return {
+      label: "Live",
+      dotClass: "bg-emerald-500",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  }
+  return {
+    label: "Untested",
+    dotClass: "bg-slate-400",
+    badgeClass: "bg-slate-50 text-slate-600 border-slate-200",
+  };
+}
+
 function ConnectorCard(props: {
   connector: SavedConnector;
   onTest: () => void;
@@ -416,6 +543,7 @@ function ConnectorCard(props: {
     g.subtypes.some((s) => s.key === props.connector.subtype),
   );
   const Icon = group?.icon ?? Database;
+  const badge = () => healthBadge(props.connector);
 
   return (
     <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-3 hover:shadow-sm transition-shadow">
@@ -434,8 +562,11 @@ function ConnectorCard(props: {
           </div>
         </div>
         <span
-          class={`mt-1 h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[props.connector.status] ?? "bg-slate-300"}`}
-        />
+          class={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge().badgeClass}`}
+        >
+          <span class={`h-1.5 w-1.5 rounded-full ${badge().dotClass}`} />
+          {badge().label}
+        </span>
       </div>
 
       <Show when={props.connector.last_tested}>
@@ -477,6 +608,11 @@ export default function Datapoint() {
   const [loading, setLoading] = createSignal(true);
   const [showAdd, setShowAdd] = createSignal(false);
   const [showFetch, setShowFetch] = createSignal<string | null>(null);
+  const [dataStatus, setDataStatus] = createSignal<
+    Record<string, DataSourceStatus>
+  >({});
+  const [activeTemplate, setActiveTemplate] =
+    createSignal<UseCaseTemplate | null>(null);
   const { addToast } = useToast();
 
   // Add form — wizard steps
@@ -528,7 +664,13 @@ export default function Datapoint() {
       .finally(() => setLoading(false));
   };
 
-  onMount(refresh);
+  onMount(() => {
+    refresh();
+    api
+      .dataStatus()
+      .then((s) => setDataStatus(s as Record<string, DataSourceStatus>))
+      .catch(() => {});
+  });
 
   const openAddWizard = () => {
     setWizardStep(0);
@@ -638,6 +780,60 @@ export default function Datapoint() {
     }
   };
 
+  // Completeness scoring
+  const completenessInfo = () => {
+    const tpl = activeTemplate();
+    const inputs = tpl
+      ? RECOMMENDED_INPUTS.filter((i) => tpl.recommended.includes(i.key))
+      : RECOMMENDED_INPUTS;
+    const ds = dataStatus();
+    const filled = inputs.filter((i) => {
+      const src = ds[i.key];
+      return src && (src.exists || (src.n_rows ?? src.rows ?? 0) > 0);
+    });
+    const pct = inputs.length
+      ? Math.round((filled.length / inputs.length) * 100)
+      : 0;
+    const gaps = inputs.filter((i) => {
+      const src = ds[i.key];
+      return !src || (!src.exists && (src.n_rows ?? src.rows ?? 0) === 0);
+    });
+    return { pct, filled: filled.length, total: inputs.length, gaps };
+  };
+
+  // Data freshness rows
+  const freshnessRows = () => {
+    const ds = dataStatus();
+    return Object.entries(ds)
+      .filter(([, v]) => v && (v.exists || (v.n_rows ?? v.rows ?? 0) > 0))
+      .map(([key, v]) => ({
+        key,
+        rows: v.n_rows ?? v.rows ?? 0,
+        lastUpdated: v.last_updated ?? null,
+        sizeKb: v.size_bytes ? Math.round(v.size_bytes / 1024) : null,
+      }));
+  };
+
+  const applyTemplate = (tpl: UseCaseTemplate) => {
+    setActiveTemplate(tpl);
+    // Pre-select category for the first recommended connector
+    const firstConn = tpl.connectors[0];
+    const group = CONNECTOR_TYPES.find((g) =>
+      g.subtypes.some((s) => s.key === firstConn),
+    );
+    if (group) {
+      setSelectedCategory(group.category);
+      const sub = group.subtypes.find((s) => s.key === firstConn);
+      if (sub) {
+        selectSubtype(group, sub);
+        setShowAdd(true);
+        return;
+      }
+    }
+    // Fallback: open the wizard
+    openAddWizard();
+  };
+
   const filteredSubtypes = () => {
     if (!selectedCategory()) return [];
     if (selectedCategory() === "File Upload") return [];
@@ -650,6 +846,219 @@ export default function Datapoint() {
         title="Connections"
         description="Manage data source connections — ad platforms, analytics, warehouses, and more"
       />
+
+      {/* ---- Use-case Templates ---- */}
+      <div class="mb-6">
+        <h2 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
+          <Sparkles size={14} /> Quick Start Templates
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <For each={USE_CASE_TEMPLATES}>
+            {(tpl) => {
+              const Icon = tpl.icon;
+              const isActive = () => activeTemplate()?.key === tpl.key;
+              return (
+                <button
+                  onClick={() => applyTemplate(tpl)}
+                  class={`relative rounded-lg border p-4 text-left transition-all ${
+                    isActive()
+                      ? "border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200"
+                      : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30"
+                  }`}
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <div
+                      class={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                        tpl.color === "indigo"
+                          ? "bg-indigo-100 text-indigo-600"
+                          : tpl.color === "violet"
+                            ? "bg-violet-100 text-violet-600"
+                            : tpl.color === "emerald"
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-amber-100 text-amber-600"
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </div>
+                    <span class="text-sm font-semibold text-slate-900">
+                      {tpl.label}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-500 mb-2">{tpl.description}</p>
+                  <div class="flex flex-wrap gap-1">
+                    <For each={tpl.kpis}>
+                      {(k) => (
+                        <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                          {k}
+                        </span>
+                      )}
+                    </For>
+                  </div>
+                  <Show when={isActive()}>
+                    <span class="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
+                      <Check size={12} />
+                    </span>
+                  </Show>
+                </button>
+              );
+            }}
+          </For>
+        </div>
+      </div>
+
+      {/* ---- Completeness Score + Data Freshness ---- */}
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Completeness Score */}
+        <div class="rounded-lg border border-slate-200 bg-white p-5">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
+            <Target size={14} /> Data Completeness
+          </h3>
+          <div class="flex items-center gap-4 mb-3">
+            <div class="relative h-16 w-16 shrink-0">
+              <svg class="h-16 w-16 -rotate-90" viewBox="0 0 36 36">
+                <path
+                  d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#e2e8f0"
+                  stroke-width="3"
+                />
+                <path
+                  d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke={
+                    completenessInfo().pct >= 80
+                      ? "#10b981"
+                      : completenessInfo().pct >= 50
+                        ? "#f59e0b"
+                        : "#ef4444"
+                  }
+                  stroke-width="3"
+                  stroke-dasharray={`${completenessInfo().pct}, 100`}
+                  stroke-linecap="round"
+                />
+              </svg>
+              <span class="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-900">
+                {completenessInfo().pct}%
+              </span>
+            </div>
+            <div>
+              <p class="text-sm text-slate-700">
+                Your model has{" "}
+                <span class="font-semibold">{completenessInfo().pct}%</span> of
+                recommended data inputs
+              </p>
+              <p class="text-xs text-slate-500 mt-0.5">
+                {completenessInfo().filled} of {completenessInfo().total}{" "}
+                sources connected
+              </p>
+            </div>
+          </div>
+          <Show when={completenessInfo().gaps.length > 0}>
+            <div class="space-y-1.5">
+              <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                Missing
+              </p>
+              <For each={completenessInfo().gaps}>
+                {(gap) => (
+                  <div class="flex items-center gap-2 text-xs">
+                    <span
+                      class={`h-1.5 w-1.5 rounded-full ${gap.required ? "bg-red-400" : "bg-amber-400"}`}
+                    />
+                    <span class="text-slate-700">{gap.label}</span>
+                    <span class="text-slate-400">
+                      {gap.required ? "(required)" : "(recommended)"}
+                    </span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+        </div>
+
+        {/* Data Freshness */}
+        <div class="rounded-lg border border-slate-200 bg-white p-5">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
+            <Clock size={14} /> Data Freshness
+          </h3>
+          <Show
+            when={freshnessRows().length > 0}
+            fallback={
+              <p class="text-xs text-slate-500">
+                No data sources loaded yet. Upload data or connect a source to
+                see freshness info.
+              </p>
+            }
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="border-b border-slate-100 text-left text-slate-500">
+                    <th class="pb-2 pr-4 font-medium">Source</th>
+                    <th class="pb-2 pr-4 font-medium text-right">Rows</th>
+                    <th class="pb-2 pr-4 font-medium text-right">Size</th>
+                    <th class="pb-2 font-medium">Last Synced</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For each={freshnessRows()}>
+                    {(row) => {
+                      const stale = () => {
+                        if (!row.lastUpdated) return false;
+                        return (
+                          Date.now() - new Date(row.lastUpdated).getTime() >
+                          24 * 60 * 60 * 1000
+                        );
+                      };
+                      return (
+                        <tr class="border-b border-slate-50">
+                          <td class="py-2 pr-4 font-medium text-slate-700">
+                            {row.key}
+                          </td>
+                          <td class="py-2 pr-4 text-right text-slate-600">
+                            {row.rows.toLocaleString()}
+                          </td>
+                          <td class="py-2 pr-4 text-right text-slate-600">
+                            {row.sizeKb != null
+                              ? `${row.sizeKb.toLocaleString()} KB`
+                              : "—"}
+                          </td>
+                          <td class="py-2">
+                            <Show
+                              when={row.lastUpdated}
+                              fallback={<span class="text-slate-400">—</span>}
+                            >
+                              <span
+                                class={`inline-flex items-center gap-1 ${stale() ? "text-amber-600" : "text-slate-600"}`}
+                              >
+                                <Show when={stale()}>
+                                  <AlertTriangle size={10} />
+                                </Show>
+                                {new Date(row.lastUpdated!).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
+                              </span>
+                            </Show>
+                          </td>
+                        </tr>
+                      );
+                    }}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </Show>
+        </div>
+      </div>
 
       {/* Quick file upload strip */}
       <div class="rounded-lg border border-slate-200 bg-white p-4 flex flex-wrap items-end gap-4">
