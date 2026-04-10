@@ -25,3 +25,8 @@ body {
   outline: 2px solid theme("colors.indigo.500");
   outline-offset: 2px;
 }
+
+/* Safe-area padding for mobile bottom tab bar (notched devices) */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

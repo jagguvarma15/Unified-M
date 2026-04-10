@@ -67,7 +67,7 @@ export default function TopNavbar(props: Props) {
       {/* Run Pipeline */}
       <button
         onClick={props.onRunPipeline}
-        class="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 shrink-0"
+        class="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 active:bg-teal-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 shrink-0"
         aria-label="Run Pipeline"
       >
         {Play({ size: 13 })}

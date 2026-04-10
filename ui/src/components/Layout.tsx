@@ -115,6 +115,14 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+const MOBILE_TAB_NAV: NavItem[] = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/optimization", label: "Optimize", icon: Target },
+  { to: "/what-if", label: "Scenarios", icon: Calculator },
+  { to: "/alerts", label: "Alerts", icon: Bell },
+  { to: "/settings", label: "Settings", icon: Settings },
+];
+
 const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
 
 export default function Layout(props: { children?: JSX.Element }) {
@@ -187,9 +195,9 @@ export default function Layout(props: { children?: JSX.Element }) {
 
       {/* ── Body: Sidebar + Main ── */}
       <div class="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar — hidden on mobile, visible md+ */}
         <aside
-          class={`flex-shrink-0 flex flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50 transition-all duration-200 ${sc() ? "w-[52px]" : "w-60"}`}
+          class={`hidden md:flex flex-shrink-0 flex-col bg-slate-900 text-slate-200 ring-1 ring-slate-800/50 transition-all duration-200 ${sc() ? "w-[52px]" : "w-60"}`}
         >
           <nav
             class={`flex-1 overflow-y-auto py-3 space-y-0.5 ${sc() ? "px-1.5" : "px-2.5"}`}
@@ -386,7 +394,7 @@ export default function Layout(props: { children?: JSX.Element }) {
 
         {/* Main content */}
         <main class="flex-1 overflow-auto">
-          <div class="mx-auto max-w-7xl px-6 py-6 min-h-[400px]">
+          <div class="mx-auto max-w-7xl px-4 py-4 md:px-6 md:py-6 pb-20 md:pb-6 min-h-[400px]">
             <Suspense
               fallback={
                 <div class="flex items-center justify-center h-64">
@@ -403,6 +411,26 @@ export default function Layout(props: { children?: JSX.Element }) {
           </div>
         </main>
       </div>
+
+      {/* ── Mobile Bottom Tab Bar (visible below md) ── */}
+      <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm safe-area-pb">
+        <div class="flex items-stretch justify-around">
+          <For each={MOBILE_TAB_NAV}>
+            {(item) => (
+              <A
+                href={item.to}
+                end={item.to === "/"}
+                activeClass="text-indigo-600"
+                inactiveClass="text-slate-400"
+                class="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors"
+              >
+                {item.icon({ size: 20, class: "shrink-0" })}
+                {item.label}
+              </A>
+            )}
+          </For>
+        </div>
+      </nav>
 
       {/* Pipeline Runner slide-out */}
       <PipelineRunner
