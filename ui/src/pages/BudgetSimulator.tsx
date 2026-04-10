@@ -193,7 +193,7 @@ export default function BudgetSimulator() {
           {/* Total budget slider */}
           <div class="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 mb-6">
             <div class="flex items-center justify-between mb-3">
-              <h2 class="text-sm font-semibold text-slate-700">
+              <h2 class="text-sm font-medium text-slate-700">
                 Total Budget Multiplier
               </h2>
               <span class="text-lg font-bold tabular-nums text-indigo-600">
@@ -220,7 +220,7 @@ export default function BudgetSimulator() {
 
           {/* Per-channel sliders */}
           <div class="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 mb-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">
+            <h2 class="text-sm font-medium text-slate-700 mb-4">
               Channel-Level Adjustments
             </h2>
             <div class="space-y-4">

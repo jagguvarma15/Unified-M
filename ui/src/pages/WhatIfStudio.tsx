@@ -258,12 +258,14 @@ export default function WhatIfStudio() {
   };
 
   const canAdvance = () => {
-    if (step() === 0) return dateStart() && dateEnd() && dateStart() < dateEnd();
+    if (step() === 0)
+      return dateStart() && dateEnd() && dateStart() < dateEnd();
     return true;
   };
 
   const handleSaveScenario = () => {
-    const name = scenarioName().trim() || `Scenario ${savedScenarios().length + 1}`;
+    const name =
+      scenarioName().trim() || `Scenario ${savedScenarios().length + 1}`;
     const saved = saveScenario({
       name,
       dateRange: { start: dateStart(), end: dateEnd() },
@@ -379,7 +381,7 @@ export default function WhatIfStudio() {
           {/* Saved Scenarios Panel */}
           <Show when={showSaved()}>
             <div class="bg-white rounded-xl border border-slate-200/60 shadow-sm p-5 mb-6">
-              <h3 class="text-sm font-semibold text-slate-700 mb-3">
+              <h3 class="text-sm font-medium text-slate-700 mb-3">
                 Saved Scenarios
               </h3>
               <Show
@@ -526,8 +528,16 @@ export default function WhatIfStudio() {
                     { label: "Q2", start: "2025-04-01", end: "2025-06-30" },
                     { label: "Q3", start: "2025-07-01", end: "2025-09-30" },
                     { label: "Q4", start: "2025-10-01", end: "2025-12-31" },
-                    { label: "Full Year", start: "2025-01-01", end: "2025-12-31" },
-                    { label: "Last 90 Days", start: "2025-07-12", end: "2025-10-09" },
+                    {
+                      label: "Full Year",
+                      start: "2025-01-01",
+                      end: "2025-12-31",
+                    },
+                    {
+                      label: "Last 90 Days",
+                      start: "2025-07-12",
+                      end: "2025-10-09",
+                    },
                   ].map((p) => (
                     <button
                       onClick={() => {
@@ -545,7 +555,9 @@ export default function WhatIfStudio() {
                   ))}
                 </div>
 
-                <Show when={dateStart() && dateEnd() && dateStart() >= dateEnd()}>
+                <Show
+                  when={dateStart() && dateEnd() && dateStart() >= dateEnd()}
+                >
                   <p class="mt-3 text-sm text-red-500">
                     Start date must be before end date
                   </p>
@@ -645,10 +657,7 @@ export default function WhatIfStudio() {
                     <div class="flex items-center justify-between text-sm mt-1">
                       <span class="text-slate-500">Simulated budget:</span>
                       <span class="font-bold text-indigo-600 tabular-nums">
-                        {formatCurrency(
-                          baseBudget() * totalBudgetMult(),
-                          true,
-                        )}
+                        {formatCurrency(baseBudget() * totalBudgetMult(), true)}
                       </span>
                     </div>
                   </div>
@@ -840,7 +849,7 @@ export default function WhatIfStudio() {
               {/* Before/After Comparison Table */}
               <div class="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-sm font-semibold text-slate-700">
+                  <h3 class="text-sm font-medium text-slate-700">
                     Current vs. Optimized Comparison
                   </h3>
                   <button
@@ -1104,7 +1113,7 @@ export default function WhatIfStudio() {
 
               {/* Save / Share actions */}
               <div class="bg-white rounded-xl border border-slate-200/60 shadow-sm p-6">
-                <h3 class="text-sm font-semibold text-slate-700 mb-4">
+                <h3 class="text-sm font-medium text-slate-700 mb-4">
                   Save & Share
                 </h3>
                 <div class="flex items-end gap-3">
@@ -1141,10 +1150,7 @@ export default function WhatIfStudio() {
 
           {/* Navigation buttons */}
           <div class="flex items-center justify-between mt-6">
-            <Show
-              when={step() > 0}
-              fallback={<div />}
-            >
+            <Show when={step() > 0} fallback={<div />}>
               <button
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
                 class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"

@@ -379,7 +379,7 @@ export default function AttributionExplorer() {
 
           {/* Top paths table */}
           <div class="mt-6 bg-white rounded-xl border border-slate-200/60 shadow-sm p-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">
+            <h2 class="text-sm font-medium text-slate-700 mb-4">
               Top Contributing Channels
             </h2>
             <div class="overflow-x-auto">

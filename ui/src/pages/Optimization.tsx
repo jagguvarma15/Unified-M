@@ -86,7 +86,7 @@ export default function Optimization() {
             </div>
             <a
               href="/scenarios"
-              class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm"
+              class="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors text-sm"
             >
               <Zap size={16} />
               Scenario Planner

@@ -165,7 +165,7 @@ export default function Diagnostics() {
 
               {/* Actual vs Predicted timeline */}
               <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-                <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                <h2 class="text-sm font-medium text-slate-700 mb-4">
                   Actual vs Predicted Over Time
                 </h2>
                 <ReactChart>
@@ -228,7 +228,7 @@ export default function Diagnostics() {
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 {/* Actual vs Predicted scatter */}
                 <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-                  <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                  <h2 class="text-sm font-medium text-slate-700 mb-4">
                     Actual vs Predicted (Scatter)
                   </h2>
                   <ReactChart>
@@ -301,7 +301,7 @@ export default function Diagnostics() {
 
                 {/* Residuals over time */}
                 <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-                  <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                  <h2 class="text-sm font-medium text-slate-700 mb-4">
                     Residuals Over Time
                   </h2>
                   <ReactChart>
@@ -363,7 +363,7 @@ export default function Diagnostics() {
 
               {/* Residual histogram */}
               <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-                <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                <h2 class="text-sm font-medium text-slate-700 mb-4">
                   Residual Distribution
                 </h2>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -404,7 +404,7 @@ export default function Diagnostics() {
                     </ReactChart>
                   </div>
                   <div class="space-y-3">
-                    <h3 class="text-sm font-semibold text-slate-700">
+                    <h3 class="text-sm font-medium text-slate-700">
                       Residual Statistics
                     </h3>
                     <div class="space-y-2 text-sm">

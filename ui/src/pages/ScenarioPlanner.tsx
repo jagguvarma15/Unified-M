@@ -263,7 +263,7 @@ export default function ScenarioPlanner() {
                 <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
                   <div class="flex items-center justify-between mb-5">
                     <div>
-                      <h2 class="text-sm font-semibold text-slate-700">
+                      <h2 class="text-sm font-medium text-slate-700">
                         {as_().name} — Budget Allocation
                       </h2>
                       <p class="text-xs text-slate-500 mt-0.5">
@@ -357,7 +357,7 @@ export default function ScenarioPlanner() {
 
             {/* Scenario comparison chart */}
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-              <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              <h2 class="text-sm font-medium text-slate-700 mb-4">
                 Scenario Comparison by Channel
               </h2>
               <ReactChart>
@@ -400,7 +400,7 @@ export default function ScenarioPlanner() {
 
             {/* Scenario summary table */}
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-              <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              <h2 class="text-sm font-medium text-slate-700 mb-4">
                 Scenario Summary
               </h2>
               <div class="overflow-x-auto">
@@ -495,7 +495,7 @@ export default function ScenarioPlanner() {
             {/* Efficiency frontier */}
             <Show when={efficiencyData().length > 0}>
               <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-                <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                <h2 class="text-sm font-medium text-slate-700 mb-4">
                   Budget Efficiency Frontier
                 </h2>
                 <p class="text-xs text-slate-500 mb-4">

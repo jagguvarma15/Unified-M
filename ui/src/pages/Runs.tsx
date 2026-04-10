@@ -423,7 +423,7 @@ function ComparisonPanel(props: {
         {/* Side-by-side metrics with delta */}
         <Show when={metricsA && metricsB}>
           <div>
-            <h3 class="text-sm font-semibold text-slate-700 mb-3">
+            <h3 class="text-sm font-medium text-slate-700 mb-3">
               Metrics Side-by-Side
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -478,7 +478,7 @@ function ComparisonPanel(props: {
         {/* Coefficient change chart */}
         <Show when={coeffDiff.length > 0}>
           <div>
-            <h3 class="text-sm font-semibold text-slate-700 mb-3">
+            <h3 class="text-sm font-medium text-slate-700 mb-3">
               Coefficient Change (B - A)
             </h3>
             <ReactChart>
@@ -538,7 +538,7 @@ function ComparisonPanel(props: {
         {/* Allocation overlay chart */}
         <Show when={allocOverlay.length > 0}>
           <div>
-            <h3 class="text-sm font-semibold text-slate-700 mb-3">
+            <h3 class="text-sm font-medium text-slate-700 mb-3">
               Allocation Overlay
             </h3>
             <ReactChart>
@@ -606,7 +606,7 @@ function ComparisonPanel(props: {
         {/* Allocation detail table */}
         <Show when={allocDiffRows.length > 0}>
           <div>
-            <h3 class="text-sm font-semibold text-slate-700 mb-3">
+            <h3 class="text-sm font-medium text-slate-700 mb-3">
               Allocation Detail
             </h3>
             <div class="overflow-x-auto rounded-lg border border-slate-200">
@@ -666,7 +666,7 @@ function ComparisonPanel(props: {
         {/* Contribution shift */}
         <Show when={Object.keys(contributionDiff).length > 0}>
           <div>
-            <h3 class="text-sm font-semibold text-slate-700 mb-3">
+            <h3 class="text-sm font-medium text-slate-700 mb-3">
               Contribution Shift (B - A)
             </h3>
             <div class="overflow-x-auto rounded-lg border border-slate-200">

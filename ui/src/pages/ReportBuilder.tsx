@@ -243,7 +243,7 @@ export default function ReportBuilder() {
                       >
                         {blockTypeLabel(block.type)}
                       </span>
-                      <span class="text-sm font-semibold text-slate-700">
+                      <span class="text-sm font-medium text-slate-700">
                         {block.title}
                       </span>
                     </div>
@@ -310,7 +310,7 @@ export default function ReportBuilder() {
         {/* Properties panel */}
         <div class="w-72 shrink-0">
           <div class="sticky top-20 rounded-xl border border-slate-200 bg-white shadow-sm p-4 space-y-4">
-            <h3 class="text-sm font-semibold text-slate-700">Properties</h3>
+            <h3 class="text-sm font-medium text-slate-700">Properties</h3>
             <Show
               when={
                 selectedBlock() &&

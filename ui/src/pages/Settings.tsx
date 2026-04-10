@@ -188,7 +188,7 @@ function ProfileTab() {
     <div class="space-y-6 max-w-2xl">
       {/* Avatar + identity */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
           {User({ size: 15, class: "text-slate-400" })}
           Personal Information
         </h2>
@@ -298,7 +298,7 @@ function ProfileTab() {
 
       {/* Change password */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
           {Lock({ size: 15, class: "text-slate-400" })}
           Change Password
         </h2>
@@ -355,7 +355,7 @@ function ProfileTab() {
 
       {/* API token */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
           {Key({ size: 15, class: "text-slate-400" })}
           Personal API Token
         </h2>
@@ -423,7 +423,7 @@ function WorkspaceTab() {
     <div class="space-y-6 max-w-2xl">
       {/* Organization */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
           {Building2({ size: 15, class: "text-slate-400" })}
           Organization
         </h2>
@@ -455,7 +455,7 @@ function WorkspaceTab() {
 
       {/* Reporting defaults */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
           {Globe({ size: 15, class: "text-slate-400" })}
           Reporting Defaults
         </h2>
@@ -584,7 +584,7 @@ function NotificationsTab() {
     <div class="space-y-6 max-w-2xl">
       {/* Email digest */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
           {Mail({ size: 15, class: "text-slate-400" })}
           Email Notifications
         </h2>
@@ -635,7 +635,7 @@ function NotificationsTab() {
 
       {/* Event notifications */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-5 flex items-center gap-2">
           {Bell({ size: 15, class: "text-slate-400" })}
           Event Triggers
         </h2>
@@ -679,7 +679,7 @@ function NotificationsTab() {
 
       {/* Slack */}
       <div class="bg-white rounded-xl border border-slate-200/70 shadow-sm p-6">
-        <h2 class="text-sm font-semibold text-slate-700 mb-1">
+        <h2 class="text-sm font-medium text-slate-700 mb-1">
           Slack Integration
         </h2>
         <p class="text-xs text-slate-500 mb-5">
@@ -748,7 +748,7 @@ function AdaptersTab({ adapters }: { adapters: AdaptersData | null }) {
     <div class="space-y-6">
       {/* Model Backends */}
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-4 flex items-center gap-2">
           {Blocks({ size: 16, class: "text-slate-400" })}
           Model Backends
         </h2>
@@ -793,7 +793,7 @@ function AdaptersTab({ adapters }: { adapters: AdaptersData | null }) {
 
       {/* Connectors */}
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4">
+        <h2 class="text-sm font-medium text-slate-700 mb-4">
           Supported Connectors
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -842,7 +842,7 @@ function AdaptersTab({ adapters }: { adapters: AdaptersData | null }) {
       {/* Cache */}
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <h2 class="text-sm font-medium text-slate-700 flex items-center gap-2">
             {Cpu({ size: 16, class: "text-slate-400" })}
             Cache Backend
           </h2>
@@ -881,7 +881,7 @@ function SystemTab({ health }: { health: HealthData | null }) {
     <div class="space-y-6">
       {/* API status */}
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-4 flex items-center gap-2">
           {Server({ size: 16, class: "text-slate-400" })}
           API Server Status
         </h2>
@@ -917,7 +917,7 @@ function SystemTab({ health }: { health: HealthData | null }) {
       {/* Endpoints */}
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <h2 class="text-sm font-medium text-slate-700 flex items-center gap-2">
             {Cpu({ size: 16, class: "text-slate-400" })}
             API Endpoints
           </h2>
@@ -1018,7 +1018,7 @@ function SystemTab({ health }: { health: HealthData | null }) {
 
       {/* Platform info */}
       <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-        <h2 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+        <h2 class="text-sm font-medium text-slate-700 mb-4 flex items-center gap-2">
           {HardDrive({ size: 16, class: "text-slate-400" })}
           Platform Info
         </h2>

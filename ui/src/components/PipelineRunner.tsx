@@ -299,7 +299,7 @@ export default function PipelineRunner(props: Props) {
                 <button
                   onClick={startPipeline}
                   disabled={starting()}
-                  class="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+                  class="w-full flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 transition-colors"
                 >
                   <Show when={starting()} fallback={<Play size={16} />}>
                     <Loader2 size={16} class="animate-spin" />

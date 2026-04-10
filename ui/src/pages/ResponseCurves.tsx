@@ -185,7 +185,7 @@ export default function ResponseCurves() {
           {/* ---- Investment Efficiency Bubble Chart ---- */}
           <Show when={bubbleData().length > 0}>
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-              <h2 class="text-sm font-semibold text-slate-700 mb-1">
+              <h2 class="text-sm font-medium text-slate-700 mb-1">
                 Investment Efficiency
               </h2>
               <p class="text-xs text-slate-500 mb-4">
@@ -350,7 +350,7 @@ export default function ResponseCurves() {
 
           {/* ---- Response curves ---- */}
           <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-4">
+            <h2 class="text-sm font-medium text-slate-700 mb-4">
               Response vs Spend (all channels)
             </h2>
             <ReactChart>
@@ -423,7 +423,7 @@ export default function ResponseCurves() {
           {/* ---- Marginal response ---- */}
           <Show when={hasMarginal() && marginalRows().length > 0}>
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-              <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              <h2 class="text-sm font-medium text-slate-700 mb-4">
                 Marginal Response (per additional dollar)
               </h2>
               <ReactChart>
