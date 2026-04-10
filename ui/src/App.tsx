@@ -20,6 +20,7 @@ const Runs = lazy(() => import("./pages/Runs"));
 const Diagnostics = lazy(() => import("./pages/Diagnostics"));
 const ROASAnalysis = lazy(() => import("./pages/ROASAnalysis"));
 const ScenarioPlanner = lazy(() => import("./pages/ScenarioPlanner"));
+const WhatIfStudio = lazy(() => import("./pages/WhatIfStudio"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Datapoint = lazy(() => import("./pages/Datapoint"));
 const ChannelInsights = lazy(() => import("./pages/ChannelInsights"));
@@ -110,10 +111,18 @@ export default function App() {
             )}
           />
           <Route
+            path="/what-if"
+            component={() => (
+              <AnalyticsGate>
+                <WhatIfStudio />
+              </AnalyticsGate>
+            )}
+          />
+          <Route
             path="/scenarios"
             component={() => (
               <AnalyticsGate>
-                <ScenarioPlanner />
+                <WhatIfStudio />
               </AnalyticsGate>
             )}
           />
@@ -180,7 +189,7 @@ export default function App() {
             path="/budget-simulator"
             component={() => (
               <AnalyticsGate>
-                <BudgetSimulator />
+                <WhatIfStudio />
               </AnalyticsGate>
             )}
           />
