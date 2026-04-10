@@ -63,10 +63,7 @@ export default function Optimization() {
     });
 
   return (
-    <Show
-      when={!query.isLoading}
-      fallback={<OptimizationSkeleton />}
-    >
+    <Show when={!query.isLoading} fallback={<OptimizationSkeleton />}>
       <Show
         when={data()}
         fallback={

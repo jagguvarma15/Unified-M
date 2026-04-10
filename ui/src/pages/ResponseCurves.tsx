@@ -165,10 +165,7 @@ export default function ResponseCurves() {
   };
 
   return (
-    <Show
-      when={!loading()}
-      fallback={<ResponseCurvesSkeleton />}
-    >
+    <Show when={!loading()} fallback={<ResponseCurvesSkeleton />}>
       <Show
         when={data() && Object.keys(data()!).length > 0}
         fallback={

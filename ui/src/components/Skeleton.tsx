@@ -26,7 +26,10 @@ export function ChartCardSkeleton(props: { height?: number }) {
     <div class="rounded-xl border border-slate-200/60 bg-white p-6">
       <Skeleton class="h-4 w-40 mb-2" />
       <Skeleton class="h-3 w-56 mb-4" />
-      <Skeleton class={`w-full rounded-lg`} style={{ height: `${props.height ?? 300}px` }} />
+      <Skeleton
+        class={`w-full rounded-lg`}
+        style={{ height: `${props.height ?? 300}px` }}
+      />
     </div>
   );
 }
