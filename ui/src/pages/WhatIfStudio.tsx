@@ -45,6 +45,7 @@ import {
   saveScenario,
   removeScenario,
   encodeScenarioUrl,
+  decodeScenarioUrl,
   type SavedScenario,
 } from "../lib/scenarioStore";
 
@@ -102,7 +103,6 @@ export default function WhatIfStudio() {
     const shared = params.get("shared");
     if (shared) {
       try {
-        const { decodeScenarioUrl } = require("../lib/scenarioStore");
         const decoded = decodeScenarioUrl(shared);
         if (decoded) {
           if (decoded.dateRange) {

@@ -26,7 +26,6 @@ import {
   PanelLeftOpen,
   Bell,
   MapIcon,
-  SlidersHorizontal,
   GripVertical,
   Award,
   Milestone,
@@ -78,12 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Plan",
     items: [
       { to: "/optimization", label: "Budget Optimizer", icon: Target },
-      { to: "/scenarios", label: "Scenario Planner", icon: Calculator },
-      {
-        to: "/budget-simulator",
-        label: "Budget Simulator",
-        icon: SlidersHorizontal,
-      },
+      { to: "/what-if", label: "What-If Studio", icon: Calculator },
       { to: "/spend-pacing", label: "Spend Pacing", icon: Gauge },
     ],
   },
