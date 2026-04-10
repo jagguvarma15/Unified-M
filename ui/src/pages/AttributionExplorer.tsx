@@ -14,7 +14,12 @@ import PageHeader from "../components/PageHeader";
 import ChartCard from "../components/ChartCard";
 import EmptyState from "../components/EmptyState";
 import { api, type ContributionsData, type ROASData } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
+import {
+  COLORS,
+  CHART_GRID,
+  CHART_TOOLTIP_BG,
+  channelColor,
+} from "../lib/colors";
 import { formatCompactNumber } from "../lib/chartFormat";
 
 interface TouchpointNode {
@@ -264,7 +269,7 @@ export default function AttributionExplorer() {
                                 class="h-full rounded-md transition-all"
                                 style={{
                                   width: `${pct}%`,
-                                  background: COLORS[i() % COLORS.length],
+                                  background: channelColor(t.channel, i()),
                                 }}
                               />
                             </div>
@@ -419,7 +424,7 @@ export default function AttributionExplorer() {
                             <span
                               class="w-3 h-3 rounded-full shrink-0"
                               style={{
-                                background: COLORS[i() % COLORS.length],
+                                background: channelColor(t.channel, i()),
                               }}
                             />
                             <span class="font-medium text-slate-900">
@@ -441,7 +446,7 @@ export default function AttributionExplorer() {
                                 class="h-full rounded-full"
                                 style={{
                                   width: `${pct}%`,
-                                  background: COLORS[i() % COLORS.length],
+                                  background: channelColor(t.channel, i()),
                                 }}
                               />
                             </div>

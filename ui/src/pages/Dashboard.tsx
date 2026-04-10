@@ -26,7 +26,7 @@ import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
-import { MetricCardSkeleton } from "../components/Skeleton";
+import { DashboardSkeleton } from "../components/Skeleton";
 import ChannelDetailPanel from "../components/ChannelDetailPanel";
 import {
   type ContributionsData,
@@ -37,7 +37,12 @@ import {
   type DiagnosticsData,
   type ROASData,
 } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
+import {
+  COLORS,
+  CHART_GRID,
+  CHART_TOOLTIP_BG,
+  channelColor,
+} from "../lib/colors";
 import { formatCurrency, formatPercent, formatROAS } from "../lib/format";
 import ChartCard from "../components/ChartCard";
 import { api } from "../lib/api";
@@ -138,7 +143,9 @@ export default function Dashboard() {
       totalDrift += Math.abs(current - optimal);
     }
     if (totalOptimal <= 0) return null;
-    return Math.round(Math.max(0, Math.min(100, (1 - totalDrift / totalOptimal) * 100)));
+    return Math.round(
+      Math.max(0, Math.min(100, (1 - totalDrift / totalOptimal) * 100)),
+    );
   });
 
   // AI Insights — top recommendations derived from optimizer + ROAS data
@@ -152,7 +159,9 @@ export default function Dashboard() {
         channel: ch.replace(/_spend$/, ""),
         current: opt.current_allocation![ch] ?? 0,
         optimal: opt.optimal_allocation![ch] ?? 0,
-        delta: (opt.optimal_allocation![ch] ?? 0) - (opt.current_allocation![ch] ?? 0),
+        delta:
+          (opt.optimal_allocation![ch] ?? 0) -
+          (opt.current_allocation![ch] ?? 0),
       }));
       const sorted = [...changes].sort((a, b) => b.delta - a.delta);
       const topIncrease = sorted[0];
@@ -226,23 +235,7 @@ export default function Dashboard() {
   };
 
   return (
-    <Show
-      when={!loading()}
-      fallback={
-        <div>
-          <PageHeader
-            title="Dashboard"
-            description="Unified Marketing Measurement overview"
-          />
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <For each={[0, 1, 2, 3, 4, 5]}>{() => <MetricCardSkeleton />}</For>
-          </div>
-          <div class="mt-6 flex items-center justify-center h-48 rounded-xl border border-slate-200/60 bg-white/50">
-            <div class="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-indigo-500" />
-          </div>
-        </div>
-      }
-    >
+    <Show when={!loading()} fallback={<DashboardSkeleton />}>
       <Show
         when={latestRun()}
         fallback={
@@ -277,12 +270,29 @@ export default function Dashboard() {
           const modelHealth = () => {
             const r2 = metrics?.r_squared;
             const mape = metrics?.mape;
-            if (r2 == null) return { label: "Unknown", dot: "bg-slate-400", ring: "shadow-slate-100" };
+            if (r2 == null)
+              return {
+                label: "Unknown",
+                dot: "bg-slate-400",
+                ring: "shadow-slate-100",
+              };
             if (r2 >= 0.8 && (mape == null || mape <= 10))
-              return { label: "Healthy", dot: "bg-emerald-400", ring: "shadow-emerald-100" };
+              return {
+                label: "Healthy",
+                dot: "bg-emerald-400",
+                ring: "shadow-emerald-100",
+              };
             if (r2 >= 0.65)
-              return { label: "Fair", dot: "bg-amber-400", ring: "shadow-amber-100" };
-            return { label: "Check Model", dot: "bg-red-400", ring: "shadow-red-100" };
+              return {
+                label: "Fair",
+                dot: "bg-amber-400",
+                ring: "shadow-amber-100",
+              };
+            return {
+              label: "Check Model",
+              dot: "bg-red-400",
+              ring: "shadow-red-100",
+            };
           };
 
           return (
@@ -428,7 +438,11 @@ export default function Dashboard() {
                   color="emerald"
                   rangeBar={
                     optimization()?.improvement_pct != null
-                      ? { lo: 0, hi: 30, current: optimization()!.improvement_pct! }
+                      ? {
+                          lo: 0,
+                          hi: 30,
+                          current: optimization()!.improvement_pct!,
+                        }
                       : undefined
                   }
                   onClick={() => navigate("/optimization")}
@@ -469,7 +483,11 @@ export default function Dashboard() {
                   }
                   rangeBar={
                     roas()?.summary.blended_roas != null
-                      ? { lo: 0, hi: Math.max(5, roas()!.summary.blended_roas * 1.5), current: roas()!.summary.blended_roas }
+                      ? {
+                          lo: 0,
+                          hi: Math.max(5, roas()!.summary.blended_roas * 1.5),
+                          current: roas()!.summary.blended_roas,
+                        }
                       : undefined
                   }
                   onClick={() => navigate("/roas")}

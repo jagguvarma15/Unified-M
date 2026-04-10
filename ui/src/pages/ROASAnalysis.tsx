@@ -108,10 +108,7 @@ export default function ROASAnalysis() {
   };
 
   return (
-    <Show
-      when={!loading()}
-      fallback={<ROASAnalysisSkeleton />}
-    >
+    <Show when={!loading()} fallback={<ROASAnalysisSkeleton />}>
       <Show
         when={data() && data()!.channels.length > 0}
         fallback={

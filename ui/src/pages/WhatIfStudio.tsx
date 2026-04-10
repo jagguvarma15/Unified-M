@@ -22,7 +22,13 @@ import {
   type OptimizationData,
   type ResponseCurvesData,
 } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
+import {
+  COLORS,
+  CHART_GRID,
+  CHART_TOOLTIP_BG,
+  channelColor,
+} from "../lib/colors";
+import { OptimizationSkeleton } from "../components/Skeleton";
 import { formatCompactNumber, formatSpendTick } from "../lib/chartFormat";
 import { formatCurrency } from "../lib/format";
 import {
@@ -336,14 +342,7 @@ export default function WhatIfStudio() {
   };
 
   return (
-    <Show
-      when={!loading()}
-      fallback={
-        <div class="flex items-center justify-center h-64">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-        </div>
-      }
-    >
+    <Show when={!loading()} fallback={<OptimizationSkeleton />}>
       <Show
         when={optData()}
         fallback={
@@ -727,7 +726,10 @@ export default function WhatIfStudio() {
                           <span
                             class="w-3 h-3 rounded-full shrink-0"
                             style={{
-                              background: channelColor(ch.replace(/_spend$/, ""), i()),
+                              background: channelColor(
+                                ch.replace(/_spend$/, ""),
+                                i(),
+                              ),
                             }}
                           />
                           <span class="text-sm font-medium text-slate-700 truncate">
