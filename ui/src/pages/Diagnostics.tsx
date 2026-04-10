@@ -44,7 +44,16 @@ export default function Diagnostics() {
         </div>
       }
     >
-      <Show when={data()} fallback={<EmptyState />}>
+      <Show
+        when={data()}
+        fallback={
+          <EmptyState
+            title="No diagnostics available"
+            message="Train a model first to see fit metrics, residual plots, and convergence diagnostics."
+            hideQuickStart
+          />
+        }
+      >
         {() => {
           const d = data()!;
           const m = d.metrics;

@@ -70,7 +70,16 @@ export default function Optimization() {
         </div>
       }
     >
-      <Show when={data()} fallback={<EmptyState />}>
+      <Show
+        when={data()}
+        fallback={
+          <EmptyState
+            title="No optimization results"
+            message="Run the pipeline to get budget allocation recommendations based on your model."
+            hideQuickStart
+          />
+        }
+      >
         <div>
           <div class="flex items-center justify-between">
             <div>

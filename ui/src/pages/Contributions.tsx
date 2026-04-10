@@ -61,7 +61,16 @@ export default function Contributions() {
         </div>
       }
     >
-      <Show when={data()?.data?.length} fallback={<EmptyState />}>
+      <Show
+        when={data()?.data?.length}
+        fallback={
+          <EmptyState
+            title="No contribution data"
+            message="Run the pipeline to see how each channel contributes to your KPI over time."
+            hideQuickStart
+          />
+        }
+      >
         <div>
           <h1 class="text-2xl font-bold text-slate-900">
             Channel Contributions

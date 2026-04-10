@@ -174,7 +174,13 @@ export default function ResponseCurves() {
     >
       <Show
         when={data() && Object.keys(data()!).length > 0}
-        fallback={<EmptyState />}
+        fallback={
+          <EmptyState
+            title="No response curves yet"
+            message="Run the pipeline to generate saturation curves — they show how each channel's returns diminish with more spend."
+            hideQuickStart
+          />
+        }
       >
         <div>
           <h1 class="text-2xl font-bold text-slate-900">Response Curves</h1>

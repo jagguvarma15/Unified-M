@@ -12,6 +12,14 @@ body {
     sans-serif;
 }
 
+/*
+ * Typography hierarchy — DM Sans weight scale
+ *   700 (bold)     : page titles
+ *   600 (semibold) : section / card headers
+ *   500 (medium)   : labels, nav items, buttons
+ *   400 (normal)   : body copy, descriptions
+ */
+
 /* Focus visible for keyboard nav (Grafana / shadcn style) */
 *:focus-visible {
   outline: 2px solid theme("colors.indigo.500");

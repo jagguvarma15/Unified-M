@@ -117,7 +117,13 @@ export default function ROASAnalysis() {
     >
       <Show
         when={data() && data()!.channels.length > 0}
-        fallback={<EmptyState />}
+        fallback={
+          <EmptyState
+            title="No ROAS data"
+            message="Run the pipeline to calculate return on ad spend for each channel."
+            hideQuickStart
+          />
+        }
       >
         {() => (
           <div>
