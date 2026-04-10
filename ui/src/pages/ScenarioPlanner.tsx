@@ -19,7 +19,7 @@ import {
   type OptimizationData,
   type ResponseCurvesData,
 } from "../lib/api";
-import { COLORS } from "../lib/colors";
+import { COLORS, channelColor } from "../lib/colors";
 
 interface ScenarioAllocation {
   [channel: string]: number;
@@ -303,7 +303,7 @@ export default function ScenarioPlanner() {
                               <span
                                 class="w-3 h-3 rounded-full flex-shrink-0"
                                 style={{
-                                  background: COLORS[i() % COLORS.length],
+                                  background: channelColor(ch, i()),
                                 }}
                               />
                               <span class="text-sm font-medium text-slate-700 truncate">

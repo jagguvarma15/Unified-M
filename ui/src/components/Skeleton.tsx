@@ -106,6 +106,29 @@ export function OptimizationSkeleton() {
   );
 }
 
+/** ROAS Analysis skeleton: 3 metrics + 2 charts + full-width chart + table. */
+export function ROASAnalysisSkeleton() {
+  return (
+    <div class="space-y-6" aria-hidden>
+      <div>
+        <Skeleton class="h-7 w-52" />
+        <Skeleton class="h-3.5 w-80 mt-2" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCardSkeleton />
+        <MetricCardSkeleton />
+        <MetricCardSkeleton />
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartCardSkeleton height={300} />
+        <ChartCardSkeleton height={300} />
+      </div>
+      <ChartCardSkeleton height={360} />
+      <TableSkeleton rows={6} cols={7} />
+    </div>
+  );
+}
+
 /** Response Curves skeleton: bubble chart + line charts. */
 export function ResponseCurvesSkeleton() {
   return (

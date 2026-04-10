@@ -22,7 +22,7 @@ import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";
 import ChartCard from "../components/ChartCard";
 import { api, type ChannelInsightsData, type ChannelInsight } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
+import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
 import { formatCurrency } from "../lib/format";
 
 const STATUS_VARIANT: Record<string, "info" | "success" | "warning"> = {
@@ -171,7 +171,7 @@ export default function ChannelInsights() {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <For each={channels()}>
               {(ch, i) => (
-                <ChannelCard insight={ch} color={COLORS[i() % COLORS.length]} />
+                <ChannelCard insight={ch} color={channelColor(ch.channel, i())} />
               )}
             </For>
           </div>

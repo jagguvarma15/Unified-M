@@ -114,7 +114,7 @@ export default function ResponseCurves() {
       currentSpend: c.current_spend,
       marginalRoi: c.marginal_roi,
       contribution: c.current_spend * Math.max(c.marginal_roi, 0),
-      color: COLORS[i % COLORS.length],
+      color: channelColor(c.channel, i),
       quadrant: classifyQuadrant(
         c.current_spend,
         c.marginal_roi,

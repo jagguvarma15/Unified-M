@@ -14,7 +14,7 @@ import PageHeader from "../components/PageHeader";
 import ChartCard from "../components/ChartCard";
 import EmptyState from "../components/EmptyState";
 import { api, type ContributionsData, type ROASData } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
+import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
 import { formatCompactNumber } from "../lib/chartFormat";
 
 interface TouchpointNode {
@@ -222,10 +222,10 @@ export default function AttributionExplorer() {
                       h(
                         Bar,
                         { dataKey: "contribution", radius: [0, 4, 4, 0] },
-                        ...channelTotals().map((_, i) =>
+                        ...channelTotals().map((entry, i) =>
                           h("Cell" as any, {
                             key: i,
-                            fill: COLORS[i % COLORS.length],
+                            fill: channelColor(entry.channel, i),
                           }),
                         ),
                       ),

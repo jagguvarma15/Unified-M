@@ -22,7 +22,7 @@ import {
   type OptimizationData,
   type ResponseCurvesData,
 } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
+import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
 import { formatCompactNumber, formatSpendTick } from "../lib/chartFormat";
 import { formatCurrency } from "../lib/format";
 import {
@@ -727,7 +727,7 @@ export default function WhatIfStudio() {
                           <span
                             class="w-3 h-3 rounded-full shrink-0"
                             style={{
-                              background: COLORS[i() % COLORS.length],
+                              background: channelColor(ch.replace(/_spend$/, ""), i()),
                             }}
                           />
                           <span class="text-sm font-medium text-slate-700 truncate">

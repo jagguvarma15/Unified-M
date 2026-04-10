@@ -37,7 +37,7 @@ import {
   type DiagnosticsData,
   type ROASData,
 } from "../lib/api";
-import { COLORS, CHART_GRID, CHART_TOOLTIP_BG } from "../lib/colors";
+import { COLORS, CHART_GRID, CHART_TOOLTIP_BG, channelColor } from "../lib/colors";
 import { formatCurrency, formatPercent, formatROAS } from "../lib/format";
 import ChartCard from "../components/ChartCard";
 import { api } from "../lib/api";
@@ -706,10 +706,10 @@ export default function Dashboard() {
                                 },
                                 cursor: "pointer",
                               },
-                              ...contribShares().map((_, i) =>
+                              ...contribShares().map((entry, i) =>
                                 h(Cell, {
                                   key: i,
-                                  fill: COLORS[i % COLORS.length],
+                                  fill: channelColor(entry.name, i),
                                 }),
                               ),
                             ),
@@ -1362,8 +1362,8 @@ export default function Dashboard() {
                               type: "monotone",
                               dataKey: ch,
                               stackId: "1",
-                              fill: COLORS[i % COLORS.length],
-                              stroke: COLORS[i % COLORS.length],
+                              fill: channelColor(ch, i),
+                              stroke: channelColor(ch, i),
                               fillOpacity: 0.7,
                             }),
                           ),

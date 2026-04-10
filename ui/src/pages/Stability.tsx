@@ -15,7 +15,7 @@ import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type StabilityData } from "../lib/api";
-import { COLORS } from "../lib/colors";
+import { COLORS, channelColor } from "../lib/colors";
 
 export default function Stability() {
   const [data, setData] = createSignal<StabilityData | null>(null);
@@ -253,10 +253,10 @@ export default function Stability() {
                             h(
                               Bar,
                               { dataKey: "cv", name: "CV %", fill: "#6366f1" },
-                              ...contribData().map((_, i) =>
+                              ...contribData().map((entry, i) =>
                                 h(Cell, {
                                   key: i,
-                                  fill: COLORS[i % COLORS.length],
+                                  fill: channelColor(entry.channel, i),
                                 }),
                               ),
                             ),

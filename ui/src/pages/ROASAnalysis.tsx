@@ -20,7 +20,8 @@ import ReactChart, { h } from "../lib/ReactChart";
 import MetricCard from "../components/MetricCard";
 import EmptyState from "../components/EmptyState";
 import { api, type ROASData } from "../lib/api";
-import { COLORS } from "../lib/colors";
+import { COLORS, channelColor } from "../lib/colors";
+import { ROASAnalysisSkeleton } from "../components/Skeleton";
 
 export default function ROASAnalysis() {
   const [data, setData] = createSignal<ROASData | null>(null);
@@ -109,11 +110,7 @@ export default function ROASAnalysis() {
   return (
     <Show
       when={!loading()}
-      fallback={
-        <div class="flex items-center justify-center h-64">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-        </div>
-      }
+      fallback={<ROASAnalysisSkeleton />}
     >
       <Show
         when={data() && data()!.channels.length > 0}
@@ -162,7 +159,7 @@ export default function ROASAnalysis() {
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
               {/* ROAS by channel bar */}
               <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-                <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                <h2 class="text-sm font-medium text-slate-700 mb-4">
                   ROAS by Channel
                 </h2>
                 <ReactChart>
@@ -206,10 +203,10 @@ export default function ROASAnalysis() {
                             radius: [0, 6, 6, 0],
                             name: "ROAS",
                           },
-                          ...sorted().map((_, i) =>
+                          ...sorted().map((entry, i) =>
                             h(Cell, {
                               key: i,
-                              fill: COLORS[i % COLORS.length],
+                              fill: channelColor(entry.channel, i),
                             }),
                           ),
                         ),
@@ -221,7 +218,7 @@ export default function ROASAnalysis() {
 
               {/* Channel efficiency radar */}
               <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
-                <h2 class="text-sm font-semibold text-slate-700 mb-4">
+                <h2 class="text-sm font-medium text-slate-700 mb-4">
                   Channel Efficiency Radar
                 </h2>
                 <ReactChart>
@@ -249,8 +246,8 @@ export default function ROASAnalysis() {
                             key: ch.channel,
                             name: ch.channel,
                             dataKey: ch.channel,
-                            stroke: COLORS[i % COLORS.length],
-                            fill: COLORS[i % COLORS.length],
+                            stroke: channelColor(ch.channel, i),
+                            fill: channelColor(ch.channel, i),
                             fillOpacity: 0.15,
                             strokeWidth: 2,
                           }),
@@ -265,7 +262,7 @@ export default function ROASAnalysis() {
 
             {/* Spend vs Contribution comparison */}
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
-              <h2 class="text-sm font-semibold text-slate-700 mb-4">
+              <h2 class="text-sm font-medium text-slate-700 mb-4">
                 Spend vs Contribution by Channel
               </h2>
               <ReactChart>
@@ -312,7 +309,7 @@ export default function ROASAnalysis() {
             {/* Detailed table */}
             <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 mt-6">
               <div class="flex items-center justify-between mb-4">
-                <h2 class="text-sm font-semibold text-slate-700">
+                <h2 class="text-sm font-medium text-slate-700">
                   Channel Performance Table
                 </h2>
                 <div class="flex items-center gap-2">
@@ -371,7 +368,7 @@ export default function ROASAnalysis() {
                             <span
                               class="w-3 h-3 rounded-full flex-shrink-0"
                               style={{
-                                background: COLORS[i() % COLORS.length],
+                                background: channelColor(ch.channel, i()),
                               }}
                             />
                             {ch.channel}
