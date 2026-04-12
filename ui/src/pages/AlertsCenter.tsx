@@ -382,10 +382,7 @@ export default function AlertsCenter() {
                       <Show
                         when={!snoozed()}
                         fallback={
-                          <BellOff
-                            size={18}
-                            class="text-slate-400 mt-0.5"
-                          />
+                          <BellOff size={18} class="text-slate-400 mt-0.5" />
                         }
                       >
                         <SevIcon
@@ -492,10 +489,7 @@ export default function AlertsCenter() {
                             <span class="font-medium text-sm text-slate-700">
                               {event.ruleName}
                             </span>
-                            <CheckCircle2
-                              size={13}
-                              class="text-emerald-500"
-                            />
+                            <CheckCircle2 size={13} class="text-emerald-500" />
                           </div>
                           <p class="text-xs text-slate-500 mt-0.5">
                             {event.channel} · {event.metric} = {event.value} ·{" "}
@@ -567,8 +561,8 @@ export default function AlertsCenter() {
               Weekly Digest
             </h2>
             <p class="text-xs text-slate-500 mb-4">
-              Automatically send a summary of alert activity and model health
-              to your team.
+              Automatically send a summary of alert activity and model health to
+              your team.
             </p>
 
             <div class="space-y-3">
@@ -605,9 +599,7 @@ export default function AlertsCenter() {
                 >
                   <span
                     class={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
-                      digestEmail()
-                        ? "translate-x-4 ml-0.5"
-                        : "translate-x-0.5"
+                      digestEmail() ? "translate-x-4 ml-0.5" : "translate-x-0.5"
                     }`}
                   />
                 </button>
@@ -630,9 +622,7 @@ export default function AlertsCenter() {
                 >
                   <span
                     class={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${
-                      digestSlack()
-                        ? "translate-x-4 ml-0.5"
-                        : "translate-x-0.5"
+                      digestSlack() ? "translate-x-4 ml-0.5" : "translate-x-0.5"
                     }`}
                   />
                 </button>
@@ -640,8 +630,11 @@ export default function AlertsCenter() {
 
               <Show when={digestEmail() || digestSlack()}>
                 <div class="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                  {digestFrequency() === "weekly" ? "Every Monday morning" : "Every morning at 8:00 AM"} you'll receive a digest of all
-                  alert activity, model health, and spend anomalies.
+                  {digestFrequency() === "weekly"
+                    ? "Every Monday morning"
+                    : "Every morning at 8:00 AM"}{" "}
+                  you'll receive a digest of all alert activity, model health,
+                  and spend anomalies.
                 </div>
               </Show>
             </div>

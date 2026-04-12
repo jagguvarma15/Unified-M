@@ -1,4 +1,10 @@
-import { FlaskConical, Plus, Calendar, CheckCircle2, Circle } from "../lib/icons";
+import {
+  FlaskConical,
+  Plus,
+  Calendar,
+  CheckCircle2,
+  Circle,
+} from "../lib/icons";
 
 interface RoadmapItem {
   title: string;
@@ -50,9 +56,7 @@ export default function ExperimentRoadmap() {
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-slate-900">
-            Experiment Roadmap
-          </h1>
+          <h1 class="text-2xl font-bold text-slate-900">Experiment Roadmap</h1>
           <p class="mt-1 text-sm text-slate-500">
             Plan and track calibration experiments, lift tests, and validation
             studies.
@@ -77,9 +81,7 @@ export default function ExperimentRoadmap() {
               <div class="mt-0.5 shrink-0">{statusIcon(item.status)}</div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-slate-900">{item.title}</p>
-                <p class="mt-0.5 text-sm text-slate-500">
-                  {item.description}
-                </p>
+                <p class="mt-0.5 text-sm text-slate-500">{item.description}</p>
               </div>
               <span
                 class={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${

@@ -284,9 +284,7 @@ export default function Benchmarks() {
                     <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
                       <span>vs. Median</span>
                       <span
-                        class={
-                          diff >= 0 ? "text-emerald-600" : "text-red-500"
-                        }
+                        class={diff >= 0 ? "text-emerald-600" : "text-red-500"}
                       >
                         {diff >= 0 ? "+" : ""}
                         {diff.toFixed(1)}%

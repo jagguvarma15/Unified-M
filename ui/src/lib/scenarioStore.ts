@@ -39,7 +39,9 @@ function persist(items: SavedScenario[]) {
 
 export { savedScenarios };
 
-export function saveScenario(scenario: Omit<SavedScenario, "id" | "createdAt">) {
+export function saveScenario(
+  scenario: Omit<SavedScenario, "id" | "createdAt">,
+) {
   const next: SavedScenario = {
     ...scenario,
     id: `sc-${Date.now()}`,

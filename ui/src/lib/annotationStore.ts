@@ -63,9 +63,8 @@ function loadAnnotations(): Annotation[] {
   return DEMO_ANNOTATIONS;
 }
 
-const [annotations, setAnnotationsRaw] = createSignal<Annotation[]>(
-  loadAnnotations(),
-);
+const [annotations, setAnnotationsRaw] =
+  createSignal<Annotation[]>(loadAnnotations());
 
 function persist(anns: Annotation[]) {
   try {

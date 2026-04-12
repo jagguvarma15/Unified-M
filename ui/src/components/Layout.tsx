@@ -55,9 +55,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-const PINNED_NAV: NavItem[] = [
-  { to: "/data", label: "Data", icon: Database },
-];
+const PINNED_NAV: NavItem[] = [{ to: "/data", label: "Data", icon: Database }];
 
 const NAV_SECTIONS: NavSection[] = [
   {
@@ -81,7 +79,11 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Experiment",
     items: [
       { to: "/calibration", label: "Calibration", icon: Crosshair },
-      { to: "/experiment-roadmap", label: "Experiment Roadmap", icon: FlaskConical },
+      {
+        to: "/experiment-roadmap",
+        label: "Experiment Roadmap",
+        icon: FlaskConical,
+      },
       { to: "/stability", label: "Stability", icon: Shield },
     ],
   },
@@ -234,8 +236,7 @@ export default function Layout(props: { children?: JSX.Element }) {
               {(section) => {
                 const items = (): NavItem[] => {
                   if (!analyticsEnabled()) {
-                    if (section.title !== "Measure")
-                      return [];
+                    if (section.title !== "Measure") return [];
                     if (section.title === "Measure")
                       return section.items.filter((i) => i.to === "/");
                   }

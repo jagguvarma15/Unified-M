@@ -339,7 +339,9 @@ export default function Calibration() {
                 const barData = () =>
                   points().map((p) => ({
                     channel: p.channel ?? "",
-                    error_pct: Math.round((p.error_pct as number | undefined) ?? 0),
+                    error_pct: Math.round(
+                      (p.error_pct as number | undefined) ?? 0,
+                    ),
                     within_ci: p.within_ci ?? false,
                   }));
                 const qualityColor = () =>
@@ -384,9 +386,9 @@ export default function Calibration() {
                         Predicted vs. Measured Lift
                       </h2>
                       <p class="text-sm text-gray-500 mb-4">
-                        Points near the diagonal mean the MMM prediction
-                        matched the experiment result. Green = within CI, Red =
-                        outside CI.
+                        Points near the diagonal mean the MMM prediction matched
+                        the experiment result. Green = within CI, Red = outside
+                        CI.
                       </p>
                       <ReactChart>
                         {() =>
@@ -621,10 +623,7 @@ export default function Calibration() {
         <div class="space-y-6">
           {/* Summary KPIs */}
           <div class="grid grid-cols-3 gap-3">
-            <MetricCard
-              label="Planned"
-              value={plannedCount()}
-            />
+            <MetricCard label="Planned" value={plannedCount()} />
             <MetricCard
               label="Running"
               value={runningCount()}
@@ -676,9 +675,7 @@ export default function Calibration() {
                   min="1000"
                   step="5000"
                   value={calcBudget()}
-                  onInput={(e) =>
-                    setCalcBudget(Number(e.currentTarget.value))
-                  }
+                  onInput={(e) => setCalcBudget(Number(e.currentTarget.value))}
                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -691,9 +688,7 @@ export default function Calibration() {
                   min="1"
                   max="52"
                   value={calcWeeks()}
-                  onInput={(e) =>
-                    setCalcWeeks(Number(e.currentTarget.value))
-                  }
+                  onInput={(e) => setCalcWeeks(Number(e.currentTarget.value))}
                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -805,8 +800,8 @@ export default function Calibration() {
                             {exp.name}
                           </p>
                           <p class="text-xs text-slate-400">
-                            {exp.channel.replace(/_/g, " ")} ·{" "}
-                            ${exp.budget.toLocaleString()} · {exp.weeks}w
+                            {exp.channel.replace(/_/g, " ")} · $
+                            {exp.budget.toLocaleString()} · {exp.weeks}w
                             {exp.startDate ? ` · Started ${exp.startDate}` : ""}
                           </p>
                         </div>
@@ -890,9 +885,7 @@ export default function Calibration() {
                 class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               >
                 <For each={CHANNELS}>
-                  {(ch) => (
-                    <option value={ch}>{ch.replace(/_/g, " ")}</option>
-                  )}
+                  {(ch) => <option value={ch}>{ch.replace(/_/g, " ")}</option>}
                 </For>
               </select>
             </div>

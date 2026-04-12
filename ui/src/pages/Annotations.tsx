@@ -1,12 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
 import PageHeader from "../components/PageHeader";
-import {
-  Plus,
-  Trash2,
-  X,
-  Info,
-  Milestone,
-} from "../lib/icons";
+import { Plus, Trash2, X, Info, Milestone } from "../lib/icons";
 import { useToast } from "../lib/toast";
 import {
   annotations,
@@ -49,9 +43,7 @@ export default function Annotations() {
   );
 
   // Form state
-  const [date, setDate] = createSignal(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [date, setDate] = createSignal(new Date().toISOString().slice(0, 10));
   const [label, setLabel] = createSignal("");
   const [type, setType] = createSignal<AnnotationType>("campaign");
   const [channel, setChannel] = createSignal("");
@@ -109,10 +101,10 @@ export default function Annotations() {
       <div class="mb-5 flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2.5 text-xs text-indigo-700">
         <Info size={14} class="mt-0.5 shrink-0" />
         <span>
-          Annotations are displayed as vertical markers on contribution,
-          ROAS, and spend pacing charts. They help correlate model shifts
-          with real-world events like product launches, media spends, or
-          platform changes.
+          Annotations are displayed as vertical markers on contribution, ROAS,
+          and spend pacing charts. They help correlate model shifts with
+          real-world events like product launches, media spends, or platform
+          changes.
         </span>
       </div>
 
@@ -204,10 +196,7 @@ export default function Annotations() {
       {/* Add annotation modal */}
       <Show when={showAdd()}>
         <div class="fixed inset-0 z-40 flex items-center justify-center">
-          <div
-            class="absolute inset-0 bg-black/20"
-            onClick={resetForm}
-          />
+          <div class="absolute inset-0 bg-black/20" onClick={resetForm} />
           <div class="relative w-full max-w-md rounded-xl bg-white shadow-xl p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h3 class="text-base font-semibold text-slate-900">
@@ -259,9 +248,7 @@ export default function Annotations() {
                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 >
                   <For each={ANNOTATION_TYPES}>
-                    {(t) => (
-                      <option value={t}>{TYPE_LABELS[t]}</option>
-                    )}
+                    {(t) => <option value={t}>{TYPE_LABELS[t]}</option>}
                   </For>
                 </select>
               </div>
@@ -275,9 +262,7 @@ export default function Annotations() {
                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 >
                   <For each={CHANNELS}>
-                    {(ch) => (
-                      <option value={ch.value}>{ch.label}</option>
-                    )}
+                    {(ch) => <option value={ch.value}>{ch.label}</option>}
                   </For>
                 </select>
               </div>
