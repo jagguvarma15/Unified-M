@@ -113,7 +113,7 @@ const MOBILE_TAB_NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/optimization", label: "Optimize", icon: Target },
   { to: "/what-if", label: "Scenarios", icon: Calculator },
-  { to: "/alerts", label: "Alerts", icon: Bell },
+  { to: "/curves", label: "Explore", icon: TrendingUp },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
