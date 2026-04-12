@@ -34,6 +34,7 @@ const ReportBuilder = lazy(() => import("./pages/ReportBuilder"));
 const AlertsCenter = lazy(() => import("./pages/AlertsCenter"));
 const Benchmarks = lazy(() => import("./pages/Benchmarks"));
 const Annotations = lazy(() => import("./pages/Annotations"));
+const ExperimentRoadmap = lazy(() => import("./pages/ExperimentRoadmap"));
 
 function AnalyticsGate(props: { children: JSX.Element }) {
   const { analyticsEnabled } = useAnalyticsMode();
@@ -215,6 +216,14 @@ export default function App() {
             component={() => (
               <AnalyticsGate>
                 <Annotations />
+              </AnalyticsGate>
+            )}
+          />
+          <Route
+            path="/experiment-roadmap"
+            component={() => (
+              <AnalyticsGate>
+                <ExperimentRoadmap />
               </AnalyticsGate>
             )}
           />

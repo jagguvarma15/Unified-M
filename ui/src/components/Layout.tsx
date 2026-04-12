@@ -57,7 +57,6 @@ interface NavSection {
 
 const PINNED_NAV: NavItem[] = [
   { to: "/data", label: "Data", icon: Database },
-  { to: "/runs", label: "Runs", icon: History },
 ];
 
 const NAV_SECTIONS: NavSection[] = [
@@ -67,7 +66,6 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
       { to: "/contributions", label: "Contributions", icon: BarChart3 },
       { to: "/roas", label: "ROAS Analysis", icon: DollarSign },
-      { to: "/benchmarks", label: "Benchmarks", icon: Award },
       { to: "/diagnostics", label: "Diagnostics", icon: Stethoscope },
     ],
   },
@@ -83,6 +81,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "Experiment",
     items: [
       { to: "/calibration", label: "Calibration", icon: Crosshair },
+      { to: "/experiment-roadmap", label: "Experiment Roadmap", icon: FlaskConical },
       { to: "/stability", label: "Stability", icon: Shield },
     ],
   },
@@ -93,8 +92,6 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/channel-insights", label: "Channel Insights", icon: Zap },
       { to: "/attribution", label: "Attribution Explorer", icon: MapIcon },
       { to: "/data-quality", label: "Data Quality", icon: ClipboardCheck },
-      { to: "/annotations", label: "Annotations", icon: Milestone },
-      { to: "/alerts", label: "Alerts Center", icon: Bell },
     ],
   },
   {
@@ -104,13 +101,12 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/report-builder", label: "Report Builder", icon: GripVertical },
     ],
   },
-  {
-    title: "Configuration",
-    items: [
-      { to: "/datapoint", label: "Connections", icon: Link2 },
-      { to: "/settings", label: "Settings", icon: Settings },
-    ],
-  },
+];
+
+const BOTTOM_NAV: NavItem[] = [
+  { to: "/datapoint", label: "Connections", icon: Link2 },
+  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/runs", label: "Runs", icon: History },
 ];
 
 const MOBILE_TAB_NAV: NavItem[] = [
@@ -238,10 +234,7 @@ export default function Layout(props: { children?: JSX.Element }) {
               {(section) => {
                 const items = (): NavItem[] => {
                   if (!analyticsEnabled()) {
-                    if (
-                      section.title !== "Configuration" &&
-                      section.title !== "Measure"
-                    )
+                    if (section.title !== "Measure")
                       return [];
                     if (section.title === "Measure")
                       return section.items.filter((i) => i.to === "/");
@@ -315,6 +308,39 @@ export default function Layout(props: { children?: JSX.Element }) {
                 );
               }}
             </For>
+            {/* Bottom utility items */}
+            <div class="my-2 border-t border-slate-800" />
+            <div class="space-y-0.5">
+              <For each={BOTTOM_NAV}>
+                {(item) => (
+                  <Show
+                    when={!sc()}
+                    fallback={
+                      <Tooltip content={item.label} side="right">
+                        <A
+                          href={item.to}
+                          activeClass="bg-indigo-600 text-white"
+                          inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                          class="flex items-center justify-center rounded-md p-2 transition-colors"
+                        >
+                          {item.icon({ size: 16, class: "shrink-0" })}
+                        </A>
+                      </Tooltip>
+                    }
+                  >
+                    <A
+                      href={item.to}
+                      activeClass="bg-indigo-600 text-white"
+                      inactiveClass="text-slate-300 hover:bg-slate-800 hover:text-white"
+                      class="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+                    >
+                      {item.icon({ size: 16, class: "shrink-0" })}
+                      {item.label}
+                    </A>
+                  </Show>
+                )}
+              </For>
+            </div>
           </nav>
 
           {/* Sidebar Footer — collapse toggle + density */}
