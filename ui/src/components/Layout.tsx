@@ -24,11 +24,9 @@ import {
   FileText,
   PanelLeftClose,
   PanelLeftOpen,
-  Bell,
   MapIcon,
   GripVertical,
-  Award,
-  Milestone,
+  FlaskConical,
   type LucideIcon,
 } from "../lib/icons";
 import {
