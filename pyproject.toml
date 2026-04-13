@@ -22,7 +22,7 @@ dependencies = [
     # API (serves the built React UI in production)
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.27.0",
-    "python-multipart>=0.0.6",
+    "python-multipart>=0.0.26",
 
     # CLI & logging
     "typer>=0.9.0",
