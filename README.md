@@ -206,21 +206,6 @@ unified-m/
 | **CI** | GitHub Actions (lint, test, build, bundle budget, docs sync) |
 | **Rust Accel** | Optional PyO3 bindings for adstock/saturation |
 
-## CI / GitHub Actions
-
-The CI pipeline runs on every PR and push to `main`:
-
-| Job | What it checks |
-|-----|----------------|
-| **Backend · Lint & Format** | `ruff format --check` + `ruff check` on `src/` and `tests/` |
-| **Backend · Type Check** | `mypy` (non-blocking, tracks regressions) |
-| **Backend · Tests** | Full `pytest` suite across all 6 test modules |
-| **Backend · Import Health** | Verifies all core modules import cleanly (catches broken refactors) |
-| **Frontend · Build & Bundle Budget** | `vite build` + gzip budget check (JS < 380 KB, CSS < 120 KB, max chunk < 230 KB) |
-| **Frontend · Format Check** | Prettier on all `.ts`, `.tsx`, `.css` |
-| **Config & Lockfile Health** | `uv lock --check`, YAML validation, docs sync, no `.env` committed |
-| **Docker · Build Smoke Test** | Builds the Dockerfile, starts API, hits `/health` (on main pushes) |
-| **Docs · Link Check** | Lychee checks all markdown links |
 
 Concurrency is enabled — pushing again to the same PR cancels the previous run.
 
