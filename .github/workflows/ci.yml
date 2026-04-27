@@ -20,9 +20,9 @@ jobs:
     name: "Backend · Lint & Format"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Setup Python
         run: uv python install 3.11
@@ -40,9 +40,9 @@ jobs:
     name: "Backend · Type Check"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Setup Python
         run: uv python install 3.11
@@ -62,9 +62,9 @@ jobs:
       matrix:
         python-version: ["3.11"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Setup Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
@@ -79,9 +79,9 @@ jobs:
     name: "Backend · Import Health"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Setup Python
         run: uv python install 3.11
@@ -115,7 +115,7 @@ jobs:
     name: "Frontend · Build & Bundle Budget"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -137,7 +137,7 @@ jobs:
     name: "Frontend · Format Check"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -158,9 +158,9 @@ jobs:
     name: "Config & Lockfile Health"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Setup Python
         run: uv python install 3.11
@@ -194,7 +194,7 @@ jobs:
     # Only run on main pushes or when Docker/config files change
     if: github.event_name == 'push' || contains(github.event.pull_request.title, 'docker') || contains(github.event.pull_request.title, 'Docker')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build base image (Python API)
         run: docker build --target base -t unified-m-api-test .
@@ -214,7 +214,7 @@ jobs:
     name: "Docs · Link Check"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: lycheeverse/lychee-action@v2
         with:
